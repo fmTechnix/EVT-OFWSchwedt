@@ -9,6 +9,8 @@ import type {
   TerminZusage, InsertTerminZusage,
   BesetzungscheckResult
 } from "@shared/schema";
+import { PostgresStorage } from "./pg-storage";
+import { initializeDatabase } from "./init-db";
 
 export interface IStorage {
   // Users (unified Benutzer with qualifications)
@@ -426,4 +428,8 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+// Use PostgresStorage for persistent data storage
+export const storage = new PostgresStorage();
+
+// Initialize database on startup
+initializeDatabase().catch(console.error);
