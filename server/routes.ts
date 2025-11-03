@@ -2,7 +2,7 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import session from "express-session";
 import { storage } from "./storage";
-import { insertVehicleSchema, insertKameradSchema, insertEinsatzSchema, insertSettingsSchema, insertQualifikationSchema } from "@shared/schema";
+import { insertVehicleSchema, insertKameradSchema, insertEinsatzSchema, insertSettingsSchema, insertQualifikationSchema, insertTerminSchema, insertTerminZusageSchema } from "@shared/schema";
 import type { User } from "@shared/schema";
 
 // Extend Express session to include user
@@ -34,6 +34,20 @@ async function requireAdmin(req: Request, res: Response, next: Function) {
   
   const user = await storage.getUser(req.session.userId);
   if (!user || user.role !== "admin") {
+    return res.status(403).json({ error: "Keine Berechtigung" });
+  }
+  
+  next();
+}
+
+// Middleware to check moderator or admin role
+async function requireModerator(req: Request, res: Response, next: Function) {
+  if (!req.session.userId) {
+    return res.status(401).json({ error: "Nicht authentifiziert" });
+  }
+  
+  const user = await storage.getUser(req.session.userId);
+  if (!user || (user.role !== "admin" && user.role !== "moderator")) {
     return res.status(403).json({ error: "Keine Berechtigung" });
   }
   
@@ -240,6 +254,133 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(result);
     } catch (error) {
       res.status(500).json({ error: "Fehler beim Besetzungscheck" });
+    }
+  });
+
+  // User endpoints
+  app.get("/api/users", requireAdmin, async (_req: Request, res: Response) => {
+    try {
+      const users = await storage.getAllUsers();
+      const sanitized = users.map(sanitizeUser);
+      res.json(sanitized);
+    } catch (error) {
+      res.status(500).json({ error: "Fehler beim Laden der Benutzer" });
+    }
+  });
+
+  app.patch("/api/users/:id/role", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { role } = req.body;
+      
+      if (!["admin", "moderator", "member"].includes(role)) {
+        return res.status(400).json({ error: "Ungültige Rolle" });
+      }
+      
+      const user = await storage.updateUserRole(id, role);
+      res.json(sanitizeUser(user));
+    } catch (error) {
+      res.status(500).json({ error: "Fehler beim Aktualisieren der Rolle" });
+    }
+  });
+
+  // Termine endpoints
+  app.get("/api/termine", requireAuth, async (_req: Request, res: Response) => {
+    try {
+      const termine = await storage.getAllTermine();
+      res.json(termine);
+    } catch (error) {
+      res.status(500).json({ error: "Fehler beim Laden der Termine" });
+    }
+  });
+
+  app.post("/api/termine", requireModerator, async (req: Request, res: Response) => {
+    try {
+      const data = insertTerminSchema.parse(req.body);
+      const termin = await storage.createTermin(data);
+      res.status(201).json(termin);
+    } catch (error) {
+      res.status(400).json({ error: "Ungültige Termindaten" });
+    }
+  });
+
+  app.put("/api/termine/:id", requireModerator, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const data = insertTerminSchema.parse(req.body);
+      const termin = await storage.updateTermin(id, data);
+      res.json(termin);
+    } catch (error) {
+      res.status(400).json({ error: "Ungültige Termindaten" });
+    }
+  });
+
+  app.delete("/api/termine/:id", requireModerator, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deleteTermin(id);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Fehler beim Löschen des Termins" });
+    }
+  });
+
+  // Termin export endpoint
+  app.get("/api/termine/export", requireAuth, async (_req: Request, res: Response) => {
+    try {
+      const termine = await storage.getAllTermine();
+      const users = await storage.getAllUsers();
+      
+      // Create CSV with BOM for Excel compatibility
+      let csv = '\uFEFF';
+      csv += "Datum,Uhrzeit,Titel,Ort,Beschreibung,Ersteller,Zusagen,Absagen\n";
+      
+      for (const termin of termine) {
+        const zusagen = await storage.getTerminZusagen(termin.id);
+        const zugesagt = zusagen.filter(z => z.status === "zugesagt").length;
+        const abgesagt = zusagen.filter(z => z.status === "abgesagt").length;
+        const ersteller = users.find(u => u.id === termin.ersteller_id);
+        
+        csv += `"${termin.datum}","${termin.uhrzeit}","${termin.titel}","${termin.ort}","${termin.beschreibung}","${ersteller?.name || 'Unbekannt'}",${zugesagt},${abgesagt}\n`;
+      }
+      
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', 'attachment; filename="termine.csv"');
+      res.send(csv);
+    } catch (error) {
+      res.status(500).json({ error: "Fehler beim Exportieren der Termine" });
+    }
+  });
+
+  // Termin Zusagen endpoints
+  app.get("/api/termine/:id/zusagen", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const terminId = parseInt(req.params.id);
+      const zusagen = await storage.getTerminZusagen(terminId);
+      res.json(zusagen);
+    } catch (error) {
+      res.status(500).json({ error: "Fehler beim Laden der Zusagen" });
+    }
+  });
+
+  app.post("/api/termine/:id/zusage", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const terminId = parseInt(req.params.id);
+      const { status } = req.body;
+      
+      if (!["zugesagt", "abgesagt"].includes(status)) {
+        return res.status(400).json({ error: "Ungültiger Status" });
+      }
+      
+      const zusage = await storage.createOrUpdateZusage({
+        termin_id: terminId,
+        user_id: req.session.userId!,
+        status,
+      });
+      
+      res.json(zusage);
+    } catch (error) {
+      res.status(500).json({ error: "Fehler beim Speichern der Zusage" });
     }
   });
 
