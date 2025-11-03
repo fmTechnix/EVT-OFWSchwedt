@@ -141,7 +141,7 @@ export default function Login() {
               <Input
                 id="username"
                 type="text"
-                placeholder="admin oder member"
+                placeholder="Benutzername eingeben"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
@@ -155,7 +155,7 @@ export default function Login() {
               <Input
                 id="password"
                 type="password"
-                placeholder="admin oder member"
+                placeholder="Passwort eingeben"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
