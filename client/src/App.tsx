@@ -19,7 +19,11 @@ function ProtectedRoute({ children, adminOnly = false }: { children: React.React
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center space-y-4">
-          <div className="text-6xl">🚒</div>
+          <img 
+            src="/feuerwehr-logo.png" 
+            alt="Feuerwehr Schwedt/Oder" 
+            className="h-24 w-auto mx-auto"
+          />
           <p className="text-muted-foreground">Lädt...</p>
         </div>
       </div>
@@ -44,7 +48,11 @@ function Router() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center space-y-4">
-          <div className="text-6xl">🚒</div>
+          <img 
+            src="/feuerwehr-logo.png" 
+            alt="Feuerwehr Schwedt/Oder" 
+            className="h-24 w-auto mx-auto"
+          />
           <p className="text-muted-foreground">Lädt...</p>
         </div>
       </div>

@@ -42,10 +42,14 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-b from-background to-muted/20">
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="space-y-3 text-center">
-          <div className="text-6xl mx-auto">🚒</div>
+          <img 
+            src="/feuerwehr-logo.png" 
+            alt="Feuerwehr Schwedt/Oder" 
+            className="h-32 w-auto mx-auto"
+          />
           <CardTitle className="text-3xl font-bold">EVT Login</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Einsatzverwaltungstool für die Feuerwehr
+            Einsatzverwaltungstool für die Feuerwehr Schwedt/Oder
           </p>
         </CardHeader>
         <CardContent>
