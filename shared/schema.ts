@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, serial, timestamp, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, serial, timestamp, boolean, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -97,6 +97,62 @@ export const terminZusagen = pgTable("termin_zusagen", {
 export const insertTerminZusageSchema = createInsertSchema(terminZusagen).omit({ id: true });
 export type InsertTerminZusage = z.infer<typeof insertTerminZusageSchema>;
 export type TerminZusage = typeof terminZusagen.$inferSelect;
+
+// Vehicle Configurations (for automatic crew assignment)
+export const vehicleConfigs = pgTable("vehicle_configs", {
+  id: serial("id").primaryKey(),
+  vehicle: text("vehicle").notNull().unique(), // e.g., "HLF 20"
+  type: text("type").notNull(), // e.g., "LF", "TLF", "RW"
+  slots: jsonb("slots").notNull(), // Array of slot configurations
+  constraints: jsonb("constraints"), // Optional constraints object
+});
+
+export const insertVehicleConfigSchema = createInsertSchema(vehicleConfigs).omit({ id: true });
+export type InsertVehicleConfig = z.infer<typeof insertVehicleConfigSchema>;
+export type VehicleConfig = typeof vehicleConfigs.$inferSelect;
+
+// TypeScript types for vehicle configuration structure
+export type VehicleSlot = {
+  position: string;
+  requires?: string[];
+  requires_any?: string[];
+  prefer?: string[];
+  addons_required?: string[];
+  allow_fallback?: boolean;
+};
+
+export type VehicleConstraints = {
+  min_agt_total?: number;
+  min_agt_watertrupp?: number;
+  min_cbrn_erkkw_total?: number;
+  min_funk_total?: number;
+  prefer_th_total?: number;
+  prefer_abc1_total?: number;
+};
+
+export type VehicleConfigData = {
+  vehicle: string;
+  type: string;
+  slots: VehicleSlot[];
+  constraints?: VehicleConstraints;
+};
+
+// Assignment result types for automatic crew assignment
+export type SlotAssignment = {
+  position: string;
+  assignedUser: User | null;
+  candidateUsers: User[];
+  isFilled: boolean;
+  meetsRequirements: boolean;
+};
+
+export type VehicleAssignment = {
+  vehicleConfig: VehicleConfig;
+  slots: SlotAssignment[];
+  isFullyStaffed: boolean;
+  meetsConstraints: boolean;
+  constraintIssues: string[];
+};
 
 // Besetzungscheck result type
 export type BesetzungscheckResult = {

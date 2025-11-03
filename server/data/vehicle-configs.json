@@ -1,0 +1,151 @@
+{
+  "qual_flags_info": {
+    "base": ["MASCH","AGT","GF","ZF","FUNK","FUEASS","TH","ABC1","CBRN_ERKKW","FAHRER_B"],
+    "addons": ["MZ","WT18"]
+  },
+  "vehicles": [
+    {
+      "vehicle": "HLF 20",
+      "type": "LF",
+      "slots": [
+        { "position": "GF",     "requires": ["GF"] },
+        { "position": "MA",     "requires": ["MASCH"] },
+        { "position": "MELDER", "requires": ["FUNK"] },
+
+        { "position": "ATF",    "requires": ["AGT"] },
+        { "position": "ATM",    "requires": ["AGT"] },
+
+        { "position": "WTF",    "requires": ["AGT"] },
+        { "position": "WTM",    "requires": ["AGT"] },
+
+        { "position": "STF",    "requires": [] },
+        { "position": "STM",    "requires": [] }
+      ],
+      "constraints": {
+        "min_agt_total": 4,
+        "min_agt_watertrupp": 1
+      }
+    },
+
+    {
+      "vehicle": "LF 20",
+      "type": "LF",
+      "slots": [
+        { "position": "GF",     "requires": ["GF"] },
+        { "position": "MA",     "requires": ["MASCH"] },
+        { "position": "MELDER", "requires": ["FUNK"] },
+
+        { "position": "ATF",    "requires": ["AGT"] },
+        { "position": "ATM",    "requires": ["AGT"] },
+
+        { "position": "WTF",    "requires": ["AGT"] },
+        { "position": "WTM",    "requires": ["AGT"] },
+
+        { "position": "STF",    "requires": [] },
+        { "position": "STM",    "requires": [] }
+      ],
+      "constraints": {
+        "min_agt_total": 4,
+        "min_agt_watertrupp": 1
+      }
+    },
+
+    {
+      "vehicle": "TLF 4000 St",
+      "type": "TLF",
+      "slots": [
+        { "position": "GF",  "requires": ["GF"] },
+        { "position": "MA",  "requires": ["MASCH"] },
+
+        { "position": "ATF", "requires": ["AGT"] },
+        { "position": "ATM", "requires": ["AGT"] },
+
+        { "position": "WTF", "requires": ["AGT"] },
+        { "position": "WTM", "requires": ["AGT"] }
+      ],
+      "constraints": {
+        "min_agt_total": 3,
+        "min_agt_watertrupp": 1
+      }
+    },
+
+    {
+      "vehicle": "RW",
+      "type": "RW",
+      "slots": [
+        { "position": "TF", "requires": [], "prefer": ["ZF","GF","TH"] },
+        { "position": "MA", "requires": ["MASCH"], "addons_required": ["MZ"], "allow_fallback": false },
+        { "position": "TM", "requires": [], "prefer": ["TH","AGT"] }
+      ],
+      "constraints": {
+        "prefer_th_total": 1
+      }
+    },
+
+    {
+      "vehicle": "ELW 1",
+      "type": "ELW",
+      "slots": [
+        { "position": "ZF",     "requires": ["ZF"], "prefer": ["GF"] },
+        { "position": "MA",     "requires": ["MASCH"] },
+        { "position": "FUEASS", "requires": ["FUEASS","FUNK"] },
+        { "position": "FUNK",   "requires": ["FUNK"], "prefer": ["FUEASS"] }
+      ]
+    },
+
+    {
+      "vehicle": "GW-G",
+      "type": "GWG",
+      "slots": [
+        { "position": "TF", "requires": [], "prefer": ["ABC1"] },
+        { "position": "MA", "requires": ["MASCH"] },
+        { "position": "TM", "requires": [], "prefer": ["ABC1"] }
+      ],
+      "constraints": {
+        "prefer_abc1_total": 1
+      }
+    },
+
+    {
+      "vehicle": "ABC-Erkunder",
+      "type": "ABC",
+      "slots": [
+        { "position": "ZF/GF", "requires": ["ZF"], "prefer": ["GF"] },
+        { "position": "MA",    "requires": ["MASCH"] },
+        { "position": "TR1",   "requires": ["CBRN_ERKKW"], "prefer": ["FUNK"] },
+        { "position": "TR2",   "requires": ["CBRN_ERKKW"], "prefer": ["FUNK"] }
+      ],
+      "constraints": {
+        "min_cbrn_erkkw_total": 2
+      }
+    },
+
+    {
+      "vehicle": "Wasserträger",
+      "type": "WT",
+      "slots": [
+        { "position": "TF", "requires": ["FUNK"], "prefer": ["ZF","GF"] },
+        { "position": "MA", "requires": ["MASCH"], "addons_required": ["WT18"], "allow_fallback": false },
+        { "position": "TM", "requires": ["FUNK"], "prefer": ["TH"] }
+      ],
+      "constraints": {
+        "min_funk_total": 2
+      }
+    },
+
+    {
+      "vehicle": "MTF",
+      "type": "MTF",
+      "slots": [
+        { "position": "FAHRER", "requires_any": ["MASCH","FAHRER_B"] },
+        { "position": "GF/TF",  "requires": [], "prefer": ["GF","ZF"] },
+        { "position": "M1", "requires": [] },
+        { "position": "M2", "requires": [] },
+        { "position": "M3", "requires": [] },
+        { "position": "M4", "requires": [] },
+        { "position": "M5", "requires": [] },
+        { "position": "M6", "requires": [] }
+      ]
+    }
+  ]
+}
