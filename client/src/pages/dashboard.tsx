@@ -49,9 +49,95 @@ export default function Dashboard() {
               </Card>
             ))}
           </div>
+        ) : user?.role === "member" ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Kalender & Termine für Members */}
+            <Card className="shadow-lg hover-elevate transition-all" data-testid="card-kalender">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <span className="text-2xl">📅</span>
+                  Kalender & Termine
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Aktuelle Termine einsehen und Zusagen verwalten
+                </p>
+                <Link href="/kalender">
+                  <Button className="w-full" data-testid="button-view-kalender">
+                    Kalender öffnen
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+
+            {/* Fahrzeuge für Members */}
+            <Card className="shadow-lg hover-elevate transition-all" data-testid="card-fahrzeuge">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <span className="text-2xl">🚛</span>
+                  Fahrzeuge
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <p className="text-2xl font-bold" data-testid="text-vehicle-count">
+                    {vehicles?.length || 0}
+                  </p>
+                  <p className="text-sm text-muted-foreground">Fahrzeuge hinterlegt</p>
+                </div>
+                <Link href="/fahrzeuge">
+                  <Button className="w-full" data-testid="button-view-vehicles">
+                    Anzeigen
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+
+            {/* Kameraden für Members */}
+            <Card className="shadow-lg hover-elevate transition-all" data-testid="card-kameraden">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <span className="text-2xl">👥</span>
+                  Kameraden
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <p className="text-2xl font-bold" data-testid="text-kamerad-count">
+                    {kameraden?.length || 0}
+                  </p>
+                  <p className="text-sm text-muted-foreground">Kameraden hinterlegt</p>
+                </div>
+                <Link href="/kameraden">
+                  <Button className="w-full" data-testid="button-view-kameraden">
+                    Anzeigen
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+
+            {/* Besetzungsprüfung für Members */}
+            <Card className="shadow-lg hover-elevate transition-all" data-testid="card-besetzung">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <span className="text-2xl">🚒</span>
+                  Besetzungsprüfung
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-muted-foreground mb-1">Aktuelle Einsatzbereitschaft prüfen</p>
+                <Link href="/mein-einsatz">
+                  <Button className="w-full" data-testid="button-check-einsatz">
+                    Prüfung starten
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+          </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Besetzung & Bedarf */}
+            {/* Besetzung & Bedarf für Admin/Moderator */}
             <Card className="shadow-lg hover-elevate transition-all" data-testid="card-besetzung">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -79,7 +165,7 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            {/* Fahrzeuge */}
+            {/* Fahrzeuge für Admin/Moderator */}
             <Card className="shadow-lg hover-elevate transition-all" data-testid="card-fahrzeuge">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -104,7 +190,7 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            {/* Kameraden */}
+            {/* Kameraden für Admin/Moderator */}
             <Card className="shadow-lg hover-elevate transition-all" data-testid="card-kameraden">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
