@@ -2,7 +2,7 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import session from "express-session";
 import { storage } from "./storage";
-import { insertVehicleSchema, insertKameradSchema, insertEinsatzSchema, insertSettingsSchema, insertQualifikationSchema, insertTerminSchema, insertTerminZusageSchema } from "@shared/schema";
+import { insertVehicleSchema, insertEinsatzSchema, insertSettingsSchema, insertQualifikationSchema, insertTerminSchema, insertTerminZusageSchema } from "@shared/schema";
 import type { User } from "@shared/schema";
 
 // Extend Express session to include user
@@ -130,7 +130,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         username,
         password: "Feuer123",
         role: "member",
-        name: `${vorname} ${nachname}`,
+        vorname,
+        nachname,
+        qualifikationen: [],
         muss_passwort_aendern: true,
       });
       
@@ -166,6 +168,129 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // User endpoints (unified Benutzer management)
+  app.get("/api/users", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      let users = await storage.getAllUsers();
+      
+      // Apply search filter if provided
+      const searchTerm = req.query.search as string;
+      if (searchTerm) {
+        const lowerSearch = searchTerm.toLowerCase();
+        users = users.filter(u => 
+          u.vorname.toLowerCase().includes(lowerSearch) ||
+          u.nachname.toLowerCase().includes(lowerSearch) ||
+          u.username.toLowerCase().includes(lowerSearch)
+        );
+      }
+      
+      // Apply sort (default: by nachname)
+      const sortBy = req.query.sortBy as string || 'nachname';
+      const sortOrder = req.query.sortOrder as string || 'asc';
+      
+      users.sort((a, b) => {
+        let aVal, bVal;
+        if (sortBy === 'vorname') {
+          aVal = a.vorname;
+          bVal = b.vorname;
+        } else if (sortBy === 'username') {
+          aVal = a.username;
+          bVal = b.username;
+        } else {
+          aVal = a.nachname;
+          bVal = b.nachname;
+        }
+        
+        if (sortOrder === 'desc') {
+          return bVal.localeCompare(aVal);
+        }
+        return aVal.localeCompare(bVal);
+      });
+      
+      const sanitized = users.map(sanitizeUser);
+      res.json(sanitized);
+    } catch (error) {
+      res.status(500).json({ error: "Fehler beim Laden der Benutzer" });
+    }
+  });
+
+  app.patch("/api/users/:id", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      
+      // Don't allow password updates through this endpoint
+      delete updates.password;
+      delete updates.id;
+      
+      const user = await storage.updateUser(id, updates);
+      res.json(sanitizeUser(user));
+    } catch (error) {
+      res.status(500).json({ error: "Fehler beim Aktualisieren des Benutzers" });
+    }
+  });
+
+  app.patch("/api/users/:id/role", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { role } = req.body;
+      
+      if (!["admin", "moderator", "member"].includes(role)) {
+        return res.status(400).json({ error: "Ungültige Rolle" });
+      }
+      
+      const user = await storage.updateUserRole(id, role);
+      res.json(sanitizeUser(user));
+    } catch (error) {
+      res.status(500).json({ error: "Fehler beim Aktualisieren der Rolle" });
+    }
+  });
+
+  app.patch("/api/users/:id/qualifikationen", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { qualifikationen } = req.body;
+      
+      if (!Array.isArray(qualifikationen)) {
+        return res.status(400).json({ error: "Qualifikationen müssen ein Array sein" });
+      }
+      
+      const user = await storage.updateUserQualifikationen(id, qualifikationen);
+      res.json(sanitizeUser(user));
+    } catch (error) {
+      res.status(500).json({ error: "Fehler beim Aktualisieren der Qualifikationen" });
+    }
+  });
+
+  app.post("/api/users/:id/reset-password", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const user = await storage.resetPassword(id);
+      res.json(sanitizeUser(user));
+    } catch (error) {
+      res.status(500).json({ error: "Fehler beim Zurücksetzen des Passworts" });
+    }
+  });
+
+  app.delete("/api/users/:id", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteUser(id);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Fehler beim Löschen des Benutzers" });
+    }
+  });
+
+  app.post("/api/users/seed", requireAdmin, async (_req: Request, res: Response) => {
+    try {
+      await storage.seedBenutzer();
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Fehler beim Generieren der Beispieldaten" });
+    }
+  });
+
   // Vehicle endpoints
   app.get("/api/vehicles", requireAuth, async (_req: Request, res: Response) => {
     try {
@@ -193,45 +318,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ error: "Fehler beim Löschen des Fahrzeugs" });
-    }
-  });
-
-  // Kamerad endpoints
-  app.get("/api/kameraden", requireAuth, async (_req: Request, res: Response) => {
-    try {
-      const kameraden = await storage.getAllKameraden();
-      res.json(kameraden);
-    } catch (error) {
-      res.status(500).json({ error: "Fehler beim Laden der Kameraden" });
-    }
-  });
-
-  app.post("/api/kameraden", requireAuth, async (req: Request, res: Response) => {
-    try {
-      const data = insertKameradSchema.parse(req.body);
-      const kamerad = await storage.createKamerad(data);
-      res.status(201).json(kamerad);
-    } catch (error) {
-      res.status(400).json({ error: "Ungültige Kameradendaten" });
-    }
-  });
-
-  app.delete("/api/kameraden/:id", requireAdmin, async (req: Request, res: Response) => {
-    try {
-      const id = parseInt(req.params.id);
-      await storage.deleteKamerad(id);
-      res.json({ success: true });
-    } catch (error) {
-      res.status(500).json({ error: "Fehler beim Löschen des Kameraden" });
-    }
-  });
-
-  app.post("/api/kameraden/seed", requireAdmin, async (_req: Request, res: Response) => {
-    try {
-      await storage.seedKameraden();
-      res.json({ success: true });
-    } catch (error) {
-      res.status(500).json({ error: "Fehler beim Generieren der Beispieldaten" });
     }
   });
 
@@ -315,33 +401,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // User endpoints
-  app.get("/api/users", requireAdmin, async (_req: Request, res: Response) => {
-    try {
-      const users = await storage.getAllUsers();
-      const sanitized = users.map(sanitizeUser);
-      res.json(sanitized);
-    } catch (error) {
-      res.status(500).json({ error: "Fehler beim Laden der Benutzer" });
-    }
-  });
-
-  app.patch("/api/users/:id/role", requireAdmin, async (req: Request, res: Response) => {
-    try {
-      const { id } = req.params;
-      const { role } = req.body;
-      
-      if (!["admin", "moderator", "member"].includes(role)) {
-        return res.status(400).json({ error: "Ungültige Rolle" });
-      }
-      
-      const user = await storage.updateUserRole(id, role);
-      res.json(sanitizeUser(user));
-    } catch (error) {
-      res.status(500).json({ error: "Fehler beim Aktualisieren der Rolle" });
-    }
-  });
-
   // Termine endpoints
   app.get("/api/termine", requireAuth, async (_req: Request, res: Response) => {
     try {
@@ -402,8 +461,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const zugesagt = zusagen.filter(z => z.status === "zugesagt").length;
         const abgesagt = zusagen.filter(z => z.status === "abgesagt").length;
         const ersteller = users.find(u => u.id === termin.ersteller_id);
+        const erstellerName = ersteller ? `${ersteller.vorname} ${ersteller.nachname}` : 'Unbekannt';
         
-        csv += `"${termin.datum}","${termin.uhrzeit}","${termin.titel}","${termin.ort}","${termin.beschreibung}","${ersteller?.name || 'Unbekannt'}",${zugesagt},${abgesagt}\n`;
+        csv += `"${termin.datum}","${termin.uhrzeit}","${termin.titel}","${termin.ort}","${termin.beschreibung}","${erstellerName}",${zugesagt},${abgesagt}\n`;
       }
       
       res.setHeader('Content-Type', 'text/csv; charset=utf-8');
