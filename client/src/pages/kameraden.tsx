@@ -193,9 +193,10 @@ export default function Kameraden() {
 
   const importMutation = useMutation({
     mutationFn: async (csvData: string) => {
-      return await apiRequest("POST", "/api/users/import", { csvData });
+      const response = await apiRequest("POST", "/api/users/import", { csvData });
+      return await response.json();
     },
-    onSuccess: (data: any) => {
+    onSuccess: (data: { imported: number; skipped: number }) => {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
       toast({
         title: "Import erfolgreich",
