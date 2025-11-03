@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, timestamp, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, serial, timestamp, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -21,7 +21,7 @@ export type User = typeof users.$inferSelect;
 
 // Vehicles (Fahrzeuge)
 export const vehicles = pgTable("vehicles", {
-  id: integer("id").primaryKey(),
+  id: serial("id").primaryKey(),
   name: text("name").notNull(),
   funk: text("funk").notNull(), // Funkrufname
   besatzung: integer("besatzung").notNull(), // Crew size
@@ -58,7 +58,7 @@ export type Settings = typeof settings.$inferSelect;
 
 // Qualifikationen (Qualifications)
 export const qualifikationen = pgTable("qualifikationen", {
-  id: integer("id").primaryKey(),
+  id: serial("id").primaryKey(),
   kuerzel: text("kuerzel").notNull().unique(), // e.g., "AGT", "TM"
   name: text("name").notNull(), // e.g., "Atemschutzgeräteträger"
   beschreibung: text("beschreibung").notNull(),
@@ -73,7 +73,7 @@ export const QUALIFIKATIONEN = ["TM", "AGT", "Maschinist", "GF", "Sprechfunker",
 
 // Termine (Calendar events)
 export const termine = pgTable("termine", {
-  id: integer("id").primaryKey(),
+  id: serial("id").primaryKey(),
   titel: text("titel").notNull(),
   beschreibung: text("beschreibung").notNull(),
   datum: text("datum").notNull(), // ISO date string (YYYY-MM-DD)
@@ -88,7 +88,7 @@ export type Termin = typeof termine.$inferSelect;
 
 // Termin Zusagen (Event responses)
 export const terminZusagen = pgTable("termin_zusagen", {
-  id: integer("id").primaryKey(),
+  id: serial("id").primaryKey(),
   termin_id: integer("termin_id").notNull(),
   user_id: text("user_id").notNull(),
   status: text("status").notNull(), // "zugesagt" or "abgesagt"

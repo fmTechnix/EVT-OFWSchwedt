@@ -23,6 +23,9 @@ export async function initializeDatabase() {
     { id: 6, kuerzel: "San", name: "Sanitäter", beschreibung: "Sanitätsausbildung" },
   ];
   await db.insert(qualifikationen).values(quals);
+  
+  // Reset sequence to max ID to prevent duplicate key errors
+  await db.execute(sql`SELECT setval('qualifikationen_id_seq', (SELECT MAX(id) FROM qualifikationen))`);
 
   // Initialize users with hashed passwords
   const defaultUsers = [
@@ -62,6 +65,9 @@ export async function initializeDatabase() {
     { id: 2, name: "DLK 23/12", funk: "Florian Schwedt 1/33/1", besatzung: 3 },
   ];
   await db.insert(vehicles).values(defaultVehicles);
+  
+  // Reset sequence to max ID to prevent duplicate key errors
+  await db.execute(sql`SELECT setval('vehicles_id_seq', (SELECT MAX(id) FROM vehicles))`);
 
   // Initialize settings
   await db.insert(settings).values({
