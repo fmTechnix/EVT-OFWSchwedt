@@ -820,6 +820,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const { date, status, reason } = validation.data;
       
+      // Store old availability for potential rollback
+      let oldAvailability = null;
+      const today = new Date().toISOString().split('T')[0];
+      if (date === today) {
+        try {
+          oldAvailability = await storage.getAvailability(userId, date);
+        } catch {
+          // No existing availability to rollback to
+        }
+      }
+      
       const availability = await storage.setAvailability({
         user_id: userId,
         date,
@@ -828,7 +839,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       // If changing availability for today, trigger automatic reassignment
-      const today = new Date().toISOString().split('T')[0];
       if (date === today) {
         try {
           // Get available users for today
@@ -884,7 +894,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
           await storage.setCurrentAssignments(assignmentsToSave);
         } catch (error) {
           console.error("Error during automatic reassignment after availability change:", error);
-          // Don't fail the availability update if reassignment fails
+          
+          // Rollback availability change if reassignment failed
+          if (oldAvailability) {
+            try {
+              await storage.setAvailability(oldAvailability);
+            } catch (rollbackError) {
+              console.error("Failed to rollback availability change:", rollbackError);
+            }
+          } else {
+            // No old availability, delete the new one
+            try {
+              if (availability.id) {
+                await storage.deleteAvailability(availability.id);
+              }
+            } catch (rollbackError) {
+              console.error("Failed to rollback availability change:", rollbackError);
+            }
+          }
+          
+          return res.status(500).json({ error: "Fehler bei der automatischen Neuzuteilung" });
         }
       }
       
