@@ -18,7 +18,7 @@ export function Navigation() {
   ];
 
   return (
-    <header className="sticky top-0 z-50 border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
+    <header className="sticky top-0 z-50 border-b border-red-800 bg-red-600 text-white shadow-md">
       <div className="flex h-16 items-center justify-between px-6">
         <div className="flex items-center gap-3 font-bold text-lg tracking-tight">
           <img 
@@ -35,7 +35,7 @@ export function Navigation() {
               <Button
                 variant="ghost"
                 size="sm"
-                className={location === item.href ? "bg-muted" : ""}
+                className={`text-white hover:bg-red-700 ${location === item.href ? "bg-red-700" : ""}`}
                 data-testid={`link-${item.label.split(' ')[1].toLowerCase()}`}
               >
                 {item.label}
@@ -46,6 +46,7 @@ export function Navigation() {
             variant="ghost"
             size="sm"
             onClick={() => logout()}
+            className="text-white hover:bg-red-700"
             data-testid="button-logout"
           >
             ⎋ Logout
