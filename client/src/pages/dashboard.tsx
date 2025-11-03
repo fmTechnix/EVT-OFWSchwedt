@@ -1,16 +1,22 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { Navigation } from "@/components/navigation";
 import { useAuth } from "@/lib/auth-context";
-import type { Vehicle, User, Einsatz, Settings, Termin } from "@shared/schema";
+import type { Vehicle, User, Einsatz, Settings, Termin, CurrentAssignment, Availability } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, parseISO, isAfter } from "date-fns";
 import { de } from "date-fns/locale";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const { toast } = useToast();
   
   const { data: vehicles, isLoading: vehiclesLoading } = useQuery<Vehicle[]>({
     queryKey: ["/api/vehicles"],
@@ -26,6 +32,55 @@ export default function Dashboard() {
 
   const { data: termine, isLoading: termineLoading } = useQuery<Termin[]>({
     queryKey: ["/api/termine"],
+  });
+
+  const today = new Date().toISOString().split('T')[0];
+  
+  const { data: myAssignment, isLoading: assignmentLoading } = useQuery<CurrentAssignment | null>({
+    queryKey: ["/api/my-assignment"],
+    enabled: user?.role === "member",
+  });
+
+  const { data: allAssignments, isLoading: allAssignmentsLoading } = useQuery<CurrentAssignment[]>({
+    queryKey: ["/api/current-assignments"],
+    enabled: user?.role === "member" && !!myAssignment,
+  });
+
+  const { data: availability, isLoading: availabilityLoading } = useQuery<Availability | null>({
+    queryKey: ["/api/availability", today],
+    enabled: user?.role === "member",
+  });
+
+  const { data: vehicleConfigs } = useQuery<any[]>({
+    queryKey: ["/api/vehicle-configs"],
+    enabled: user?.role === "member" && !!myAssignment,
+  });
+
+  const availabilityMutation = useMutation({
+    mutationFn: async (status: "available" | "unavailable") => {
+      const response = await apiRequest("POST", "/api/availability", {
+        date: today,
+        status,
+        reason: status === "unavailable" ? "Heute nicht verfügbar" : null,
+      });
+      return await response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/availability", today] });
+      queryClient.invalidateQueries({ queryKey: ["/api/my-assignment"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/current-assignments"] });
+      toast({
+        title: "Verfügbarkeit aktualisiert",
+        description: "Ihre Verfügbarkeit wurde erfolgreich geändert",
+      });
+    },
+    onError: () => {
+      toast({
+        variant: "destructive",
+        title: "Fehler",
+        description: "Verfügbarkeit konnte nicht aktualisiert werden",
+      });
+    },
   });
 
   const isLoading = vehiclesLoading || usersLoading || einsatzLoading || termineLoading;
@@ -70,6 +125,106 @@ export default function Dashboard() {
           </div>
         ) : user?.role === "member" ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Verfügbarkeit */}
+            <Card className="shadow-lg hover-elevate transition-all" data-testid="card-availability">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <span className="text-2xl">✅</span>
+                  Meine Verfügbarkeit heute
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="availability-toggle" className="text-base">
+                    {availability?.status === "unavailable" ? "Nicht verfügbar" : "Verfügbar"}
+                  </Label>
+                  <Switch
+                    id="availability-toggle"
+                    data-testid="switch-availability"
+                    checked={availability?.status !== "unavailable"}
+                    disabled={availabilityMutation.isPending}
+                    onCheckedChange={(checked) => {
+                      availabilityMutation.mutate(checked ? "available" : "unavailable");
+                    }}
+                  />
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {availability?.status === "unavailable" 
+                    ? "Sie sind heute als nicht verfügbar markiert" 
+                    : "Sie sind heute als verfügbar markiert"}
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Meine Zuteilung */}
+            <Card className="shadow-lg hover-elevate transition-all md:col-span-2" data-testid="card-my-assignment">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <span className="text-2xl">🚛</span>
+                  Meine Zuteilung
+                </CardTitle>
+                <CardDescription>
+                  Ihre aktuelle Fahrzeug- und Positionszuteilung
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {assignmentLoading ? (
+                  <Skeleton className="h-20 w-full" />
+                ) : myAssignment ? (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Fahrzeug</p>
+                        <p className="font-semibold" data-testid="text-my-vehicle">
+                          {vehicleConfigs?.find(vc => vc.id === myAssignment.vehicle_config_id)?.vehicle || `ID: ${myAssignment.vehicle_config_id}`}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Position</p>
+                        <p className="font-semibold" data-testid="text-my-position">
+                          {myAssignment.position}
+                        </p>
+                      </div>
+                      {myAssignment.trupp_partner_id && (
+                        <div>
+                          <p className="text-sm text-muted-foreground">Trupp-Partner</p>
+                          <p className="font-semibold" data-testid="text-my-partner">
+                            {users?.find(u => u.id === myAssignment.trupp_partner_id)
+                              ? `${users.find(u => u.id === myAssignment.trupp_partner_id)?.vorname} ${users.find(u => u.id === myAssignment.trupp_partner_id)?.nachname}`
+                              : "Wird geladen..."}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                    {allAssignments && allAssignments.length > 0 && (
+                      <div className="mt-4">
+                        <p className="text-sm font-semibold mb-2">Gesamte Fahrzeugbesetzung:</p>
+                        <div className="space-y-1">
+                          {allAssignments
+                            .filter(a => a.vehicle_config_id === myAssignment.vehicle_config_id)
+                            .map((assignment, idx) => {
+                              const assignedUser = users?.find(u => u.id === assignment.user_id);
+                              return (
+                                <div key={idx} className="flex items-center justify-between text-sm">
+                                  <span className="text-muted-foreground">{assignment.position}</span>
+                                  <Badge variant={assignment.user_id === user?.id ? "default" : "outline"}>
+                                    {assignedUser ? `${assignedUser.vorname} ${assignedUser.nachname}` : "Unbekannt"}
+                                  </Badge>
+                                </div>
+                              );
+                            })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground" data-testid="text-no-assignment">
+                    Sie sind derzeit keinem Fahrzeug zugeteilt.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
             {/* Kalender & Termine für Members */}
             <Card className="shadow-lg hover-elevate transition-all" data-testid="card-kalender">
               <CardHeader>

@@ -827,10 +827,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
         reason: reason || null,
       });
       
-      // If setting unavailable for today, trigger automatic reassignment
+      // If changing availability for today, trigger automatic reassignment
       const today = new Date().toISOString().split('T')[0];
-      if (date === today && status === "unavailable") {
-        // TODO: Trigger automatic reassignment
+      if (date === today) {
+        try {
+          // Get available users for today
+          const availableUsers = await storage.getAvailableUsers(today);
+          
+          // Get all vehicle configurations
+          const vehicleConfigs = await storage.getAllVehicleConfigs();
+          
+          // Run assignment algorithm with only available users
+          const result = assignCrewToVehicles(availableUsers, vehicleConfigs);
+          
+          // Save assignments to database
+          const assignmentsToSave: Array<{
+            user_id: string;
+            vehicle_config_id: number;
+            position: string;
+            trupp_partner_id: string | null;
+          }> = [];
+          
+          for (const vehicleAssignment of result.assignments) {
+            const vehicleConfig = vehicleConfigs.find(
+              vc => vc.vehicle === (vehicleAssignment as any).vehicle
+            );
+            
+            if (!vehicleConfig) continue;
+            
+            for (const slot of vehicleAssignment.slots) {
+              if (slot.assignedUser) {
+                let truppPartnerId: string | null = null;
+                
+                if (slot.position.includes("trupp") && !slot.position.includes("führer")) {
+                  const truppName = slot.position.replace(/\s*\(.*?\)/, "");
+                  const partnerSlot = vehicleAssignment.slots.find(
+                    s => s.position !== slot.position && 
+                         s.position.includes(truppName) && 
+                         s.assignedUser
+                  );
+                  if (partnerSlot && partnerSlot.assignedUser) {
+                    truppPartnerId = partnerSlot.assignedUser.id;
+                  }
+                }
+                
+                assignmentsToSave.push({
+                  user_id: slot.assignedUser.id,
+                  vehicle_config_id: vehicleConfig.id,
+                  position: slot.position,
+                  trupp_partner_id: truppPartnerId,
+                });
+              }
+            }
+          }
+          
+          await storage.setCurrentAssignments(assignmentsToSave);
+        } catch (error) {
+          console.error("Error during automatic reassignment after availability change:", error);
+          // Don't fail the availability update if reassignment fails
+        }
       }
       
       res.json(availability);
@@ -921,6 +976,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }> = [];
       
       for (const vehicleAssignment of result.assignments) {
+        // Find the vehicle config ID by vehicle name
+        const vehicleConfig = vehicleConfigs.find(
+          vc => vc.vehicle === (vehicleAssignment as any).vehicle
+        );
+        
+        if (!vehicleConfig) continue;
+        
         for (const slot of vehicleAssignment.slots) {
           if (slot.assignedUser) {
             // Find trupp partner for positions like "Angriffstrupp", "Wassertrupp", etc.
@@ -940,7 +1002,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             assignmentsToSave.push({
               user_id: slot.assignedUser.id,
-              vehicle_config_id: vehicleAssignment.vehicleConfig.id,
+              vehicle_config_id: vehicleConfig.id,
               position: slot.position,
               trupp_partner_id: truppPartnerId,
             });
