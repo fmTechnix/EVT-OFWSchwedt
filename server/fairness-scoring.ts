@@ -36,6 +36,11 @@ export interface ScoredUser {
 export class FairnessScorer {
   private storage: IStorage;
   
+  // Cached data for performance optimization
+  private userHistoryCache: Map<string, AssignmentHistory[]> = new Map();
+  private userMetricsCache: Map<string, AssignmentHistory> | null = null;
+  private fairnessMetricsCache: Map<string, any> = new Map();
+  
   // Default position weights (higher = rotates faster)
   private static DEFAULT_POSITION_WEIGHTS: Record<string, number> = {
     'Maschinist': 3.0,           // Fahrer rotieren am schnellsten
@@ -51,6 +56,49 @@ export class FairnessScorer {
 
   constructor(storage: IStorage) {
     this.storage = storage;
+  }
+
+  /**
+   * Preload history and metrics for all users (performance optimization)
+   * Call this before scoring multiple positions to avoid O(users × slots) queries
+   */
+  async preloadUserData(userIds: string[], rotationWindow: number): Promise<void> {
+    // Batch-load all histories in parallel
+    const historyPromises = userIds.map(userId => 
+      this.storage.getAssignmentHistory(userId, rotationWindow)
+        .then(history => ({ userId, history }))
+    );
+    
+    const histories = await Promise.all(historyPromises);
+    
+    // Cache results
+    this.userHistoryCache.clear();
+    for (const { userId, history } of histories) {
+      this.userHistoryCache.set(userId, history);
+    }
+    
+    // Batch-load all fairness metrics
+    const metricsPromises = userIds.map(userId =>
+      this.storage.getFairnessMetrics(userId)
+        .then(metrics => ({ userId, metrics }))
+    );
+    
+    const allMetrics = await Promise.all(metricsPromises);
+    
+    this.fairnessMetricsCache.clear();
+    for (const { userId, metrics } of allMetrics) {
+      if (metrics) {
+        this.fairnessMetricsCache.set(userId, metrics);
+      }
+    }
+  }
+
+  /**
+   * Clear cache (call after completing all assignments for a run)
+   */
+  clearCache(): void {
+    this.userHistoryCache.clear();
+    this.fairnessMetricsCache.clear();
   }
 
   /**
@@ -82,13 +130,12 @@ export class FairnessScorer {
     const positionWeight = positionWeights[options.position] || 1.0;
 
     for (const user of qualifiedUsers) {
-      // Hole Assignment-History
-      const history = await this.storage.getAssignmentHistory(user.id, options.rotationWindow);
-      const positionHistory = await this.storage.getRecentAssignmentsByPosition(
-        user.id,
-        options.position,
-        options.rotationWindow
-      );
+      // Use cached data if available, otherwise fetch
+      const history = this.userHistoryCache.get(user.id) || 
+        await this.storage.getAssignmentHistory(user.id, options.rotationWindow);
+      
+      // Filter history for this specific position
+      const positionHistory = history.filter(h => h.position === options.position);
 
       // Berechne Recency Penalty
       const recencyPenalty = this.calculateRecencyPenalty(
@@ -97,8 +144,9 @@ export class FairnessScorer {
         options.rotationWindow
       );
 
-      // Hole Fairness-Metriken
-      const fairnessMetrics = await this.storage.getFairnessMetrics(user.id);
+      // Use cached fairness metrics if available
+      const fairnessMetrics = this.fairnessMetricsCache.get(user.id) ||
+        await this.storage.getFairnessMetrics(user.id);
       const totalAssignments = fairnessMetrics?.total_assignments || 0;
 
       // Berechne finalen Score

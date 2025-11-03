@@ -1241,6 +1241,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get assignment history for current user
+  app.get("/api/assignments/history", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const userId = req.session?.userId;
+      
+      if (!userId) {
+        return res.status(401).json({ error: "Nicht angemeldet" });
+      }
+      
+      const weeks = parseInt(req.query.weeks as string) || 4;
+      const history = await storage.getAssignmentHistory(userId, weeks);
+      res.json(history);
+    } catch (error) {
+      res.status(500).json({ error: "Fehler beim Abrufen der Zuteilungshistorie" });
+    }
+  });
+
+  // Get assignment history for specific user (Admin/Moderator only)
+  app.get("/api/assignments/history/:userId", requireModerator, async (req: Request, res: Response) => {
+    try {
+      const userId = req.params.userId;
+      const weeks = parseInt(req.query.weeks as string) || 4;
+      const history = await storage.getAssignmentHistory(userId, weeks);
+      res.json(history);
+    } catch (error) {
+      res.status(500).json({ error: "Fehler beim Abrufen der Zuteilungshistorie" });
+    }
+  });
+
+  // Get fairness metrics for current user
+  app.get("/api/assignments/fairness/me", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const userId = req.session?.userId;
+      
+      if (!userId) {
+        return res.status(401).json({ error: "Nicht angemeldet" });
+      }
+      
+      const metrics = await storage.getFairnessMetrics(userId);
+      res.json(metrics || null);
+    } catch (error) {
+      res.status(500).json({ error: "Fehler beim Abrufen der Fairness-Metriken" });
+    }
+  });
+
+  // Get all fairness metrics (Admin only)
+  app.get("/api/assignments/fairness", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const metrics = await storage.getAllFairnessMetrics();
+      res.json(metrics);
+    } catch (error) {
+      res.status(500).json({ error: "Fehler beim Abrufen aller Fairness-Metriken" });
+    }
+  });
+
   // Automatic Crew Assignment endpoint
   app.post("/api/crew-assignment", requireAuth, async (req: Request, res: Response) => {
     try {
@@ -1274,7 +1329,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Run assignment algorithm with only available users
-      const result = await assignCrewToVehicles(availableUsers, vehicleConfigs, storage, dateString);
+      const result = await assignCrewToVehicles(availableUsers, vehicleConfigs, storage, today);
       
       // Save assignments to database
       const assignmentsToSave: Array<{

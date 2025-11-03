@@ -219,6 +219,10 @@ export async function assignCrewToVehicles(
   const rotationWindow = settings.rotation_window || 4;
   const rotationWeights = settings.rotation_weights as Record<string, number> | undefined;
   
+  // Preload all user history and metrics for performance (single batch query)
+  const allUserIds = users.map(u => u.id);
+  await fairnessScorer.preloadUserData(allUserIds, rotationWindow);
+  
   let totalFulfilled = 0;
   
   for (const vehicleConfig of vehicleConfigs) {
@@ -336,6 +340,9 @@ export async function assignCrewToVehicles(
     
     assignments.push(vehicleAssignment);
   }
+  
+  // Clear cache after assignment run
+  fairnessScorer.clearCache();
   
   return {
     assignments,
