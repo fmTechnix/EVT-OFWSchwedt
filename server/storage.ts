@@ -12,7 +12,9 @@ import type {
   Availability, InsertAvailability,
   CurrentAssignment, InsertCurrentAssignment,
   PushSubscription, InsertPushSubscription,
-  MaengelMeldung, InsertMaengelMeldung
+  MaengelMeldung, InsertMaengelMeldung,
+  AssignmentHistory, InsertAssignmentHistory,
+  AssignmentFairness, InsertAssignmentFairness
 } from "@shared/schema";
 import { PostgresStorage } from "./pg-storage";
 import { initializeDatabase } from "./init-db";
@@ -97,6 +99,17 @@ export interface IStorage {
   createMaengelMeldung(meldung: InsertMaengelMeldung): Promise<MaengelMeldung>;
   updateMaengelMeldung(id: number, updates: Partial<InsertMaengelMeldung>): Promise<MaengelMeldung>;
   deleteMaengelMeldung(id: number): Promise<void>;
+  
+  // Assignment History (Fairness-Tracking)
+  createAssignmentHistory(insertHistory: InsertAssignmentHistory): Promise<AssignmentHistory>;
+  getAssignmentHistory(userId: string, weeks?: number): Promise<AssignmentHistory[]>;
+  getRecentAssignmentsByPosition(userId: string, position: string, weeks?: number): Promise<AssignmentHistory[]>;
+  
+  // Assignment Fairness
+  getFairnessMetrics(userId: string): Promise<AssignmentFairness | undefined>;
+  getAllFairnessMetrics(): Promise<AssignmentFairness[]>;
+  updateFairnessMetrics(userId: string, position: string): Promise<AssignmentFairness>;
+  resetFairnessMetrics(userId: string): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -147,10 +160,11 @@ export class MemStorage implements IStorage {
     // Initialize default settings
     this.settings = {
       id: 1,
-      schichtlaenge_std: 12,
       min_agt: 2,
       min_maschinist: 1,
       min_gf: 1,
+      rotation_window: 4,
+      rotation_weights: null,
     };
   }
 
@@ -326,6 +340,12 @@ export class MemStorage implements IStorage {
     return vehicle;
   }
 
+  async updateVehicle(id: number, data: InsertVehicle): Promise<Vehicle> {
+    const vehicle: Vehicle = { id, ...data };
+    this.vehicles.set(id, vehicle);
+    return vehicle;
+  }
+
   async deleteVehicle(id: number): Promise<void> {
     this.vehicles.delete(id);
   }
@@ -346,7 +366,11 @@ export class MemStorage implements IStorage {
   }
 
   async updateSettings(insertSettings: InsertSettings): Promise<Settings> {
-    this.settings = { id: 1, ...insertSettings };
+    this.settings = { 
+      id: 1, 
+      ...insertSettings,
+      rotation_window: insertSettings.rotation_window ?? 4,
+    };
     return this.settings;
   }
 
@@ -602,6 +626,36 @@ export class MemStorage implements IStorage {
 
   async deleteMaengelMeldung(id: number): Promise<void> {
     this.maengelMeldungen.delete(id);
+  }
+
+  // Assignment History (Fairness-Tracking) - Stub implementations
+  async createAssignmentHistory(_insertHistory: InsertAssignmentHistory): Promise<AssignmentHistory> {
+    throw new Error("Not implemented in MemStorage");
+  }
+
+  async getAssignmentHistory(_userId: string, _weeks?: number): Promise<AssignmentHistory[]> {
+    throw new Error("Not implemented in MemStorage");
+  }
+
+  async getRecentAssignmentsByPosition(_userId: string, _position: string, _weeks?: number): Promise<AssignmentHistory[]> {
+    throw new Error("Not implemented in MemStorage");
+  }
+
+  // Assignment Fairness - Stub implementations
+  async getFairnessMetrics(_userId: string): Promise<AssignmentFairness | undefined> {
+    throw new Error("Not implemented in MemStorage");
+  }
+
+  async getAllFairnessMetrics(): Promise<AssignmentFairness[]> {
+    throw new Error("Not implemented in MemStorage");
+  }
+
+  async updateFairnessMetrics(_userId: string, _position: string): Promise<AssignmentFairness> {
+    throw new Error("Not implemented in MemStorage");
+  }
+
+  async resetFairnessMetrics(_userId: string): Promise<void> {
+    throw new Error("Not implemented in MemStorage");
   }
 }
 

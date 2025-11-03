@@ -13,6 +13,8 @@ import {
   currentAssignments,
   pushSubscriptions,
   maengelMeldungen,
+  assignmentHistory,
+  assignmentFairness,
   type User,
   type InsertUser,
   type Vehicle,
@@ -37,6 +39,10 @@ import {
   type InsertPushSubscription,
   type MaengelMeldung,
   type InsertMaengelMeldung,
+  type AssignmentHistory,
+  type InsertAssignmentHistory,
+  type AssignmentFairness,
+  type InsertAssignmentFairness,
 } from "@shared/schema";
 import type { IStorage } from "./storage";
 import { hashPassword } from "./password-utils";
@@ -152,10 +158,10 @@ export class PostgresStorage implements IStorage {
       // Initialize default settings if not exists
       const newSettings = await db.insert(settings).values({
         id: 1,
-        schichtlaenge_std: 12,
         min_agt: 2,
         min_maschinist: 1,
         min_gf: 1,
+        rotation_window: 4,
       }).returning();
       return newSettings[0];
     }
@@ -457,5 +463,82 @@ export class PostgresStorage implements IStorage {
 
   async deleteMaengelMeldung(id: number): Promise<void> {
     await db.delete(maengelMeldungen).where(eq(maengelMeldungen.id, id));
+  }
+
+  // Assignment History (Fairness-Tracking)
+  async createAssignmentHistory(insertHistory: InsertAssignmentHistory): Promise<AssignmentHistory> {
+    const result = await db.insert(assignmentHistory).values(insertHistory).returning();
+    return result[0];
+  }
+
+  async getAssignmentHistory(userId: string, weeks: number = 4): Promise<AssignmentHistory[]> {
+    const weeksAgo = new Date();
+    weeksAgo.setDate(weeksAgo.getDate() - (weeks * 7));
+    const dateThreshold = weeksAgo.toISOString().split('T')[0];
+
+    return await db.select().from(assignmentHistory)
+      .where(sql`${assignmentHistory.user_id} = ${userId} AND ${assignmentHistory.assigned_for_date} >= ${dateThreshold}`)
+      .orderBy(desc(assignmentHistory.created_at));
+  }
+
+  async getRecentAssignmentsByPosition(userId: string, position: string, weeks: number = 4): Promise<AssignmentHistory[]> {
+    const weeksAgo = new Date();
+    weeksAgo.setDate(weeksAgo.getDate() - (weeks * 7));
+    const dateThreshold = weeksAgo.toISOString().split('T')[0];
+
+    return await db.select().from(assignmentHistory)
+      .where(sql`${assignmentHistory.user_id} = ${userId} AND ${assignmentHistory.position} = ${position} AND ${assignmentHistory.assigned_for_date} >= ${dateThreshold}`)
+      .orderBy(desc(assignmentHistory.created_at));
+  }
+
+  // Assignment Fairness
+  async getFairnessMetrics(userId: string): Promise<AssignmentFairness | undefined> {
+    const result = await db.select().from(assignmentFairness)
+      .where(eq(assignmentFairness.user_id, userId));
+    return result[0];
+  }
+
+  async getAllFairnessMetrics(): Promise<AssignmentFairness[]> {
+    return await db.select().from(assignmentFairness);
+  }
+
+  async updateFairnessMetrics(userId: string, position: string): Promise<AssignmentFairness> {
+    const existing = await this.getFairnessMetrics(userId);
+
+    if (existing) {
+      // Update existing metrics
+      const perPositionCounts = existing.per_position_counts as any || {};
+      perPositionCounts[position] = (perPositionCounts[position] || 0) + 1;
+
+      const result = await db.update(assignmentFairness)
+        .set({
+          total_assignments: existing.total_assignments + 1,
+          per_position_counts: perPositionCounts,
+          last_position: position,
+          last_assigned_at: new Date(),
+          rolling_fairness_score: existing.total_assignments + 1,
+          updated_at: new Date(),
+        })
+        .where(eq(assignmentFairness.user_id, userId))
+        .returning();
+      return result[0];
+    } else {
+      // Create new entry
+      const result = await db.insert(assignmentFairness)
+        .values({
+          user_id: userId,
+          total_assignments: 1,
+          per_position_counts: { [position]: 1 },
+          last_position: position,
+          last_assigned_at: new Date(),
+          rolling_fairness_score: 1,
+        })
+        .returning();
+      return result[0];
+    }
+  }
+
+  async resetFairnessMetrics(userId: string): Promise<void> {
+    await db.delete(assignmentFairness).where(eq(assignmentFairness.user_id, userId));
   }
 }
