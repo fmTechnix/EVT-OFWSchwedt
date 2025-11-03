@@ -227,6 +227,28 @@ export default function Kameraden() {
     e.target.value = "";
   };
 
+  const seedMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/users/seed", {});
+      return await response.json();
+    },
+    onSuccess: (data: { created: number; skipped: number; message: string }) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      toast({
+        title: "Testbenutzer erstellt",
+        description: data.message,
+        duration: 5000,
+      });
+    },
+    onError: () => {
+      toast({
+        variant: "destructive",
+        title: "Fehler",
+        description: "Testbenutzer konnten nicht erstellt werden",
+      });
+    },
+  });
+
   const handleSubmitRegister = (e: React.FormEvent) => {
     e.preventDefault();
     if (!vorname || !nachname) {
@@ -367,6 +389,16 @@ export default function Kameraden() {
                       disabled={importMutation.isPending}
                     />
                   </label>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => seedMutation.mutate()}
+                  disabled={seedMutation.isPending}
+                  data-testid="button-seed-users"
+                >
+                  <Users className="h-4 w-4 mr-2" />
+                  {seedMutation.isPending ? "Erstelle..." : "77 Testbenutzer"}
                 </Button>
               </div>
             </div>

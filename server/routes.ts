@@ -418,6 +418,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Seed 77 test users
+  app.post("/api/users/seed", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const qualifications = ["TM", "AGT", "MASCH", "GF", "ZF", "FUNK", "FUEASS", "TH", "ABC1", "CBRN_ERKKW", "FAHRER_B", "San", "MZ", "WT18"];
+      const vornamen = ["Max", "Anna", "Peter", "Maria", "Thomas", "Lisa", "Michael", "Sarah", "Andreas", "Julia", "Christian", "Laura", "Daniel", "Sophie", "Martin", "Emma", "Stefan", "Lena", "Markus", "Hannah", "Alexander", "Mia", "Sebastian", "Johanna", "Felix", "Lea"];
+      const nachnamen = ["Müller", "Schmidt", "Schneider", "Fischer", "Weber", "Meyer", "Wagner", "Becker", "Schulz", "Hoffmann", "Koch", "Bauer", "Richter", "Klein", "Wolf", "Schröder", "Neumann", "Schwarz", "Zimmermann", "Braun", "Krüger", "Hofmann", "Hartmann", "Lange", "Schmitt", "Werner"];
+      
+      const created = [];
+      const skipped = [];
+      
+      for (let i = 1; i <= 77; i++) {
+        const vorname = vornamen[i % vornamen.length];
+        const nachname = nachnamen[Math.floor(i / vornamen.length) % nachnamen.length];
+        const username = `${vorname.toLowerCase()}.${nachname.toLowerCase()}${i}`;
+        
+        // Check if user already exists
+        const existing = await storage.getUserByUsername(username);
+        if (existing) {
+          skipped.push(username);
+          continue;
+        }
+        
+        // Assign random qualifications (2-6 per user for realistic distribution)
+        const numQuals = Math.floor(Math.random() * 5) + 2;
+        const userQuals: string[] = [];
+        
+        // Always include TM for most users
+        if (Math.random() > 0.2) {
+          userQuals.push("TM");
+        }
+        
+        // Add random additional qualifications
+        const shuffled = [...qualifications].sort(() => Math.random() - 0.5);
+        for (let j = 0; j < numQuals && j < shuffled.length; j++) {
+          if (!userQuals.includes(shuffled[j])) {
+            userQuals.push(shuffled[j]);
+          }
+        }
+        
+        await storage.createUser({
+          username,
+          password: "Feuer123",
+          role: "member",
+          vorname,
+          nachname,
+          qualifikationen: userQuals,
+          muss_passwort_aendern: false,
+        });
+        
+        created.push(username);
+      }
+      
+      res.json({
+        success: true,
+        created: created.length,
+        skipped: skipped.length,
+        message: `${created.length} Testbenutzer erstellt, ${skipped.length} übersprungen (existieren bereits)`,
+      });
+    } catch (error) {
+      console.error("Seed error:", error);
+      res.status(500).json({ error: "Fehler beim Erstellen der Testbenutzer" });
+    }
+  });
+
   // Vehicle endpoints
   app.get("/api/vehicles", requireAuth, async (_req: Request, res: Response) => {
     try {
