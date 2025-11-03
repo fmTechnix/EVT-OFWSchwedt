@@ -78,8 +78,8 @@ function Router() {
         </ProtectedRoute>
       </Route>
       
-      <Route path="/kameraden">
-        <ProtectedRoute>
+      <Route path="/benutzer">
+        <ProtectedRoute adminOnly>
           <Kameraden />
         </ProtectedRoute>
       </Route>
