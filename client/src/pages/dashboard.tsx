@@ -4,8 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Navigation } from "@/components/navigation";
 import { useAuth } from "@/lib/auth-context";
-import type { Vehicle, Kamerad, Einsatz, Settings } from "@shared/schema";
+import type { Vehicle, User, Einsatz, Settings, Termin } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
+import { format, parseISO, isAfter } from "date-fns";
+import { de } from "date-fns/locale";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -14,15 +16,32 @@ export default function Dashboard() {
     queryKey: ["/api/vehicles"],
   });
 
-  const { data: kameraden, isLoading: kameradenLoading } = useQuery<Kamerad[]>({
-    queryKey: ["/api/kameraden"],
+  const { data: users, isLoading: usersLoading } = useQuery<User[]>({
+    queryKey: ["/api/users/public"],
   });
 
   const { data: einsatz, isLoading: einsatzLoading } = useQuery<Einsatz>({
     queryKey: ["/api/einsatz"],
   });
 
-  const isLoading = vehiclesLoading || kameradenLoading || einsatzLoading;
+  const { data: termine, isLoading: termineLoading } = useQuery<Termin[]>({
+    queryKey: ["/api/termine"],
+  });
+
+  const isLoading = vehiclesLoading || usersLoading || einsatzLoading || termineLoading;
+  
+  // Get next 3 upcoming Termine
+  const upcomingTermine = termine
+    ?.filter((termin) => {
+      const terminDate = parseISO(`${termin.datum}T${termin.uhrzeit}`);
+      return isAfter(terminDate, new Date());
+    })
+    .sort((a, b) => {
+      const dateA = parseISO(`${a.datum}T${a.uhrzeit}`);
+      const dateB = parseISO(`${b.datum}T${b.uhrzeit}`);
+      return dateA.getTime() - dateB.getTime();
+    })
+    .slice(0, 3) || [];
 
   return (
     <div className="min-h-screen bg-background">
@@ -105,13 +124,55 @@ export default function Dashboard() {
               <CardContent className="space-y-4">
                 <div>
                   <p className="text-2xl font-bold" data-testid="text-kamerad-count">
-                    {kameraden?.length || 0}
+                    {users?.length || 0}
                   </p>
                   <p className="text-sm text-muted-foreground">Kameraden hinterlegt</p>
                 </div>
-                <Link href="/kameraden">
-                  <Button className="w-full" data-testid="button-view-kameraden">
-                    Anzeigen
+              </CardContent>
+            </Card>
+
+            {/* Nächste Termine für Members */}
+            <Card className="shadow-lg hover-elevate transition-all md:col-span-2" data-testid="card-upcoming-termine">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <span className="text-2xl">📅</span>
+                  Nächste Termine
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {upcomingTermine.length === 0 ? (
+                  <p className="text-sm text-muted-foreground" data-testid="text-no-termine">
+                    Keine anstehenden Termine
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {upcomingTermine.map((termin) => {
+                      const terminDate = parseISO(`${termin.datum}T${termin.uhrzeit}`);
+                      return (
+                        <div
+                          key={termin.id}
+                          className="border rounded-md p-3 hover-elevate"
+                          data-testid={`termin-${termin.id}`}
+                        >
+                          <p className="font-semibold" data-testid={`text-titel-${termin.id}`}>
+                            {termin.titel}
+                          </p>
+                          <p className="text-sm text-muted-foreground" data-testid={`text-datum-${termin.id}`}>
+                            {format(terminDate, "dd.MM.yyyy 'um' HH:mm 'Uhr'", { locale: de })}
+                          </p>
+                          {termin.ort && (
+                            <p className="text-sm text-muted-foreground" data-testid={`text-ort-${termin.id}`}>
+                              📍 {termin.ort}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                <Link href="/kalender">
+                  <Button variant="outline" className="w-full" data-testid="button-all-termine">
+                    Alle Termine anzeigen
                   </Button>
                 </Link>
               </CardContent>
@@ -201,13 +262,62 @@ export default function Dashboard() {
               <CardContent className="space-y-4">
                 <div>
                   <p className="text-2xl font-bold" data-testid="text-kamerad-count">
-                    {kameraden?.length || 0}
+                    {users?.length || 0}
                   </p>
                   <p className="text-sm text-muted-foreground">Kameraden hinterlegt</p>
                 </div>
-                <Link href="/kameraden">
-                  <Button className="w-full" data-testid="button-view-kameraden">
-                    Anzeigen
+                {user?.role === "admin" && (
+                  <Link href="/benutzer">
+                    <Button className="w-full" data-testid="button-manage-benutzer">
+                      Verwalten
+                    </Button>
+                  </Link>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Nächste Termine für Admin/Moderator */}
+            <Card className="shadow-lg hover-elevate transition-all lg:col-span-3" data-testid="card-upcoming-termine">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <span className="text-2xl">📅</span>
+                  Nächste Termine
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {upcomingTermine.length === 0 ? (
+                  <p className="text-sm text-muted-foreground" data-testid="text-no-termine">
+                    Keine anstehenden Termine
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {upcomingTermine.map((termin) => {
+                      const terminDate = parseISO(`${termin.datum}T${termin.uhrzeit}`);
+                      return (
+                        <div
+                          key={termin.id}
+                          className="border rounded-md p-3 hover-elevate"
+                          data-testid={`termin-${termin.id}`}
+                        >
+                          <p className="font-semibold" data-testid={`text-titel-${termin.id}`}>
+                            {termin.titel}
+                          </p>
+                          <p className="text-sm text-muted-foreground" data-testid={`text-datum-${termin.id}`}>
+                            {format(terminDate, "dd.MM.yyyy 'um' HH:mm 'Uhr'", { locale: de })}
+                          </p>
+                          {termin.ort && (
+                            <p className="text-sm text-muted-foreground" data-testid={`text-ort-${termin.id}`}>
+                              📍 {termin.ort}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                <Link href="/kalender">
+                  <Button variant="outline" className="w-full" data-testid="button-all-termine">
+                    Alle Termine anzeigen
                   </Button>
                 </Link>
               </CardContent>
