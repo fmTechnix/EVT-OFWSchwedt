@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Dialog,
@@ -16,102 +15,46 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { Kamerad, InsertKamerad, Qualifikation, User } from "@shared/schema";
+import type { User, Qualifikation } from "@shared/schema";
 import { useAuth } from "@/lib/auth-context";
 import { Skeleton } from "@/components/ui/skeleton";
-import { UserPlus } from "lucide-react";
+import { UserPlus, Trash2, Key, Search, Users } from "lucide-react";
 
 export default function Kameraden() {
-  const [name, setName] = useState("");
-  const [selectedQuals, setSelectedQuals] = useState<string[]>([]);
-  const [dialogOpen, setDialogOpen] = useState(false);
   const [vorname, setVorname] = useState("");
   const [nachname, setNachname] = useState("");
+  const [registerDialogOpen, setRegisterDialogOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortBy, setSortBy] = useState<"nachname" | "vorname" | "username">("nachname");
+  const [editingUser, setEditingUser] = useState<Omit<User, "password"> | null>(null);
+  const [editingQuals, setEditingQuals] = useState<string[]>([]);
   const { toast } = useToast();
   const { user } = useAuth();
 
-  const { data: kameraden, isLoading } = useQuery<Kamerad[]>({
-    queryKey: ["/api/kameraden"],
+  const { data: users, isLoading: usersLoading } = useQuery<Omit<User, "password">[]>({
+    queryKey: ["/api/users", { search: searchTerm, sortBy }],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (searchTerm) params.append("search", searchTerm);
+      params.append("sortBy", sortBy);
+      const response = await fetch(`/api/users?${params}`);
+      if (!response.ok) throw new Error("Failed to fetch users");
+      return response.json();
+    },
   });
 
   const { data: qualifikationen, isLoading: qualsLoading } = useQuery<Qualifikation[]>({
     queryKey: ["/api/qualifikationen"],
   });
 
-  const { data: users, isLoading: usersLoading } = useQuery<Omit<User, "password">[]>({
-    queryKey: ["/api/users"],
-  });
-
-  const createMutation = useMutation({
-    mutationFn: async (data: InsertKamerad) => {
-      return await apiRequest("POST", "/api/kameraden", data);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/kameraden"] });
-      setName("");
-      setSelectedQuals([]);
-      toast({
-        title: "Kamerad hinzugefügt",
-        description: "Der Kamerad wurde erfolgreich hinzugefügt",
-      });
-    },
-    onError: () => {
-      toast({
-        variant: "destructive",
-        title: "Fehler",
-        description: "Kamerad konnte nicht hinzugefügt werden",
-      });
-    },
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: async (id: number) => {
-      return await apiRequest("DELETE", `/api/kameraden/${id}`, {});
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/kameraden"] });
-      toast({
-        title: "Kamerad gelöscht",
-        description: "Der Kamerad wurde erfolgreich gelöscht",
-      });
-    },
-    onError: () => {
-      toast({
-        variant: "destructive",
-        title: "Fehler",
-        description: "Kamerad konnte nicht gelöscht werden",
-      });
-    },
-  });
-
-  const seedMutation = useMutation({
-    mutationFn: async () => {
-      return await apiRequest("POST", "/api/kameraden/seed", {});
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/kameraden"] });
-      toast({
-        title: "Beispieldaten erstellt",
-        description: "77 Beispielkameraden wurden erfolgreich generiert",
-      });
-    },
-    onError: () => {
-      toast({
-        variant: "destructive",
-        title: "Fehler",
-        description: "Beispieldaten konnten nicht erstellt werden",
-      });
-    },
-  });
-
   const registerMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/auth/register", { vorname, nachname });
-      return await response.json();
+      return await apiRequest("POST", "/api/auth/register", { vorname, nachname });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
@@ -120,22 +63,22 @@ export default function Kameraden() {
         description: `Login: ${vorname.toLowerCase()}.${nachname.toLowerCase()} mit Passwort "Feuer123"`,
         duration: 10000,
       });
-      setDialogOpen(false);
+      setRegisterDialogOpen(false);
       setVorname("");
       setNachname("");
     },
-    onError: (error: Error) => {
+    onError: () => {
       toast({
         variant: "destructive",
         title: "Fehler",
-        description: error.message.includes("409") ? "Benutzer existiert bereits" : "Registrierung fehlgeschlagen",
+        description: "Benutzer konnte nicht registriert werden",
       });
     },
   });
 
-  const updateUserRoleMutation = useMutation({
-    mutationFn: async ({ userId, role }: { userId: string, role: string }) => {
-      return await apiRequest("PATCH", `/api/users/${userId}/role`, { role });
+  const updateRoleMutation = useMutation({
+    mutationFn: async ({ id, role }: { id: string; role: string }) => {
+      return await apiRequest("PATCH", `/api/users/${id}/role`, { role });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
@@ -153,335 +96,395 @@ export default function Kameraden() {
     },
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim()) return;
-    
-    createMutation.mutate({
-      name: name.trim(),
-      qualifikationen: selectedQuals,
-    });
-  };
+  const updateQualsMutation = useMutation({
+    mutationFn: async ({ id, qualifikationen }: { id: string; qualifikationen: string[] }) => {
+      return await apiRequest("PATCH", `/api/users/${id}/qualifikationen`, { qualifikationen });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      toast({
+        title: "Qualifikationen aktualisiert",
+        description: "Die Qualifikationen wurden erfolgreich geändert",
+      });
+      setEditingUser(null);
+    },
+    onError: () => {
+      toast({
+        variant: "destructive",
+        title: "Fehler",
+        description: "Qualifikationen konnten nicht aktualisiert werden",
+      });
+    },
+  });
 
-  const handleRegister = (e: React.FormEvent) => {
+  const resetPasswordMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest("POST", `/api/users/${id}/reset-password`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      toast({
+        title: "Passwort zurückgesetzt",
+        description: 'Passwort wurde auf "Feuer123" zurückgesetzt',
+      });
+    },
+    onError: () => {
+      toast({
+        variant: "destructive",
+        title: "Fehler",
+        description: "Passwort konnte nicht zurückgesetzt werden",
+      });
+    },
+  });
+
+  const deleteUserMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest("DELETE", `/api/users/${id}`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      toast({
+        title: "Benutzer gelöscht",
+        description: "Der Benutzer wurde erfolgreich gelöscht",
+      });
+    },
+    onError: () => {
+      toast({
+        variant: "destructive",
+        title: "Fehler",
+        description: "Benutzer konnte nicht gelöscht werden",
+      });
+    },
+  });
+
+  const seedMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("POST", "/api/users/seed", {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      toast({
+        title: "Beispieldaten erstellt",
+        description: "77 Beispielbenutzer wurden erfolgreich generiert",
+      });
+    },
+    onError: () => {
+      toast({
+        variant: "destructive",
+        title: "Fehler",
+        description: "Beispieldaten konnten nicht erstellt werden",
+      });
+    },
+  });
+
+  const handleSubmitRegister = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!vorname || !nachname) {
+      toast({
+        variant: "destructive",
+        title: "Fehler",
+        description: "Bitte Vor- und Nachname eingeben",
+      });
+      return;
+    }
     registerMutation.mutate();
   };
 
-  const handleDelete = (id: number, kameradName: string) => {
-    if (confirm(`Kamerad "${kameradName}" wirklich löschen?`)) {
-      deleteMutation.mutate(id);
+  const handleOpenEditQuals = (u: Omit<User, "password">) => {
+    setEditingUser(u);
+    setEditingQuals(u.qualifikationen);
+  };
+
+  const handleSaveQuals = () => {
+    if (editingUser) {
+      updateQualsMutation.mutate({ id: editingUser.id, qualifikationen: editingQuals });
     }
   };
 
-  const handleQualChange = (qual: string, checked: boolean) => {
-    if (checked) {
-      setSelectedQuals([...selectedQuals, qual]);
+  const toggleQual = (kuerzel: string) => {
+    if (editingQuals.includes(kuerzel)) {
+      setEditingQuals(editingQuals.filter(q => q !== kuerzel));
     } else {
-      setSelectedQuals(selectedQuals.filter(q => q !== qual));
+      setEditingQuals([...editingQuals, kuerzel]);
     }
   };
+
+  if (!user || user.role !== "admin") {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <div className="container mx-auto p-8">
+          <Card>
+            <CardHeader>
+              <CardTitle>Keine Berechtigung</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p>Sie haben keine Berechtigung, diese Seite anzuzeigen.</p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
-      
-      <main className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-8">
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-bold flex items-center gap-3">
-            <span className="text-4xl">👥</span>
-            Kameraden & Benutzer
-          </h1>
-        </div>
-
-        <Tabs defaultValue="kameraden" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 max-w-md">
-            <TabsTrigger value="kameraden">Kameraden ({kameraden?.length || 0})</TabsTrigger>
-            <TabsTrigger value="benutzer">Benutzer ({users?.length || 0})</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="kameraden">
-            <div className="flex justify-end mb-4">
-              {user?.role === "admin" && (
-                <Button
-                  onClick={() => seedMutation.mutate()}
-                  disabled={seedMutation.isPending}
-                  data-testid="button-seed"
-                >
-                  77 Beispiele generieren
-                </Button>
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Kameraden Liste */}
-              <Card className="shadow-lg">
-                <CardHeader>
-                  <CardTitle>Kameradenliste</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {isLoading ? (
-                    <div className="space-y-3">
-                      {[1, 2, 3].map((i) => <Skeleton key={i} className="h-12 w-full" />)}
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Name</TableHead>
-                            <TableHead>Qualifikationen</TableHead>
-                            {user?.role === "admin" && <TableHead className="w-24"></TableHead>}
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {kameraden?.length === 0 ? (
-                            <TableRow>
-                              <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
-                                Noch keine Kameraden vorhanden
-                              </TableCell>
-                            </TableRow>
-                          ) : (
-                            kameraden?.map((kamerad) => (
-                              <TableRow key={kamerad.id} data-testid={`row-kamerad-${kamerad.id}`}>
-                                <TableCell className="font-semibold" data-testid={`text-name-${kamerad.id}`}>
-                                  {kamerad.name}
-                                </TableCell>
-                                <TableCell>
-                                  <div className="flex flex-wrap gap-1">
-                                    {kamerad.qualifikationen.map((qual) => (
-                                      <Badge key={qual} variant="secondary" className="text-xs">
-                                        {qual}
-                                      </Badge>
-                                    ))}
-                                  </div>
-                                </TableCell>
-                                {user?.role === "admin" && (
-                                  <TableCell>
-                                    <Button
-                                      variant="destructive"
-                                      size="sm"
-                                      onClick={() => handleDelete(kamerad.id, kamerad.name)}
-                                      disabled={deleteMutation.isPending}
-                                      data-testid={`button-delete-${kamerad.id}`}
-                                    >
-                                      Löschen
-                                    </Button>
-                                  </TableCell>
-                                )}
-                              </TableRow>
-                            ))
-                          )}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Neuer Kamerad */}
-              <Card className="shadow-lg">
-                <CardHeader>
-                  <CardTitle>Neuer Kamerad</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleSubmit} className="space-y-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="name">Name</Label>
-                      <Input
-                        id="name"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        placeholder="z.B. Max Mustermann"
-                        required
-                        data-testid="input-name"
-                        className="h-11"
-                      />
-                    </div>
-
-                    <div className="space-y-3">
-                      <Label>Qualifikationen</Label>
-                      {qualsLoading ? (
-                        <Skeleton className="h-24 w-full" />
-                      ) : (
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                          {qualifikationen?.map((qual) => (
-                            <div key={qual.kuerzel} className="flex items-center space-x-2">
-                              <Checkbox
-                                id={qual.kuerzel}
-                                checked={selectedQuals.includes(qual.kuerzel)}
-                                onCheckedChange={(checked) => handleQualChange(qual.kuerzel, checked as boolean)}
-                                data-testid={`checkbox-${qual.kuerzel.toLowerCase()}`}
-                              />
-                              <label
-                                htmlFor={qual.kuerzel}
-                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                              >
-                                {qual.kuerzel}
-                              </label>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    <Button
-                      type="submit"
-                      className="w-full h-11"
-                      disabled={createMutation.isPending}
-                      data-testid="button-add-kamerad"
-                    >
-                      {createMutation.isPending ? "Wird gespeichert..." : "Kamerad hinzufügen"}
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="benutzer">
-            <div className="flex justify-end mb-4">
-              {user?.role === "admin" && (
-                <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <div className="container mx-auto p-8">
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between gap-2">
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Benutzer
+              </CardTitle>
+              <div className="flex gap-2">
+                <Dialog open={registerDialogOpen} onOpenChange={setRegisterDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button data-testid="button-register-user">
-                      <UserPlus className="mr-2 h-4 w-4" />
-                      Benutzer registrieren
+                    <Button variant="default" size="sm" data-testid="button-add-user">
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Benutzer hinzufügen
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-md">
+                  <DialogContent>
                     <DialogHeader>
                       <DialogTitle>Neuen Benutzer registrieren</DialogTitle>
                       <DialogDescription>
-                        Der Benutzer erhält das Standard-Passwort "Feuer123" und muss es beim ersten Login ändern.
+                        Erstellen Sie einen neuen Benutzer. Der Benutzername wird automatisch aus Vor- und Nachname generiert.
                       </DialogDescription>
                     </DialogHeader>
-                    <form onSubmit={handleRegister} className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="vorname">Vorname</Label>
-                        <Input
-                          id="vorname"
-                          value={vorname}
-                          onChange={(e) => setVorname(e.target.value)}
-                          placeholder="z.B. Max"
-                          required
-                          data-testid="input-vorname"
-                          className="h-11"
-                        />
+                    <form onSubmit={handleSubmitRegister}>
+                      <div className="space-y-4 py-4">
+                        <div>
+                          <Label htmlFor="vorname">Vorname</Label>
+                          <Input
+                            id="vorname"
+                            data-testid="input-vorname"
+                            value={vorname}
+                            onChange={(e) => setVorname(e.target.value)}
+                            placeholder="Max"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="nachname">Nachname</Label>
+                          <Input
+                            id="nachname"
+                            data-testid="input-nachname"
+                            value={nachname}
+                            onChange={(e) => setNachname(e.target.value)}
+                            placeholder="Mustermann"
+                          />
+                        </div>
+                        {vorname && nachname && (
+                          <div className="text-sm text-muted-foreground">
+                            Benutzername: {vorname.toLowerCase()}.{nachname.toLowerCase()}
+                            <br />
+                            Passwort: Feuer123 (muss beim ersten Login geändert werden)
+                          </div>
+                        )}
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="nachname">Nachname</Label>
-                        <Input
-                          id="nachname"
-                          value={nachname}
-                          onChange={(e) => setNachname(e.target.value)}
-                          placeholder="z.B. Mustermann"
-                          required
-                          data-testid="input-nachname"
-                          className="h-11"
-                        />
-                      </div>
-                      <div className="text-sm text-muted-foreground bg-muted p-3 rounded-md">
-                        Login: <strong>{vorname && nachname ? `${vorname.toLowerCase()}.${nachname.toLowerCase()}` : "(wird generiert)"}</strong>
-                        <br />
-                        Passwort: <strong>Feuer123</strong>
-                      </div>
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => setDialogOpen(false)}
-                          className="h-11"
-                        >
-                          Abbrechen
+                      <DialogFooter>
+                        <Button type="submit" data-testid="button-submit-register" disabled={registerMutation.isPending}>
+                          {registerMutation.isPending ? "Wird erstellt..." : "Benutzer erstellen"}
                         </Button>
-                        <Button
-                          type="submit"
-                          disabled={registerMutation.isPending}
-                          className="h-11"
-                          data-testid="button-submit-register"
-                        >
-                          {registerMutation.isPending ? "Wird erstellt..." : "Registrieren"}
-                        </Button>
-                      </div>
+                      </DialogFooter>
                     </form>
                   </DialogContent>
                 </Dialog>
-              )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => seedMutation.mutate()}
+                  disabled={seedMutation.isPending}
+                  data-testid="button-seed-users"
+                >
+                  {seedMutation.isPending ? "Generiere..." : "77 Beispieldaten"}
+                </Button>
+              </div>
             </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Benutzer suchen..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-8"
+                    data-testid="input-search"
+                  />
+                </div>
+                <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
+                  <SelectTrigger className="w-[180px]" data-testid="select-sort">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="nachname">Nach Nachname</SelectItem>
+                    <SelectItem value="vorname">Nach Vorname</SelectItem>
+                    <SelectItem value="username">Nach Username</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <Card className="shadow-lg">
-              <CardHeader>
-                <CardTitle>Benutzerverwaltung</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {usersLoading ? (
-                  <div className="space-y-4">
-                    {[1, 2, 3].map((i) => (
-                      <Skeleton key={i} className="h-16 w-full" />
-                    ))}
-                  </div>
-                ) : (
+              {usersLoading ? (
+                <div className="space-y-2">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <Skeleton key={i} className="h-16 w-full" />
+                  ))}
+                </div>
+              ) : (
+                <div className="border rounded-md">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Benutzername</TableHead>
-                        <TableHead>Name</TableHead>
+                        <TableHead>Vorname</TableHead>
+                        <TableHead>Nachname</TableHead>
+                        <TableHead>Username</TableHead>
                         <TableHead>Rolle</TableHead>
-                        {user?.role === "admin" && <TableHead className="w-48">Aktion</TableHead>}
+                        <TableHead>Qualifikationen</TableHead>
+                        <TableHead className="text-right">Aktionen</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {users && users.length > 0 ? (
-                        users.map((u) => (
-                          <TableRow key={u.id} data-testid={`row-user-${u.id}`}>
-                            <TableCell className="font-medium" data-testid={`text-username-${u.id}`}>
-                              {u.username}
-                            </TableCell>
-                            <TableCell data-testid={`text-name-${u.id}`}>
-                              {u.name}
-                            </TableCell>
-                            <TableCell data-testid={`text-role-${u.id}`}>
-                              {u.role === "admin" ? "Administrator" : u.role === "moderator" ? "Moderator" : "Mitglied"}
-                            </TableCell>
-                            {user?.role === "admin" && (
-                              <TableCell>
-                                <Select
-                                  value={u.role}
-                                  onValueChange={(role) => updateUserRoleMutation.mutate({ userId: u.id, role })}
-                                  disabled={updateUserRoleMutation.isPending}
-                                >
-                                  <SelectTrigger 
-                                    className="h-9 w-[150px]" 
-                                    data-testid={`select-role-${u.id}`}
-                                  >
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="admin">Administrator</SelectItem>
-                                    <SelectItem value="moderator">Moderator</SelectItem>
-                                    <SelectItem value="member">Mitglied</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </TableCell>
-                            )}
-                          </TableRow>
-                        ))
-                      ) : (
+                      {users && users.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={4} className="text-center text-muted-foreground">
-                            Keine Benutzer vorhanden
+                          <TableCell colSpan={6} className="text-center text-muted-foreground">
+                            Keine Benutzer gefunden
                           </TableCell>
                         </TableRow>
+                      ) : (
+                        users?.map((u) => (
+                          <TableRow key={u.id} data-testid={`row-user-${u.id}`}>
+                            <TableCell data-testid={`text-vorname-${u.id}`}>{u.vorname}</TableCell>
+                            <TableCell data-testid={`text-nachname-${u.id}`}>{u.nachname}</TableCell>
+                            <TableCell data-testid={`text-username-${u.id}`}>{u.username}</TableCell>
+                            <TableCell>
+                              <Select
+                                value={u.role}
+                                onValueChange={(role) => updateRoleMutation.mutate({ id: u.id, role })}
+                                data-testid={`select-role-${u.id}`}
+                              >
+                                <SelectTrigger className="w-[140px]">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="admin">Admin</SelectItem>
+                                  <SelectItem value="moderator">Moderator</SelectItem>
+                                  <SelectItem value="member">Member</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-wrap gap-1">
+                                {u.qualifikationen.length === 0 ? (
+                                  <span className="text-sm text-muted-foreground">Keine</span>
+                                ) : (
+                                  u.qualifikationen.map((q) => (
+                                    <Badge key={q} variant="secondary" data-testid={`badge-qual-${q}-${u.id}`}>
+                                      {q}
+                                    </Badge>
+                                  ))
+                                )}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleOpenEditQuals(u)}
+                                  data-testid={`button-edit-quals-${u.id}`}
+                                  className="h-6 px-2 text-xs"
+                                >
+                                  Bearbeiten
+                                </Button>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex justify-end gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => resetPasswordMutation.mutate(u.id)}
+                                  data-testid={`button-reset-password-${u.id}`}
+                                  title="Passwort zurücksetzen"
+                                >
+                                  <Key className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => deleteUserMutation.mutate(u.id)}
+                                  data-testid={`button-delete-user-${u.id}`}
+                                  title="Benutzer löschen"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
                       )}
                     </TableBody>
                   </Table>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </main>
+                </div>
+              )}
+
+              {users && users.length > 0 && (
+                <div className="text-sm text-muted-foreground">
+                  {users.length} Benutzer gesamt
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Qualifications Edit Dialog */}
+      <Dialog open={!!editingUser} onOpenChange={(open) => !open && setEditingUser(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Qualifikationen bearbeiten</DialogTitle>
+            <DialogDescription>
+              {editingUser && `${editingUser.vorname} ${editingUser.nachname} (${editingUser.username})`}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            {qualsLoading ? (
+              <div className="space-y-2">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <Skeleton key={i} className="h-6 w-full" />
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {qualifikationen?.map((qual) => (
+                  <div key={qual.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`qual-${qual.id}`}
+                      checked={editingQuals.includes(qual.kuerzel)}
+                      onCheckedChange={() => toggleQual(qual.kuerzel)}
+                      data-testid={`checkbox-qual-${qual.kuerzel}`}
+                    />
+                    <label
+                      htmlFor={`qual-${qual.id}`}
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                    >
+                      <span className="font-bold">{qual.kuerzel}</span> - {qual.name}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingUser(null)} data-testid="button-cancel-quals">
+              Abbrechen
+            </Button>
+            <Button onClick={handleSaveQuals} disabled={updateQualsMutation.isPending} data-testid="button-save-quals">
+              {updateQualsMutation.isPending ? "Speichere..." : "Speichern"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

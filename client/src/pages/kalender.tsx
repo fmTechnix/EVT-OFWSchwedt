@@ -342,7 +342,7 @@ function TerminCard({ termin, users, currentUserId }: {
                 📍 {termin.ort}
               </div>
               <div data-testid={`text-ersteller-${termin.id}`}>
-                👤 {ersteller?.name || "Unbekannt"}
+                👤 {ersteller ? `${ersteller.vorname} ${ersteller.nachname}` : "Unbekannt"}
               </div>
             </div>
           </div>
@@ -399,7 +399,7 @@ function TerminCard({ termin, users, currentUserId }: {
                     const user = users.find((u) => u.id === z.user_id);
                     return (
                       <div key={z.id} className="text-muted-foreground">
-                        {user?.name || "Unbekannt"}
+                        {user ? `${user.vorname} ${user.nachname}` : "Unbekannt"}
                       </div>
                     );
                   })}
@@ -417,7 +417,7 @@ function TerminCard({ termin, users, currentUserId }: {
                     const user = users.find((u) => u.id === z.user_id);
                     return (
                       <div key={z.id} className="text-muted-foreground">
-                        {user?.name || "Unbekannt"}
+                        {user ? `${user.vorname} ${user.nachname}` : "Unbekannt"}
                       </div>
                     );
                   })}
