@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { Settings, Einsatz, Qualifikation } from "@shared/schema";
+import type { Settings, Einsatz, Qualifikation, User } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Trash2, Plus } from "lucide-react";
 import {
@@ -19,6 +19,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function Einstellungen() {
   const { toast } = useToast();
@@ -33,6 +40,10 @@ export default function Einstellungen() {
 
   const { data: qualifikationen, isLoading: qualifikationenLoading } = useQuery<Qualifikation[]>({
     queryKey: ["/api/qualifikationen"],
+  });
+
+  const { data: users, isLoading: usersLoading } = useQuery<Omit<User, "password">[]>({
+    queryKey: ["/api/users"],
   });
 
   const [schichtlaenge, setSchichtlaenge] = useState("");
@@ -146,6 +157,26 @@ export default function Einstellungen() {
         variant: "destructive",
         title: "Fehler",
         description: "Qualifikation konnte nicht gelöscht werden",
+      });
+    },
+  });
+
+  const updateUserRoleMutation = useMutation({
+    mutationFn: async ({ userId, role }: { userId: string, role: string }) => {
+      return await apiRequest("PATCH", `/api/users/${userId}/role`, { role });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      toast({
+        title: "Rolle aktualisiert",
+        description: "Die Benutzerrolle wurde erfolgreich geändert",
+      });
+    },
+    onError: () => {
+      toast({
+        variant: "destructive",
+        title: "Fehler",
+        description: "Rolle konnte nicht aktualisiert werden",
       });
     },
   });
@@ -284,6 +315,74 @@ export default function Einstellungen() {
                   {saveMutation.isPending ? "Wird gespeichert..." : "Einstellungen speichern"}
                 </Button>
               </form>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-lg mt-8">
+          <CardHeader>
+            <CardTitle>Benutzer und Rollen</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {usersLoading ? (
+              <div className="space-y-4">
+                {[1, 2, 3].map((i) => (
+                  <Skeleton key={i} className="h-16 w-full" />
+                ))}
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Benutzername</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Rolle</TableHead>
+                    <TableHead className="w-48">Aktion</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {users && users.length > 0 ? (
+                    users.map((user) => (
+                      <TableRow key={user.id} data-testid={`row-user-${user.id}`}>
+                        <TableCell className="font-medium" data-testid={`text-username-${user.id}`}>
+                          {user.username}
+                        </TableCell>
+                        <TableCell data-testid={`text-name-${user.id}`}>
+                          {user.name}
+                        </TableCell>
+                        <TableCell data-testid={`text-role-${user.id}`}>
+                          {user.role === "admin" ? "Administrator" : user.role === "moderator" ? "Moderator" : "Mitglied"}
+                        </TableCell>
+                        <TableCell>
+                          <Select
+                            value={user.role}
+                            onValueChange={(role) => updateUserRoleMutation.mutate({ userId: user.id, role })}
+                            disabled={updateUserRoleMutation.isPending}
+                          >
+                            <SelectTrigger 
+                              className="h-9 w-[150px]" 
+                              data-testid={`select-role-${user.id}`}
+                            >
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="admin">Administrator</SelectItem>
+                              <SelectItem value="moderator">Moderator</SelectItem>
+                              <SelectItem value="member">Mitglied</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center text-muted-foreground">
+                        Keine Benutzer vorhanden
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
             )}
           </CardContent>
         </Card>
