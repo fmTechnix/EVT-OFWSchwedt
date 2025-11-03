@@ -40,6 +40,13 @@ The system supports three user roles with different access levels:
 
 Preferred communication style: Simple, everyday language.
 
+## Test Credentials
+
+For testing purposes, the following default users are available:
+- **Admin**: username "admin", password "admin"
+- **Moderator**: username "moderator", password "moderator123"
+- **Member**: username "member", password "member123"
+
 ## System Architecture
 
 ### Frontend Architecture

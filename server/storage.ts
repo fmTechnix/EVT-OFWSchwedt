@@ -132,7 +132,7 @@ export class MemStorage implements IStorage {
     const admin: User = {
       id: randomUUID(),
       username: "admin",
-      password: "admin123",
+      password: "admin",
       role: "admin",
       vorname: "Admin",
       nachname: "User",
@@ -207,6 +207,7 @@ export class MemStorage implements IStorage {
       ...insertUser,
       id,
       qualifikationen: insertUser.qualifikationen || [],
+      muss_passwort_aendern: insertUser.muss_passwort_aendern ?? false,
     };
     this.users.set(id, user);
     return user;
