@@ -1,0 +1,28 @@
+
+{% extends "base.html" %}
+{% block title %}Dashboard · EVT{% endblock %}
+{% block content %}
+<div class="grid grid-3">
+  <div class="card">
+    <h3>Besetzung & Bedarf</h3>
+    <p>
+      <strong>Stichwort:</strong> {{ einsatz.stichwort }}<br/>
+      <strong>Bedarf:</strong> {{ einsatz.mannschaftsbedarf }}
+    </p>
+    <p class="small"><small class="muted">Einstellungen → Mindestrollen & Stichwort</small></p>
+    <a class="btn" href="{{ url_for('mein_einsatz_view') }}">Mein Einsatz prüfen</a>
+  </div>
+  <div class="card">
+    <h3>Fahrzeuge</h3>
+    <p>{{ vehicles|length }} Fahrzeuge hinterlegt.</p>
+    {% if session.get('role') == 'admin' %}
+      <a class="btn" href="{{ url_for('vehicles_view') }}">Verwalten</a>
+    {% endif %}
+  </div>
+  <div class="card">
+    <h3>Kameraden</h3>
+    <p>{{ kameraden|length }} Kameraden hinterlegt.</p>
+    <a class="btn" href="{{ url_for('kameraden_view') }}">Anzeigen</a>
+  </div>
+</div>
+{% endblock %}

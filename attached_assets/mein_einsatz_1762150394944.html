@@ -1,0 +1,28 @@
+
+{% extends "base.html" %}
+{% block title %}Mein Einsatz · EVT{% endblock %}
+{% block content %}
+<div class="card">
+  <h3>Besetzungscheck</h3>
+  <p><strong>Stichwort:</strong> {{ einsatz.stichwort }} | <strong>Bedarf gesamt:</strong> {{ need.mannschaftsbedarf }}</p>
+  <div class="grid grid-3" style="margin-top:8px;">
+    <div class="card">
+      <h4>Vorhanden</h4>
+      <p>AGT: {{ check.AGT }}<br>Maschinist: {{ check.Maschinist }}<br>GF: {{ check.GF }}<br>Gesamt: {{ check.gesamt }}</p>
+    </div>
+    <div class="card">
+      <h4>Minima</h4>
+      <p>AGT ≥ {{ need.min_agt }}<br>Maschinist ≥ {{ need.min_maschinist }}<br>GF ≥ {{ need.min_gf }}</p>
+    </div>
+    <div class="card">
+      <h4>Status</h4>
+      {% if ok %}
+        <div class="flash ok">✅ Mindestanforderungen erfüllt</div>
+      {% else %}
+        <div class="flash error">❌ Anforderungen nicht erfüllt</div>
+      {% endif %}
+      <small class="muted">Passe die Minima unter Einstellungen an.</small>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,41 @@
+
+{% extends "base.html" %}
+{% block title %}Einstellungen · EVT{% endblock %}
+{% block content %}
+<div class="card">
+  <h3>Einsatz & Mindestanforderungen</h3>
+  <form method="post" class="grid grid-3" style="margin-top:12px;">
+    <div>
+      <label>Schichtlänge (Std)</label>
+      <input type="number" name="schichtlaenge_std" value="{{ settings.schichtlaenge_std }}">
+    </div>
+    <div>
+      <label>Min. AGT</label>
+      <input type="number" name="min_agt" value="{{ settings.min_agt }}">
+    </div>
+    <div>
+      <label>Min. Maschinist</label>
+      <input type="number" name="min_maschinist" value="{{ settings.min_maschinist }}">
+    </div>
+    <div>
+      <label>Min. Gruppenführer</label>
+      <input type="number" name="min_gf" value="{{ settings.min_gf }}">
+    </div>
+    <div>
+      <label>Stichwort</label>
+      <input name="stichwort" value="{{ einsatz.stichwort }}">
+    </div>
+    <div>
+      <label>Mannschaftsbedarf</label>
+      <input type="number" name="mannschaftsbedarf" value="{{ einsatz.mannschaftsbedarf }}">
+    </div>
+    <div style="grid-column:1 / -1;">
+      <label>Bemerkung</label>
+      <textarea name="bemerkung" rows="3">{{ einsatz.bemerkung }}</textarea>
+    </div>
+    <div style="grid-column:1 / -1;">
+      <button>Speichern</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

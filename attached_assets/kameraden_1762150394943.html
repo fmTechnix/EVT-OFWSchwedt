@@ -1,0 +1,53 @@
+
+{% extends "base.html" %}
+{% block title %}Kameraden · EVT{% endblock %}
+{% block content %}
+<div class="grid grid-2">
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <h3>Kameraden ({{ kameraden|length }})</h3>
+      {% if session.get('role') == 'admin' %}
+      <a class="btn" href="{{ url_for('seed_kameraden_view') }}">77 Beispiel generieren</a>
+      {% endif %}
+    </div>
+    <table class="table">
+      <thead><tr><th>Name</th><th>Qualifikationen</th><th style="width:120px;"></th></tr></thead>
+      <tbody>
+        {% for k in kameraden %}
+        <tr>
+          <td>{{ k.name }}</td>
+          <td>
+            {% for q in k.qualifikationen %}
+              <span class="badge">{{ q }}</span>
+            {% endfor %}
+          </td>
+          <td>
+            {% if session.get('role') == 'admin' %}
+            <form method="post" action="{{ url_for('kamerad_delete', kid=k.id) }}" onsubmit="return confirm('Löschen?')">
+              <button class="btn-secondary">Löschen</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="card">
+    <h3>Neuer Kamerad</h3>
+    <form method="post">
+      <label>Name</label>
+      <input name="name" required>
+      <label>Qualifikationen</label>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px;">
+        {% for q in all_quals %}
+          <label style="display:flex;gap:8px;align-items:center;">
+            <input type="checkbox" name="qualifikationen" value="{{ q }}"> {{ q }}
+          </label>
+        {% endfor %}
+      </div>
+      <button>Hinzufügen</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

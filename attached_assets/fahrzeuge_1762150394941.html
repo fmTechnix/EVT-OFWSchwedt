@@ -1,0 +1,41 @@
+
+{% extends "base.html" %}
+{% block title %}Fahrzeuge · EVT{% endblock %}
+{% block content %}
+<div class="grid grid-2">
+  <div class="card">
+    <h3>Fahrzeuge</h3>
+    <table class="table">
+      <thead><tr><th>Name</th><th>Funkrufname</th><th>Besatzung</th><th></th></tr></thead>
+      <tbody>
+        {% for v in vehicles %}
+        <tr>
+          <td>{{ v.name }}</td>
+          <td>{{ v.funk }}</td>
+          <td>{{ v.besatzung }}</td>
+          <td>
+            <form method="post" action="{{ url_for('vehicle_delete', vid=v.id) }}" onsubmit="return confirm('Löschen?')">
+              <button class="btn-secondary">Löschen</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="card">
+    <h3>Neues Fahrzeug</h3>
+    <form method="post">
+      <label>Name</label>
+      <input name="name" required>
+      <label>Funkrufname</label>
+      <input name="funk">
+      <label>Besatzung</label>
+      <input type="number" name="besatzung" min="0" value="9">
+      <div style="margin-top:12px;">
+        <button>Speichern</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

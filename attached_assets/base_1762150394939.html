@@ -1,0 +1,41 @@
+
+{% set authed = session.get("username") %}
+{% set role = session.get("role") %}
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>{% block title %}EVT{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">🚒 EVT</div>
+    <nav class="nav">
+      {% if authed %}
+        <a href="{{ url_for('dashboard_view') }}">📊 Dashboard</a>
+        <a href="{{ url_for('mein_einsatz_view') }}">🚒 Mein Einsatz</a>
+        <a href="{{ url_for('kameraden_view') }}">👥 Kameraden</a>
+        {% if role == 'admin' %}
+          <a href="{{ url_for('vehicles_view') }}">🚛 Fahrzeuge</a>
+          <a href="{{ url_for('einstellungen_view') }}">⚙️ Einstellungen</a>
+        {% endif %}
+        <a href="{{ url_for('logout_view') }}">⎋ Logout</a>
+      {% else %}
+        <a href="{{ url_for('login_view') }}">Login</a>
+      {% endif %}
+    </nav>
+  </header>
+  <main class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for cat, msg in messages %}
+          <div class="flash {{ cat }}">{{ msg }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>
