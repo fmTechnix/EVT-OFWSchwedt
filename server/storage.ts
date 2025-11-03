@@ -286,7 +286,17 @@ export class MemStorage implements IStorage {
     for (let i = 0; i < 77; i++) {
       const vorname = firstNames[Math.floor(Math.random() * firstNames.length)];
       const nachname = lastNames[Math.floor(Math.random() * lastNames.length)];
-      const username = `${vorname.toLowerCase()}${nachname.toLowerCase()}${i}`;
+      
+      // Generate username without number first
+      let baseUsername = `${vorname.toLowerCase()}${nachname.toLowerCase()}`;
+      let username = baseUsername;
+      let counter = 2;
+      
+      // Check if username already exists, if so, append number
+      while (await this.getUserByUsername(username)) {
+        username = `${baseUsername}${counter}`;
+        counter++;
+      }
       
       const qualifikationen = new Set<string>();
       
