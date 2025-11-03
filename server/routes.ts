@@ -5,6 +5,8 @@ import { storage } from "./storage";
 import { insertVehicleSchema, insertEinsatzSchema, insertSettingsSchema, insertQualifikationSchema, insertTerminSchema, insertTerminZusageSchema } from "@shared/schema";
 import type { User, InsertUser } from "@shared/schema";
 import { verifyPassword } from "./password-utils";
+import { assignCrewToVehicles } from "./crew-assignment";
+import { z } from "zod";
 
 // Extend Express session to include user
 declare module "express-session" {
@@ -759,6 +761,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ imported, skipped, total: vehicles.length });
     } catch (error) {
       res.status(500).json({ error: "Fehler beim Importieren der Fahrzeug-Konfigurationen" });
+    }
+  });
+
+  // Automatic Crew Assignment endpoint
+  app.post("/api/crew-assignment", requireAuth, async (req: Request, res: Response) => {
+    try {
+      // Validate request body
+      const crewAssignmentSchema = z.object({
+        vehicleIds: z.array(z.number()).optional(),
+      });
+      
+      const validation = crewAssignmentSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ error: "Ungültige Anfrage", details: validation.error });
+      }
+      
+      const { vehicleIds } = validation.data;
+      
+      // Get all users
+      const allUsers = await storage.getAllUsers();
+      
+      // Get vehicle configurations
+      let vehicleConfigs;
+      if (vehicleIds && vehicleIds.length > 0) {
+        // Get specific vehicles
+        vehicleConfigs = await Promise.all(
+          vehicleIds.map(id => storage.getVehicleConfig(id))
+        );
+        vehicleConfigs = vehicleConfigs.filter(c => c !== undefined);
+      } else {
+        // Get all vehicles
+        vehicleConfigs = await storage.getAllVehicleConfigs();
+      }
+      
+      // Run assignment algorithm
+      const result = assignCrewToVehicles(allUsers, vehicleConfigs);
+      
+      res.json(result);
+    } catch (error) {
+      console.error("Crew assignment error:", error);
+      res.status(500).json({ error: "Fehler bei der automatischen Zuteilung" });
     }
   });
 

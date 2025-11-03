@@ -7,7 +7,8 @@ import type {
   Qualifikation, InsertQualifikation,
   Termin, InsertTermin,
   TerminZusage, InsertTerminZusage,
-  BesetzungscheckResult
+  BesetzungscheckResult,
+  VehicleConfig, InsertVehicleConfig
 } from "@shared/schema";
 import { PostgresStorage } from "./pg-storage";
 import { initializeDatabase } from "./init-db";
@@ -57,6 +58,14 @@ export interface IStorage {
   
   // Besetzungscheck
   getBesetzungscheck(): Promise<BesetzungscheckResult>;
+  
+  // Vehicle Configurations
+  getAllVehicleConfigs(): Promise<VehicleConfig[]>;
+  getVehicleConfig(id: number): Promise<VehicleConfig | undefined>;
+  getVehicleConfigByName(name: string): Promise<VehicleConfig | undefined>;
+  createVehicleConfig(config: InsertVehicleConfig): Promise<VehicleConfig>;
+  updateVehicleConfig(id: number, updates: Partial<InsertVehicleConfig>): Promise<VehicleConfig>;
+  deleteVehicleConfig(id: number): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -425,6 +434,31 @@ export class MemStorage implements IStorage {
     );
     
     return { vorhanden, minima, erfuellt };
+  }
+
+  // Vehicle Configurations (stub implementation - not used)
+  async getAllVehicleConfigs(): Promise<VehicleConfig[]> {
+    return [];
+  }
+
+  async getVehicleConfig(_id: number): Promise<VehicleConfig | undefined> {
+    return undefined;
+  }
+
+  async getVehicleConfigByName(_name: string): Promise<VehicleConfig | undefined> {
+    return undefined;
+  }
+
+  async createVehicleConfig(_config: InsertVehicleConfig): Promise<VehicleConfig> {
+    throw new Error("Not implemented in MemStorage");
+  }
+
+  async updateVehicleConfig(_id: number, _updates: Partial<InsertVehicleConfig>): Promise<VehicleConfig> {
+    throw new Error("Not implemented in MemStorage");
+  }
+
+  async deleteVehicleConfig(_id: number): Promise<void> {
+    throw new Error("Not implemented in MemStorage");
   }
 }
 

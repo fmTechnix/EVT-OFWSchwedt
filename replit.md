@@ -11,6 +11,23 @@ The system supports three user roles with different access levels:
 
 ## Recent Changes (November 2025)
 
+**Automatic Crew Assignment System (November 3, 2025):**
+- Expanded qualification system from 6 to 14 qualifications: TM, AGT, MASCH, GF, ZF, FUNK, FUEASS, TH, ABC1, CBRN_ERKKW, FAHRER_B, San, MZ, WT18
+- Created `vehicle_configs` database table with JSONB storage for complex vehicle slot requirements
+- Imported 9 vehicle configurations (HLF 20, LF 20, TLF 4000 St, RW, ELW 1, GW-G, ABC-Erkunder, Wasserträger, MTF) with detailed slot requirements and constraints
+- Implemented comprehensive crew assignment algorithm (`server/crew-assignment.ts`) that:
+  - Assigns crew members to vehicle positions based on qualification requirements
+  - Prioritizes users with preferred qualifications
+  - Respects vehicle-specific constraints (min AGT, min FUNK, etc.)
+  - Handles fallback assignments when strict requirements cannot be met
+  - Returns detailed warnings for unfulfilled positions
+- Added backend API endpoints:
+  - `/api/vehicle-configs` - CRUD operations for vehicle configurations (admin only)
+  - `/api/vehicle-configs/export/json` - Export configurations as JSON
+  - `/api/vehicle-configs/import/json` - Import configurations from JSON (admin only)
+  - `/api/crew-assignment` - Run automatic crew assignment algorithm
+- Fixed Besetzungscheck to use "MASCH" instead of "Maschinist" for consistency
+
 **Unified Benutzer/Personnel System (November 3, 2025):**
 - Merged Kameraden (crew members) and Benutzer (users) into single unified User model
 - Removed separate `kameraden` table; personnel data now stored in `users` table with vorname, nachname, qualifikationen[]
@@ -104,6 +121,11 @@ For testing purposes, the following default users are available:
 - `/api/termine/:id/zusagen` - Event RSVP listing (all authenticated)
 - `/api/termine/:id/zusage` - Event RSVP submission (all authenticated)
 - `/api/termine/export` - CSV export of events with participant data (all authenticated)
+- `/api/vehicle-configs` - Vehicle configuration CRUD operations (GET: all authenticated, POST/PATCH/DELETE: admin only)
+- `/api/vehicle-configs/:id` - Get specific vehicle configuration (all authenticated)
+- `/api/vehicle-configs/export/json` - Export all configurations as JSON (all authenticated)
+- `/api/vehicle-configs/import/json` - Import configurations from JSON (admin only)
+- `/api/crew-assignment` - POST automatic crew assignment algorithm (all authenticated, accepts optional vehicleIds[])
 
 **Data Layer**: Uses an in-memory storage implementation (`MemStorage` class) that implements the `IStorage` interface. The architecture is designed to support database persistence through the interface pattern.
 
@@ -115,13 +137,16 @@ For testing purposes, the following default users are available:
 
 - **users**: Unified user/personnel model with roles (admin/moderator/member), authentication credentials, vorname, nachname, qualifikationen[] array, and `muss_passwort_aendern` flag for first-login password enforcement
 - **vehicles**: Fire trucks/vehicles with crew capacity and radio call signs
-- **qualifikationen**: Available qualifications/certifications (e.g., TM, AGT, Maschinist)
+- **qualifikationen**: Available qualifications/certifications (14 total: TM, AGT, MASCH, GF, ZF, FUNK, FUEASS, TH, ABC1, CBRN_ERKKW, FAHRER_B, San, MZ, WT18)
+- **vehicle_configs**: Vehicle configurations with JSONB storage for slots (position requirements) and constraints (min AGT, FUNK, etc.)
 - **einsatz**: Mission information including keyword (Stichwort), crew requirements
 - **settings**: System configuration for shift length and minimum qualification requirements
 - **termine**: Calendar events with title, description, date, time, location, and creator reference
 - **termin_zusagen**: Event RSVPs linking users to events with status (zugesagt/abgesagt)
 
-Note: The separate `kameraden` table has been removed. All personnel data is now stored in the `users` table with qualifikationen as an array field.
+Notes:
+- The separate `kameraden` table has been removed. All personnel data is now stored in the `users` table with qualifikationen as an array field.
+- Vehicle configurations are stored as JSONB to support flexible slot requirements and constraints per vehicle type
 
 **Intended Database**: PostgreSQL via Neon serverless (`@neondatabase/serverless`). The Drizzle configuration points to a PostgreSQL database, but the current implementation uses in-memory storage.
 
