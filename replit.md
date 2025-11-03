@@ -11,10 +11,18 @@ The system supports three user roles with different access levels:
 
 ## Recent Changes (November 2025)
 
+**Self-Service Registration & Role-Based Dashboard (November 3, 2025):**
+- Implemented self-service user registration with first name and last name
+- New users receive auto-generated username (firstname.lastname) and default password "Feuer123"
+- Mandatory password change on first login enforced via `muss_passwort_aendern` flag
+- Moved user management and registration from Settings to Kameraden page (Benutzer tab)
+- Implemented role-based dashboard views: Members see simplified interface (calendar, basic info), Admins/Moderators see full operational dashboard
+- Enhanced security: Password change endpoint validates old password before allowing updates
+
 **Calendar System & Role Management Implementation:**
 - Extended user roles from two-tier (admin/member) to three-tier (admin/moderator/member)
 - Implemented complete calendar/event management system with RSVP functionality
-- Added user role assignment interface for admins in settings page
+- Added user role assignment interface for admins
 - Created CSV export functionality for calendar events with participant tracking
 - Security enhancement: Event creator ID now derived server-side from session to prevent forgery
 
@@ -58,7 +66,9 @@ Preferred communication style: Simple, everyday language.
 - Three-tier role system: admin (full access), moderator (calendar management), member (read/RSVP access)
 
 **API Design**: RESTful API endpoints under `/api` namespace:
-- `/api/auth/*` - Authentication endpoints (login, logout, me)
+- `/api/auth/*` - Authentication endpoints (login, logout, me, register, change-password)
+  - `/api/auth/register` - Self-service registration with vorname/nachname (creates username as firstname.lastname)
+  - `/api/auth/change-password` - Password change with old password validation
 - `/api/users` - User listing and role management (admin only)
 - `/api/users/:id/role` - User role assignment (admin only)
 - `/api/vehicles` - Vehicle CRUD operations (admin only)
@@ -80,7 +90,7 @@ Preferred communication style: Simple, everyday language.
 
 **Database Schema Design**: Drizzle ORM schema is defined for PostgreSQL in `shared/schema.ts`:
 
-- **users**: User accounts with roles (admin/moderator/member), authentication credentials, names
+- **users**: User accounts with roles (admin/moderator/member), authentication credentials, names, and `muss_passwort_aendern` flag for first-login password enforcement
 - **vehicles**: Fire trucks/vehicles with crew capacity and radio call signs
 - **kameraden**: Crew members with qualification arrays stored as references to qualifikationen table
 - **qualifikationen**: Available qualifications/certifications (e.g., TM, AGT, Maschinist)
