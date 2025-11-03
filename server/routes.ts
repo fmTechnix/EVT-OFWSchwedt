@@ -543,7 +543,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Create vehicle based on config
         // Funk and Besatzung are estimated from config
-        const totalSlots = config.slots?.length || 9;
+        const totalSlots = (config.slots as any)?.length || 9;
         await storage.createVehicle({
           name: config.vehicle,
           funk: `Florian Schwedt 1/XX/1`, // Placeholder
@@ -942,7 +942,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const today = new Date().toISOString().split('T')[0];
       if (date === today) {
         try {
-          oldAvailability = await storage.getAvailability(userId, date);
+          oldAvailability = await storage.getUserAvailability(userId, date);
         } catch {
           // No existing availability to rollback to
         }

@@ -3,10 +3,30 @@ import type { IStorage } from "./storage";
 import type { PushSubscription } from "@shared/schema";
 
 // VAPID keys for Web Push
-// In production, these should be stored in environment variables
-// Generated with: npx web-push generate-vapid-keys
-const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || "BOiq1Yxowae7lV7xtlRCMoZ0wka5J_Rl-mwtpwNtUcn5vQoNPR6zdfPI627RvYqZFbVpgH_TQ82g7S1sZDtx7QI";
-const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || "qqUjP3MJaJVM_EV2nQoyqZHUExW2YUoXvNCabtYsg6Y";
+// SECURITY WARNING: These default keys are for development only!
+// For production deployment:
+// 1. Generate new VAPID keys: npx web-push generate-vapid-keys
+// 2. Set environment variables: VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_EMAIL
+// 3. Remove or rotate these development keys
+// 4. Never commit production keys to source control!
+
+const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || (() => {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('VAPID_PUBLIC_KEY must be set in production environment');
+  }
+  // Development-only fallback
+  console.warn('⚠️  WARNING: Using development VAPID keys. Do not use in production!');
+  return "BOiq1Yxowae7lV7xtlRCMoZ0wka5J_Rl-mwtpwNtUcn5vQoNPR6zdfPI627RvYqZFbVpgH_TQ82g7S1sZDtx7QI";
+})();
+
+const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || (() => {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('VAPID_PRIVATE_KEY must be set in production environment');
+  }
+  // Development-only fallback
+  return "qqUjP3MJaJVM_EV2nQoyqZHUExW2YUoXvNCabtYsg6Y";
+})();
+
 const VAPID_EMAIL = process.env.VAPID_EMAIL || "mailto:admin@feuerwehr-schwedt.de";
 
 // Configure web-push
