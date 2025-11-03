@@ -502,6 +502,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch("/api/vehicles/:id", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const data = insertVehicleSchema.parse(req.body);
+      const vehicle = await storage.updateVehicle(id, data);
+      res.json(vehicle);
+    } catch (error) {
+      res.status(400).json({ error: "Ungültige Fahrzeugdaten" });
+    }
+  });
+
   app.delete("/api/vehicles/:id", requireAdmin, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);

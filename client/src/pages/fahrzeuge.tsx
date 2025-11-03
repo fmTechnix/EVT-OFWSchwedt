@@ -13,6 +13,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Vehicle, InsertVehicle, VehicleConfig } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Truck, Settings, Users } from "lucide-react";
 
 export default function Fahrzeuge() {
@@ -63,6 +64,8 @@ function FahrzeuglisteTab() {
   const [name, setName] = useState("");
   const [funk, setFunk] = useState("");
   const [besatzung, setBesatzung] = useState("9");
+  const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const { data: vehicles, isLoading } = useQuery<Vehicle[]>({
@@ -134,6 +137,28 @@ function FahrzeuglisteTab() {
     },
   });
 
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: InsertVehicle }) => {
+      return await apiRequest("PATCH", `/api/vehicles/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
+      setEditDialogOpen(false);
+      setEditingVehicle(null);
+      toast({
+        title: "Fahrzeug aktualisiert",
+        description: "Das Fahrzeug wurde erfolgreich aktualisiert",
+      });
+    },
+    onError: () => {
+      toast({
+        variant: "destructive",
+        title: "Fehler",
+        description: "Fahrzeug konnte nicht aktualisiert werden",
+      });
+    },
+  });
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
@@ -149,6 +174,25 @@ function FahrzeuglisteTab() {
     if (confirm(`Fahrzeug "${vehicleName}" wirklich löschen?`)) {
       deleteMutation.mutate(id);
     }
+  };
+
+  const handleEdit = (vehicle: Vehicle) => {
+    setEditingVehicle(vehicle);
+    setEditDialogOpen(true);
+  };
+
+  const handleUpdateSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingVehicle) return;
+    
+    updateMutation.mutate({
+      id: editingVehicle.id,
+      data: {
+        name: editingVehicle.name,
+        funk: editingVehicle.funk,
+        besatzung: editingVehicle.besatzung,
+      },
+    });
   };
 
   return (
@@ -185,7 +229,7 @@ function FahrzeuglisteTab() {
                     <TableHead>Name</TableHead>
                     <TableHead>Funkrufname</TableHead>
                     <TableHead className="text-center">Besatzung</TableHead>
-                    <TableHead className="w-24"></TableHead>
+                    <TableHead className="w-40">Aktionen</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -208,15 +252,25 @@ function FahrzeuglisteTab() {
                           {vehicle.besatzung}
                         </TableCell>
                         <TableCell>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => handleDelete(vehicle.id, vehicle.name)}
-                            disabled={deleteMutation.isPending}
-                            data-testid={`button-delete-${vehicle.id}`}
-                          >
-                            Löschen
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEdit(vehicle)}
+                              data-testid={`button-edit-${vehicle.id}`}
+                            >
+                              Bearbeiten
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => handleDelete(vehicle.id, vehicle.name)}
+                              disabled={deleteMutation.isPending}
+                              data-testid={`button-delete-${vehicle.id}`}
+                            >
+                              Löschen
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))
@@ -284,6 +338,74 @@ function FahrzeuglisteTab() {
           </form>
         </CardContent>
       </Card>
+
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Fahrzeug bearbeiten</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleUpdateSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-name">Name</Label>
+              <Input
+                id="edit-name"
+                value={editingVehicle?.name || ""}
+                onChange={(e) => setEditingVehicle(prev => prev ? { ...prev, name: e.target.value } : null)}
+                placeholder="z.B. HLF 20"
+                required
+                data-testid="input-edit-name"
+                className="h-11"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-funk">Funkrufname</Label>
+              <Input
+                id="edit-funk"
+                value={editingVehicle?.funk || ""}
+                onChange={(e) => setEditingVehicle(prev => prev ? { ...prev, funk: e.target.value } : null)}
+                placeholder="z.B. Florian Schwedt 01/43-01"
+                required
+                data-testid="input-edit-funk"
+                className="h-11"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-besatzung">Besatzung</Label>
+              <Input
+                id="edit-besatzung"
+                type="number"
+                min="1"
+                value={editingVehicle?.besatzung || ""}
+                onChange={(e) => setEditingVehicle(prev => prev ? { ...prev, besatzung: parseInt(e.target.value) || 0 } : null)}
+                placeholder="z.B. 9"
+                required
+                data-testid="input-edit-besatzung"
+                className="h-11"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setEditDialogOpen(false)}
+                data-testid="button-cancel-edit"
+              >
+                Abbrechen
+              </Button>
+              <Button
+                type="submit"
+                disabled={updateMutation.isPending}
+                data-testid="button-save-edit"
+              >
+                {updateMutation.isPending ? "Speichert..." : "Speichern"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -31,6 +31,7 @@ export interface IStorage {
   // Vehicles
   getAllVehicles(): Promise<Vehicle[]>;
   createVehicle(vehicle: InsertVehicle): Promise<Vehicle>;
+  updateVehicle(id: number, data: InsertVehicle): Promise<Vehicle>;
   deleteVehicle(id: number): Promise<void>;
   
   // Einsatz

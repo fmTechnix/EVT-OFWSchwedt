@@ -103,6 +103,12 @@ export class PostgresStorage implements IStorage {
     return result[0];
   }
 
+  async updateVehicle(id: number, data: InsertVehicle): Promise<Vehicle> {
+    const result = await db.update(vehicles).set(data).where(eq(vehicles.id, id)).returning();
+    if (!result[0]) throw new Error("Fahrzeug nicht gefunden");
+    return result[0];
+  }
+
   async deleteVehicle(id: number): Promise<void> {
     await db.delete(vehicles).where(eq(vehicles.id, id));
   }
