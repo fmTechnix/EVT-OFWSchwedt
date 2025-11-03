@@ -512,6 +512,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Seed vehicles from vehicle configs
+  app.post("/api/vehicles/seed", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const vehicleConfigs = await storage.getAllVehicleConfigs();
+      const existingVehicles = await storage.getAllVehicles();
+      
+      const created = [];
+      const skipped = [];
+      
+      for (const config of vehicleConfigs) {
+        // Check if vehicle with this name already exists
+        const exists = existingVehicles.find(v => v.name === config.vehicle);
+        if (exists) {
+          skipped.push(config.vehicle);
+          continue;
+        }
+        
+        // Create vehicle based on config
+        // Funk and Besatzung are estimated from config
+        const totalSlots = config.slots?.length || 9;
+        await storage.createVehicle({
+          name: config.vehicle,
+          funk: `Florian Schwedt 1/XX/1`, // Placeholder
+          besatzung: totalSlots,
+        });
+        
+        created.push(config.vehicle);
+      }
+      
+      res.json({
+        success: true,
+        created: created.length,
+        skipped: skipped.length,
+        message: `${created.length} Fahrzeuge erstellt, ${skipped.length} übersprungen (existieren bereits)`,
+      });
+    } catch (error) {
+      console.error("Vehicle seed error:", error);
+      res.status(500).json({ error: "Fehler beim Erstellen der Fahrzeuge" });
+    }
+  });
+
   // Einsatz endpoints
   app.get("/api/einsatz", requireAuth, async (_req: Request, res: Response) => {
     try {

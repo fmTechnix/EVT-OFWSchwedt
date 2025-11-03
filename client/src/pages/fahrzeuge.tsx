@@ -112,6 +112,28 @@ function FahrzeuglisteTab() {
     },
   });
 
+  const seedMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/vehicles/seed", {});
+      return await response.json();
+    },
+    onSuccess: (data: { created: number; skipped: number; message: string }) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
+      toast({
+        title: "Fahrzeuge erstellt",
+        description: data.message,
+        duration: 5000,
+      });
+    },
+    onError: () => {
+      toast({
+        variant: "destructive",
+        title: "Fehler",
+        description: "Fahrzeuge konnten nicht erstellt werden",
+      });
+    },
+  });
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
@@ -133,8 +155,22 @@ function FahrzeuglisteTab() {
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle>Fahrzeugliste</CardTitle>
-          <CardDescription>Einfache Fahrzeugverwaltung für Funk und Besatzung</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Fahrzeugliste</CardTitle>
+              <CardDescription>Einfache Fahrzeugverwaltung für Funk und Besatzung</CardDescription>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => seedMutation.mutate()}
+              disabled={seedMutation.isPending}
+              data-testid="button-seed-vehicles"
+            >
+              <Truck className="h-4 w-4 mr-2" />
+              {seedMutation.isPending ? "Erstelle..." : "Aus Konfigurationen"}
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
