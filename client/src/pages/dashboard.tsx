@@ -13,10 +13,13 @@ import { format, parseISO, isAfter } from "date-fns";
 import { de } from "date-fns/locale";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { usePushNotifications } from "@/hooks/use-push-notifications";
+import { Bell, BellOff } from "lucide-react";
 
 export default function Dashboard() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const pushNotifications = usePushNotifications();
   
   const { data: vehicles, isLoading: vehiclesLoading } = useQuery<Vehicle[]>({
     queryKey: ["/api/vehicles"],
@@ -151,6 +154,73 @@ export default function Dashboard() {
                 </p>
               </CardContent>
             </Card>
+
+            {/* Push-Benachrichtigungen */}
+            {pushNotifications.isSupported && (
+              <Card className="shadow-lg hover-elevate transition-all" data-testid="card-push-notifications">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    {pushNotifications.isSubscribed ? (
+                      <Bell className="w-5 h-5" />
+                    ) : (
+                      <BellOff className="w-5 h-5" />
+                    )}
+                    Benachrichtigungen
+                  </CardTitle>
+                  <CardDescription>
+                    Erhalten Sie Push-Benachrichtigungen bei Neuzuteilungen
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="push-toggle" className="text-base">
+                      {pushNotifications.isSubscribed ? "Aktiviert" : "Deaktiviert"}
+                    </Label>
+                    <Switch
+                      id="push-toggle"
+                      data-testid="switch-push-notifications"
+                      checked={pushNotifications.isSubscribed}
+                      disabled={pushNotifications.isLoading}
+                      onCheckedChange={async (checked) => {
+                        try {
+                          if (checked) {
+                            await pushNotifications.subscribe();
+                            toast({
+                              title: "Benachrichtigungen aktiviert",
+                              description: "Sie erhalten jetzt Push-Benachrichtigungen bei Neuzuteilungen",
+                            });
+                          } else {
+                            await pushNotifications.unsubscribe();
+                            toast({
+                              title: "Benachrichtigungen deaktiviert",
+                              description: "Sie erhalten keine Push-Benachrichtigungen mehr",
+                            });
+                          }
+                        } catch (error) {
+                          toast({
+                            variant: "destructive",
+                            title: "Fehler",
+                            description: checked 
+                              ? "Benachrichtigungen konnten nicht aktiviert werden" 
+                              : "Benachrichtigungen konnten nicht deaktiviert werden",
+                          });
+                        }
+                      }}
+                    />
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {pushNotifications.isSubscribed 
+                      ? "Sie werden benachrichtigt, wenn Ihre Zuteilung geändert wird" 
+                      : "Aktivieren Sie Benachrichtigungen, um über Neuzuteilungen informiert zu werden"}
+                  </p>
+                  {pushNotifications.permission === "denied" && (
+                    <p className="text-sm text-destructive">
+                      Benachrichtigungen wurden blockiert. Bitte erlauben Sie Benachrichtigungen in Ihren Browser-Einstellungen.
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             {/* Meine Zuteilung */}
             <Card className="shadow-lg hover-elevate transition-all md:col-span-2" data-testid="card-my-assignment">
