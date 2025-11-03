@@ -2,7 +2,7 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import session from "express-session";
 import { storage } from "./storage";
-import { insertVehicleSchema, insertKameradSchema, insertEinsatzSchema, insertSettingsSchema } from "@shared/schema";
+import { insertVehicleSchema, insertKameradSchema, insertEinsatzSchema, insertSettingsSchema, insertQualifikationSchema } from "@shared/schema";
 import type { User } from "@shared/schema";
 
 // Extend Express session to include user
@@ -200,6 +200,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(settings);
     } catch (error) {
       res.status(400).json({ error: "Ungültige Einstellungsdaten" });
+    }
+  });
+
+  // Qualifikationen endpoints
+  app.get("/api/qualifikationen", requireAuth, async (_req: Request, res: Response) => {
+    try {
+      const qualifikationen = await storage.getAllQualifikationen();
+      res.json(qualifikationen);
+    } catch (error) {
+      res.status(500).json({ error: "Fehler beim Laden der Qualifikationen" });
+    }
+  });
+
+  app.post("/api/qualifikationen", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const data = insertQualifikationSchema.parse(req.body);
+      const qualifikation = await storage.createQualifikation(data);
+      res.status(201).json(qualifikation);
+    } catch (error) {
+      res.status(400).json({ error: "Ungültige Qualifikationsdaten" });
+    }
+  });
+
+  app.delete("/api/qualifikationen/:id", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deleteQualifikation(id);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Fehler beim Löschen der Qualifikation" });
     }
   });
 

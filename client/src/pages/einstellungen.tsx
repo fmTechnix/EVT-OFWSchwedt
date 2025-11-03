@@ -8,8 +8,17 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { Settings, Einsatz } from "@shared/schema";
+import type { Settings, Einsatz, Qualifikation } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Trash2, Plus } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export default function Einstellungen() {
   const { toast } = useToast();
@@ -22,6 +31,10 @@ export default function Einstellungen() {
     queryKey: ["/api/einsatz"],
   });
 
+  const { data: qualifikationen, isLoading: qualifikationenLoading } = useQuery<Qualifikation[]>({
+    queryKey: ["/api/qualifikationen"],
+  });
+
   const [schichtlaenge, setSchichtlaenge] = useState("");
   const [minAgt, setMinAgt] = useState("");
   const [minMaschinist, setMinMaschinist] = useState("");
@@ -29,6 +42,11 @@ export default function Einstellungen() {
   const [stichwort, setStichwort] = useState("");
   const [mannschaftsbedarf, setMannschaftsbedarf] = useState("");
   const [bemerkung, setBemerkung] = useState("");
+  
+  // Qualifikation form state
+  const [qualKuerzel, setQualKuerzel] = useState("");
+  const [qualName, setQualName] = useState("");
+  const [qualBeschreibung, setQualBeschreibung] = useState("");
 
   useEffect(() => {
     if (settings) {
@@ -82,6 +100,58 @@ export default function Einstellungen() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     saveMutation.mutate();
+  };
+
+  const addQualifikationMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("POST", "/api/qualifikationen", {
+        kuerzel: qualKuerzel,
+        name: qualName,
+        beschreibung: qualBeschreibung,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/qualifikationen"] });
+      setQualKuerzel("");
+      setQualName("");
+      setQualBeschreibung("");
+      toast({
+        title: "Qualifikation hinzugefügt",
+        description: "Die Qualifikation wurde erfolgreich erstellt",
+      });
+    },
+    onError: () => {
+      toast({
+        variant: "destructive",
+        title: "Fehler",
+        description: "Qualifikation konnte nicht erstellt werden",
+      });
+    },
+  });
+
+  const deleteQualifikationMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return await apiRequest("DELETE", `/api/qualifikationen/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/qualifikationen"] });
+      toast({
+        title: "Qualifikation gelöscht",
+        description: "Die Qualifikation wurde erfolgreich entfernt",
+      });
+    },
+    onError: () => {
+      toast({
+        variant: "destructive",
+        title: "Fehler",
+        description: "Qualifikation konnte nicht gelöscht werden",
+      });
+    },
+  });
+
+  const handleAddQualifikation = (e: React.FormEvent) => {
+    e.preventDefault();
+    addQualifikationMutation.mutate();
   };
 
   const isLoading = settingsLoading || einsatzLoading;
@@ -213,6 +283,115 @@ export default function Einstellungen() {
                   {saveMutation.isPending ? "Wird gespeichert..." : "Einstellungen speichern"}
                 </Button>
               </form>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-lg mt-8">
+          <CardHeader>
+            <CardTitle>Qualifikationen verwalten</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {qualifikationenLoading ? (
+              <div className="space-y-4">
+                {[1, 2, 3].map((i) => (
+                  <Skeleton key={i} className="h-16 w-full" />
+                ))}
+              </div>
+            ) : (
+              <>
+                <div className="mb-6">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Kürzel</TableHead>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Beschreibung</TableHead>
+                        <TableHead className="w-20">Aktionen</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {qualifikationen && qualifikationen.length > 0 ? (
+                        qualifikationen.map((qual) => (
+                          <TableRow key={qual.id}>
+                            <TableCell className="font-medium">{qual.kuerzel}</TableCell>
+                            <TableCell>{qual.name}</TableCell>
+                            <TableCell>{qual.beschreibung}</TableCell>
+                            <TableCell>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => deleteQualifikationMutation.mutate(qual.id)}
+                                disabled={deleteQualifikationMutation.isPending}
+                                data-testid={`button-delete-qual-${qual.id}`}
+                              >
+                                <Trash2 className="h-4 w-4 text-red-500" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center text-muted-foreground">
+                            Keine Qualifikationen vorhanden
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                <form onSubmit={handleAddQualifikation} className="space-y-4 border-t pt-6">
+                  <h3 className="text-lg font-semibold mb-4">Neue Qualifikation hinzufügen</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="qual-kuerzel">Kürzel</Label>
+                      <Input
+                        id="qual-kuerzel"
+                        value={qualKuerzel}
+                        onChange={(e) => setQualKuerzel(e.target.value)}
+                        placeholder="z.B. AGT"
+                        required
+                        data-testid="input-qual-kuerzel"
+                        className="h-11"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="qual-name">Name</Label>
+                      <Input
+                        id="qual-name"
+                        value={qualName}
+                        onChange={(e) => setQualName(e.target.value)}
+                        placeholder="z.B. Atemschutzgeräteträger"
+                        required
+                        data-testid="input-qual-name"
+                        className="h-11"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="qual-beschreibung">Beschreibung</Label>
+                      <Input
+                        id="qual-beschreibung"
+                        value={qualBeschreibung}
+                        onChange={(e) => setQualBeschreibung(e.target.value)}
+                        placeholder="z.B. Berechtigung zum Tragen von Atemschutz"
+                        required
+                        data-testid="input-qual-beschreibung"
+                        className="h-11"
+                      />
+                    </div>
+                  </div>
+                  <Button
+                    type="submit"
+                    className="w-full h-11"
+                    disabled={addQualifikationMutation.isPending}
+                    data-testid="button-add-qualifikation"
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    {addQualifikationMutation.isPending ? "Wird hinzugefügt..." : "Qualifikation hinzufügen"}
+                  </Button>
+                </form>
+              </>
             )}
           </CardContent>
         </Card>

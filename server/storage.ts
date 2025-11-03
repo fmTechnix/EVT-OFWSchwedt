@@ -5,6 +5,7 @@ import type {
   Kamerad, InsertKamerad,
   Einsatz, InsertEinsatz,
   Settings, InsertSettings,
+  Qualifikation, InsertQualifikation,
   BesetzungscheckResult
 } from "@shared/schema";
 
@@ -33,6 +34,11 @@ export interface IStorage {
   getSettings(): Promise<Settings>;
   updateSettings(settings: InsertSettings): Promise<Settings>;
   
+  // Qualifikationen
+  getAllQualifikationen(): Promise<Qualifikation[]>;
+  createQualifikation(qualifikation: InsertQualifikation): Promise<Qualifikation>;
+  deleteQualifikation(id: number): Promise<void>;
+  
   // Besetzungscheck
   getBesetzungscheck(): Promise<BesetzungscheckResult>;
 }
@@ -41,20 +47,27 @@ export class MemStorage implements IStorage {
   private users: Map<string, User>;
   private vehicles: Map<number, Vehicle>;
   private kameraden: Map<number, Kamerad>;
+  private qualifikationen: Map<number, Qualifikation>;
   private einsatz: Einsatz;
   private settings: Settings;
   private nextVehicleId: number;
   private nextKameradId: number;
+  private nextQualifikationId: number;
 
   constructor() {
     this.users = new Map();
     this.vehicles = new Map();
     this.kameraden = new Map();
+    this.qualifikationen = new Map();
     this.nextVehicleId = 1;
     this.nextKameradId = 1;
+    this.nextQualifikationId = 1;
 
     // Initialize default users
     this.initializeUsers();
+    
+    // Initialize default qualifikationen (must be before kameraden)
+    this.initializeQualifikationen();
     
     // Initialize default vehicles
     this.initializeVehicles();
@@ -99,6 +112,25 @@ export class MemStorage implements IStorage {
     
     this.users.set(admin.id, admin);
     this.users.set(member.id, member);
+  }
+
+  private initializeQualifikationen() {
+    const qualifikationen: Omit<Qualifikation, "id">[] = [
+      { kuerzel: "TM", name: "Truppmann", beschreibung: "Grundausbildung für Feuerwehrleute" },
+      { kuerzel: "AGT", name: "Atemschutzgeräteträger", beschreibung: "Berechtigung zum Tragen von Atemschutzgeräten" },
+      { kuerzel: "Maschinist", name: "Maschinist", beschreibung: "Befähigung zur Bedienung von Feuerwehrfahrzeugen" },
+      { kuerzel: "GF", name: "Gruppenführer", beschreibung: "Führungsausbildung für Gruppen" },
+      { kuerzel: "Sprechfunker", name: "Sprechfunker", beschreibung: "Berechtigung zur Funkkommunikation" },
+      { kuerzel: "San", name: "Sanitäter", beschreibung: "Sanitätsausbildung" },
+    ];
+
+    for (const qual of qualifikationen) {
+      const qualifikation: Qualifikation = {
+        id: this.nextQualifikationId++,
+        ...qual,
+      };
+      this.qualifikationen.set(qualifikation.id, qualifikation);
+    }
   }
 
   private initializeVehicles() {
@@ -251,6 +283,22 @@ export class MemStorage implements IStorage {
   async updateSettings(insertSettings: InsertSettings): Promise<Settings> {
     this.settings = { id: 1, ...insertSettings };
     return this.settings;
+  }
+
+  // Qualifikationen methods
+  async getAllQualifikationen(): Promise<Qualifikation[]> {
+    return Array.from(this.qualifikationen.values());
+  }
+
+  async createQualifikation(insertQualifikation: InsertQualifikation): Promise<Qualifikation> {
+    const id = this.nextQualifikationId++;
+    const qualifikation: Qualifikation = { ...insertQualifikation, id };
+    this.qualifikationen.set(id, qualifikation);
+    return qualifikation;
+  }
+
+  async deleteQualifikation(id: number): Promise<void> {
+    this.qualifikationen.delete(id);
   }
 
   // Besetzungscheck

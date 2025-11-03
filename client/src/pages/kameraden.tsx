@@ -10,8 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { Kamerad, InsertKamerad } from "@shared/schema";
-import { QUALIFIKATIONEN } from "@shared/schema";
+import type { Kamerad, InsertKamerad, Qualifikation } from "@shared/schema";
 import { useAuth } from "@/lib/auth-context";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -23,6 +22,10 @@ export default function Kameraden() {
 
   const { data: kameraden, isLoading } = useQuery<Kamerad[]>({
     queryKey: ["/api/kameraden"],
+  });
+
+  const { data: qualifikationen, isLoading: qualsLoading } = useQuery<Qualifikation[]>({
+    queryKey: ["/api/qualifikationen"],
   });
 
   const createMutation = useMutation({
@@ -220,24 +223,28 @@ export default function Kameraden() {
 
                 <div className="space-y-3">
                   <Label>Qualifikationen</Label>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                    {QUALIFIKATIONEN.map((qual) => (
-                      <div key={qual} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={qual}
-                          checked={selectedQuals.includes(qual)}
-                          onCheckedChange={(checked) => handleQualChange(qual, checked as boolean)}
-                          data-testid={`checkbox-${qual.toLowerCase()}`}
-                        />
-                        <label
-                          htmlFor={qual}
-                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                        >
-                          {qual}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
+                  {qualsLoading ? (
+                    <Skeleton className="h-24 w-full" />
+                  ) : (
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {qualifikationen?.map((qual) => (
+                        <div key={qual.kuerzel} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={qual.kuerzel}
+                            checked={selectedQuals.includes(qual.kuerzel)}
+                            onCheckedChange={(checked) => handleQualChange(qual.kuerzel, checked as boolean)}
+                            data-testid={`checkbox-${qual.kuerzel.toLowerCase()}`}
+                          />
+                          <label
+                            htmlFor={qual.kuerzel}
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                          >
+                            {qual.kuerzel}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <Button

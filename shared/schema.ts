@@ -64,7 +64,19 @@ export const insertSettingsSchema = createInsertSchema(settings).omit({ id: true
 export type InsertSettings = z.infer<typeof insertSettingsSchema>;
 export type Settings = typeof settings.$inferSelect;
 
-// Available qualifications
+// Qualifikationen (Qualifications)
+export const qualifikationen = pgTable("qualifikationen", {
+  id: integer("id").primaryKey(),
+  kuerzel: text("kuerzel").notNull().unique(), // e.g., "AGT", "TM"
+  name: text("name").notNull(), // e.g., "Atemschutzgeräteträger"
+  beschreibung: text("beschreibung").notNull(),
+});
+
+export const insertQualifikationSchema = createInsertSchema(qualifikationen).omit({ id: true });
+export type InsertQualifikation = z.infer<typeof insertQualifikationSchema>;
+export type Qualifikation = typeof qualifikationen.$inferSelect;
+
+// Available qualifications (kept for backwards compatibility)
 export const QUALIFIKATIONEN = ["TM", "AGT", "Maschinist", "GF", "Sprechfunker", "San"] as const;
 
 // Besetzungscheck result type
