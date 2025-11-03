@@ -46,7 +46,6 @@ export type Einsatz = typeof einsatz.$inferSelect;
 // Settings
 export const settings = pgTable("settings", {
   id: integer("id").primaryKey(),
-  schichtlaenge_std: integer("schichtlaenge_std").notNull(),
   min_agt: integer("min_agt").notNull(),
   min_maschinist: integer("min_maschinist").notNull(),
   min_gf: integer("min_gf").notNull(),

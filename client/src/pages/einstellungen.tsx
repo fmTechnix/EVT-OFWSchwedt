@@ -42,7 +42,6 @@ export default function Einstellungen() {
     queryKey: ["/api/qualifikationen"],
   });
 
-  const [schichtlaenge, setSchichtlaenge] = useState("");
   const [minAgt, setMinAgt] = useState("");
   const [minMaschinist, setMinMaschinist] = useState("");
   const [minGf, setMinGf] = useState("");
@@ -57,7 +56,6 @@ export default function Einstellungen() {
 
   useEffect(() => {
     if (settings) {
-      setSchichtlaenge(settings.schichtlaenge_std.toString());
       setMinAgt(settings.min_agt.toString());
       setMinMaschinist(settings.min_maschinist.toString());
       setMinGf(settings.min_gf.toString());
@@ -75,7 +73,6 @@ export default function Einstellungen() {
   const saveMutation = useMutation({
     mutationFn: async () => {
       await apiRequest("PUT", "/api/settings", {
-        schichtlaenge_std: parseInt(schichtlaenge),
         min_agt: parseInt(minAgt),
         min_maschinist: parseInt(minMaschinist),
         min_gf: parseInt(minGf),
@@ -187,21 +184,7 @@ export default function Einstellungen() {
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="schichtlaenge">Schichtlänge (Std)</Label>
-                    <Input
-                      id="schichtlaenge"
-                      type="number"
-                      min="0"
-                      value={schichtlaenge}
-                      onChange={(e) => setSchichtlaenge(e.target.value)}
-                      required
-                      data-testid="input-schichtlaenge"
-                      className="h-11"
-                    />
-                  </div>
-
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label htmlFor="min-agt">Min. AGT</Label>
                     <Input

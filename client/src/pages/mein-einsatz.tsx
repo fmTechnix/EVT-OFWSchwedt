@@ -1,12 +1,22 @@
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Navigation } from "@/components/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import type { BesetzungscheckResult, Einsatz } from "@shared/schema";
+import { Button } from "@/components/ui/button";
+import type { BesetzungscheckResult, Einsatz, Availability } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CheckCircle2, XCircle } from "lucide-react";
+import { CheckCircle2, XCircle, Calendar } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useAuth } from "@/lib/auth-context";
+import { addDays, startOfWeek, format } from "date-fns";
+import { de } from "date-fns/locale";
 
 export default function MeinEinsatz() {
+  const { toast } = useToast();
+  const { user } = useAuth();
+  
   const { data, isLoading } = useQuery<BesetzungscheckResult>({
     queryKey: ["/api/besetzungscheck"],
   });
@@ -15,16 +25,143 @@ export default function MeinEinsatz() {
     queryKey: ["/api/einsatz"],
   });
 
+  // Get next Monday
+  const getNextMonday = () => {
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    const daysUntilMonday = dayOfWeek === 0 ? 1 : 8 - dayOfWeek; // If Sunday, next day; else days until next Monday
+    return startOfWeek(addDays(today, daysUntilMonday), { weekStartsOn: 1 });
+  };
+
+  const [weekStart, setWeekStart] = useState(getNextMonday());
+  
+  // Generate week days (Monday-Sunday)
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+
+  const { data: availabilities, isLoading: availabilitiesLoading } = useQuery<Availability[]>({
+    queryKey: ["/api/availabilities", user?.id],
+    enabled: !!user,
+  });
+
+  const [weekAvailability, setWeekAvailability] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    if (availabilities) {
+      const availabilityMap: Record<string, boolean> = {};
+      weekDays.forEach((day) => {
+        const dateStr = format(day, "yyyy-MM-dd");
+        const avail = availabilities.find((a) => a.date === dateStr);
+        availabilityMap[dateStr] = avail?.status === "available";
+      });
+      setWeekAvailability(availabilityMap);
+    }
+  }, [availabilities, weekStart]);
+
+  const saveAvailabilityMutation = useMutation({
+    mutationFn: async () => {
+      const availabilityData = weekDays.map((day) => ({
+        date: format(day, "yyyy-MM-dd"),
+        status: weekAvailability[format(day, "yyyy-MM-dd")] ? "available" : "unavailable",
+      }));
+      
+      return await apiRequest("POST", "/api/availabilities/week", { availabilities: availabilityData });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/availabilities"] });
+      toast({
+        title: "Verfügbarkeit gespeichert",
+        description: "Deine Verfügbarkeit für die Woche wurde aktualisiert",
+      });
+    },
+    onError: () => {
+      toast({
+        variant: "destructive",
+        title: "Fehler",
+        description: "Verfügbarkeit konnte nicht gespeichert werden",
+      });
+    },
+  });
+
+  const toggleDay = (dateStr: string) => {
+    setWeekAvailability((prev) => ({
+      ...prev,
+      [dateStr]: !prev[dateStr],
+    }));
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
       
       <main className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-8">
         <h1 className="text-3xl font-bold mb-8 flex items-center gap-3">
-          <span className="text-4xl">🚒</span>
-          Mein Einsatz - Besetzungscheck
+          <Calendar className="w-8 h-8" />
+          Meine Verfügbarkeit & Besetzungscheck
         </h1>
 
+        {/* Week Availability Section */}
+        <Card className="shadow-lg mb-6">
+          <CardHeader>
+            <CardTitle>Verfügbarkeit für nächste Woche (Montag-Sonntag)</CardTitle>
+            <CardDescription>
+              Gib an, an welchen Tagen du verfügbar bist. Die automatische Zuteilung erfolgt basierend auf deiner Verfügbarkeit.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {availabilitiesLoading ? (
+              <Skeleton className="h-32 w-full" />
+            ) : (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 md:grid-cols-7 gap-3">
+                  {weekDays.map((day, index) => {
+                    const dateStr = format(day, "yyyy-MM-dd");
+                    const isAvailable = weekAvailability[dateStr] || false;
+                    const dayName = format(day, "EEEE", { locale: de });
+                    const dayDate = format(day, "dd.MM.", { locale: de });
+                    
+                    return (
+                      <button
+                        key={dateStr}
+                        onClick={() => toggleDay(dateStr)}
+                        className={`p-4 rounded-lg border-2 transition-all ${
+                          isAvailable
+                            ? "bg-green-500/10 border-green-500 hover:bg-green-500/20"
+                            : "bg-destructive/10 border-destructive/30 hover:bg-destructive/20"
+                        }`}
+                        data-testid={`day-${index}`}
+                      >
+                        <div className="text-center">
+                          <div className="font-semibold text-sm">{dayName}</div>
+                          <div className="text-xs text-muted-foreground mt-1">{dayDate}</div>
+                          <div className="mt-2">
+                            {isAvailable ? (
+                              <CheckCircle2 className="w-6 h-6 mx-auto text-green-500" />
+                            ) : (
+                              <XCircle className="w-6 h-6 mx-auto text-destructive" />
+                            )}
+                          </div>
+                          <div className="text-xs font-medium mt-1">
+                            {isAvailable ? "Verfügbar" : "Nicht verfügbar"}
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+                <Button
+                  onClick={() => saveAvailabilityMutation.mutate()}
+                  disabled={saveAvailabilityMutation.isPending}
+                  className="w-full"
+                  data-testid="button-save-availability"
+                >
+                  {saveAvailabilityMutation.isPending ? "Wird gespeichert..." : "Verfügbarkeit speichern"}
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Besetzungscheck Section */}
         {isLoading || einsatzLoading ? (
           <div className="space-y-6">
             <Skeleton className="h-20 w-full" />
@@ -43,6 +180,7 @@ export default function MeinEinsatz() {
           </div>
         ) : (
           <>
+            <h2 className="text-2xl font-bold mb-4">Aktuelle Besetzung</h2>
             <Card className="shadow-lg mb-6">
               <CardContent className="pt-6">
                 <div className="flex flex-wrap items-center gap-4 text-lg">

@@ -1093,6 +1093,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Set week availability (batch update for Monday-Sunday)
+  app.post("/api/availabilities/week", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Nicht angemeldet" });
+      }
+
+      const weekAvailabilitySchema = z.object({
+        availabilities: z.array(z.object({
+          date: z.string(), // ISO date string (YYYY-MM-DD)
+          status: z.enum(["available", "unavailable"]),
+        })),
+      });
+
+      const validation = weekAvailabilitySchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ error: "Ungültige Daten", details: validation.error });
+      }
+
+      const { availabilities } = validation.data;
+
+      // Set availability for each day
+      for (const avail of availabilities) {
+        await storage.setAvailability({
+          user_id: userId,
+          date: avail.date,
+          status: avail.status,
+        });
+      }
+
+      // Trigger automatic crew reassignment
+      try {
+        const availableUsers = await storage.getAvailableUsers(new Date().toISOString().split('T')[0]);
+        const vehicleConfigs = await storage.getAllVehicleConfigs();
+        const result = assignCrewToVehicles(availableUsers, vehicleConfigs);
+
+        const assignmentsToSave: Array<{
+          user_id: string;
+          vehicle_config_id: number;
+          position: string;
+          trupp_partner_id: string | null;
+        }> = [];
+
+        for (const vehicleAssignment of result) {
+          const vehicleConfig = vehicleAssignment.vehicleConfig;
+          for (const slot of vehicleAssignment.slots) {
+            if (slot.assignedUser) {
+              let truppPartnerId: string | null = null;
+              
+              const isTruppPosition = slot.position.includes("trupp") && 
+                                      !slot.position.includes("führer");
+              
+              if (isTruppPosition) {
+                const truppName = slot.position.split(" ")[0];
+                const partnerSlot = vehicleAssignment.slots.find(
+                  s => s.position !== slot.position && 
+                       s.position.includes(truppName) && 
+                       s.assignedUser
+                );
+                if (partnerSlot && partnerSlot.assignedUser) {
+                  truppPartnerId = partnerSlot.assignedUser.id;
+                }
+              }
+              
+              assignmentsToSave.push({
+                user_id: slot.assignedUser.id,
+                vehicle_config_id: vehicleConfig.id,
+                position: slot.position,
+                trupp_partner_id: truppPartnerId,
+              });
+            }
+          }
+        }
+        
+        await storage.setCurrentAssignments(assignmentsToSave);
+      } catch (error) {
+        console.error("Error during automatic reassignment:", error);
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Set week availability error:", error);
+      res.status(500).json({ error: "Fehler beim Speichern der Wochenverfügbarkeit" });
+    }
+  });
+
   // Delete availability record
   app.delete("/api/availability/:id", requireAuth, async (req: Request, res: Response) => {
     try {
