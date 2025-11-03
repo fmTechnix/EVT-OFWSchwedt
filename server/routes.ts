@@ -764,6 +764,119 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Availability management
+  // Get current user's availability for a specific date
+  app.get("/api/availability/:date", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const { date } = req.params;
+      const userId = req.session?.userId;
+      
+      if (!userId) {
+        return res.status(401).json({ error: "Nicht angemeldet" });
+      }
+      
+      const availability = await storage.getUserAvailability(userId, date);
+      res.json(availability || null);
+    } catch (error) {
+      res.status(500).json({ error: "Fehler beim Abrufen der Verfügbarkeit" });
+    }
+  });
+
+  // Get current user's all availability records
+  app.get("/api/availability", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const userId = req.session?.userId;
+      
+      if (!userId) {
+        return res.status(401).json({ error: "Nicht angemeldet" });
+      }
+      
+      const availabilities = await storage.getUserAvailabilities(userId);
+      res.json(availabilities);
+    } catch (error) {
+      res.status(500).json({ error: "Fehler beim Abrufen der Verfügbarkeiten" });
+    }
+  });
+
+  // Set user availability for a specific date
+  app.post("/api/availability", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const userId = req.session?.userId;
+      
+      if (!userId) {
+        return res.status(401).json({ error: "Nicht angemeldet" });
+      }
+      
+      const availabilitySchema = z.object({
+        date: z.string(),
+        status: z.enum(["available", "unavailable"]),
+        reason: z.string().optional(),
+      });
+      
+      const validation = availabilitySchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ error: "Ungültige Daten", details: validation.error });
+      }
+      
+      const { date, status, reason } = validation.data;
+      
+      const availability = await storage.setAvailability({
+        user_id: userId,
+        date,
+        status,
+        reason: reason || null,
+      });
+      
+      // If setting unavailable for today, trigger automatic reassignment
+      const today = new Date().toISOString().split('T')[0];
+      if (date === today && status === "unavailable") {
+        // TODO: Trigger automatic reassignment
+      }
+      
+      res.json(availability);
+    } catch (error) {
+      console.error("Set availability error:", error);
+      res.status(500).json({ error: "Fehler beim Setzen der Verfügbarkeit" });
+    }
+  });
+
+  // Delete availability record
+  app.delete("/api/availability/:id", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteAvailability(parseInt(id));
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Fehler beim Löschen der Verfügbarkeit" });
+    }
+  });
+
+  // Get current assignments (all users can see all assignments)
+  app.get("/api/current-assignments", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const assignments = await storage.getCurrentAssignments();
+      res.json(assignments);
+    } catch (error) {
+      res.status(500).json({ error: "Fehler beim Abrufen der aktuellen Zuteilungen" });
+    }
+  });
+
+  // Get current user's assignment
+  app.get("/api/my-assignment", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const userId = req.session?.userId;
+      
+      if (!userId) {
+        return res.status(401).json({ error: "Nicht angemeldet" });
+      }
+      
+      const assignment = await storage.getUserAssignment(userId);
+      res.json(assignment || null);
+    } catch (error) {
+      res.status(500).json({ error: "Fehler beim Abrufen der eigenen Zuteilung" });
+    }
+  });
+
   // Automatic Crew Assignment endpoint
   app.post("/api/crew-assignment", requireAuth, async (req: Request, res: Response) => {
     try {
@@ -779,8 +892,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const { vehicleIds } = validation.data;
       
-      // Get all users
-      const allUsers = await storage.getAllUsers();
+      // Get available users for today
+      const today = new Date().toISOString().split('T')[0];
+      const availableUsers = await storage.getAvailableUsers(today);
       
       // Get vehicle configurations
       let vehicleConfigs;
@@ -795,8 +909,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
         vehicleConfigs = await storage.getAllVehicleConfigs();
       }
       
-      // Run assignment algorithm
-      const result = assignCrewToVehicles(allUsers, vehicleConfigs);
+      // Run assignment algorithm with only available users
+      const result = assignCrewToVehicles(availableUsers, vehicleConfigs);
+      
+      // Save assignments to database
+      const assignmentsToSave: Array<{
+        user_id: string;
+        vehicle_config_id: number;
+        position: string;
+        trupp_partner_id: string | null;
+      }> = [];
+      
+      for (const vehicleAssignment of result.assignments) {
+        for (const slot of vehicleAssignment.slots) {
+          if (slot.assignedUser) {
+            // Find trupp partner for positions like "Angriffstrupp", "Wassertrupp", etc.
+            let truppPartnerId: string | null = null;
+            
+            if (slot.position.includes("trupp") && !slot.position.includes("führer")) {
+              const truppName = slot.position.replace(/\s*\(.*?\)/, ""); // Remove qualifications in parentheses
+              const partnerSlot = vehicleAssignment.slots.find(
+                s => s.position !== slot.position && 
+                     s.position.includes(truppName) && 
+                     s.assignedUser
+              );
+              if (partnerSlot && partnerSlot.assignedUser) {
+                truppPartnerId = partnerSlot.assignedUser.id;
+              }
+            }
+            
+            assignmentsToSave.push({
+              user_id: slot.assignedUser.id,
+              vehicle_config_id: vehicleAssignment.vehicleConfig.id,
+              position: slot.position,
+              trupp_partner_id: truppPartnerId,
+            });
+          }
+        }
+      }
+      
+      await storage.setCurrentAssignments(assignmentsToSave);
       
       res.json(result);
     } catch (error) {
