@@ -38,7 +38,7 @@ export function Navigation() {
                 variant="ghost"
                 size="sm"
                 className={`text-white hover:bg-red-700 ${location === item.href ? "bg-red-700" : ""}`}
-                data-testid={`link-${item.label.split(' ')[1].toLowerCase()}`}
+                data-testid={`link-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
               >
                 {item.label}
               </Button>
