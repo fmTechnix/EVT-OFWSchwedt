@@ -1,4 +1,6 @@
-import type { User, VehicleConfig } from "@shared/schema";
+import type { User, VehicleConfig, Settings } from "@shared/schema";
+import type { IStorage } from "./storage";
+import { FairnessScorer } from "./fairness-scoring";
 
 export interface SlotAssignment {
   position: string;
@@ -199,13 +201,23 @@ function checkVehicleConstraints(
   return { met, warnings };
 }
 
-export function assignCrewToVehicles(
+export async function assignCrewToVehicles(
   users: User[],
-  vehicleConfigs: VehicleConfig[]
-): CrewAssignmentResult {
+  vehicleConfigs: VehicleConfig[],
+  storage: IStorage,
+  assignedForDate: string
+): Promise<CrewAssignmentResult> {
   const availableUsers = [...users];
   const assignments: VehicleAssignment[] = [];
   const globalWarnings: string[] = [];
+  
+  // Initialize fairness scorer
+  const fairnessScorer = new FairnessScorer(storage);
+  
+  // Get settings for rotation configuration
+  const settings = await storage.getSettings();
+  const rotationWindow = settings.rotation_window || 4;
+  const rotationWeights = settings.rotation_weights as Record<string, number> | undefined;
   
   let totalFulfilled = 0;
   
@@ -235,18 +247,73 @@ export function assignCrewToVehicles(
       const eligibleUsers = availableUsers.filter(user => canFulfillSlot(user, slot));
       
       if (eligibleUsers.length > 0) {
-        // Sort by score (prefer qualifications)
-        eligibleUsers.sort((a, b) => calculateUserScore(b, slot) - calculateUserScore(a, slot));
+        // Calculate qualification scores (prefer qualifications)
+        const usersWithQualScore = eligibleUsers.map(user => ({
+          user,
+          qualScore: calculateUserScore(user, slot),
+        }));
+        
+        // Calculate fairness scores
+        const requiredQuals = [
+          ...(slot.requires || []),
+          ...(slot.requires_any || []),
+        ];
+        
+        const scoredUsers = await fairnessScorer.scoreUsersForPosition(
+          eligibleUsers,
+          {
+            position: slot.position,
+            vehicleName: vehicleConfig.vehicle,
+            requiredQuals,
+            assignedForDate,
+            rotationWindow,
+            rotationWeights,
+          }
+        );
+        
+        // Combine qualification and fairness scores
+        // Higher qualification score = better match
+        // Lower fairness score = higher priority
+        // We normalize and combine them
+        const combinedScores = scoredUsers.map(scored => {
+          const qualUser = usersWithQualScore.find(u => u.user.id === scored.user.id);
+          const qualScore = qualUser?.qualScore || 0;
+          
+          // Combined score: Qualification bonus - Fairness penalty
+          // This ensures qualified users are preferred, but fairness balances the load
+          const combinedScore = qualScore - (scored.score * 0.5);
+          
+          return {
+            user: scored.user,
+            combinedScore,
+            qualScore,
+            fairnessScore: scored.score,
+            breakdown: scored.breakdown,
+          };
+        });
+        
+        // Sort by combined score (higher is better)
+        combinedScores.sort((a, b) => b.combinedScore - a.combinedScore);
         
         // Assign best match
-        const bestUser = eligibleUsers[0];
-        slotAssignment.assignedUser = bestUser;
+        const bestMatch = combinedScores[0];
+        slotAssignment.assignedUser = bestMatch.user;
         
         // Remove from available pool
-        const index = availableUsers.indexOf(bestUser);
+        const index = availableUsers.indexOf(bestMatch.user);
         if (index > -1) {
           availableUsers.splice(index, 1);
         }
+        
+        // Update fairness metrics (async, but we don't await to improve performance)
+        fairnessScorer.updateAfterAssignment(
+          bestMatch.user.id,
+          slot.position,
+          vehicleConfig.vehicle,
+          assignedForDate
+        ).catch(err => {
+          console.error("Error updating fairness metrics:", err);
+        });
       }
       
       vehicleAssignment.slots.push(slotAssignment);

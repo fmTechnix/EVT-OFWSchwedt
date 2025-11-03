@@ -984,7 +984,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const vehicleConfigs = await storage.getAllVehicleConfigs();
           
           // Run assignment algorithm with only available users
-          const result = assignCrewToVehicles(availableUsers, vehicleConfigs);
+          const result = await assignCrewToVehicles(availableUsers, vehicleConfigs, storage, today);
           
           // Save assignments to database
           const assignmentsToSave: Array<{
@@ -1142,9 +1142,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Trigger automatic crew reassignment
       try {
-        const availableUsers = await storage.getAvailableUsers(new Date().toISOString().split('T')[0]);
+        const today = new Date().toISOString().split('T')[0];
+        const availableUsers = await storage.getAvailableUsers(today);
         const vehicleConfigs = await storage.getAllVehicleConfigs();
-        const result = assignCrewToVehicles(availableUsers, vehicleConfigs);
+        const result = await assignCrewToVehicles(availableUsers, vehicleConfigs, storage, today);
 
         const assignmentsToSave: Array<{
           user_id: string;
@@ -1273,7 +1274,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Run assignment algorithm with only available users
-      const result = assignCrewToVehicles(availableUsers, vehicleConfigs);
+      const result = await assignCrewToVehicles(availableUsers, vehicleConfigs, storage, dateString);
       
       // Save assignments to database
       const assignmentsToSave: Array<{

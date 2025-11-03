@@ -190,7 +190,8 @@ export type CurrentAssignment = typeof currentAssignments.$inferSelect;
 export const assignmentHistory = pgTable("assignment_history", {
   id: serial("id").primaryKey(),
   user_id: text("user_id").notNull(),
-  vehicle_config_id: integer("vehicle_config_id").notNull(),
+  vehicle_config_id: integer("vehicle_config_id"),
+  vehicle_name: text("vehicle_name").notNull(), // Denormalized for query performance
   position: text("position").notNull(),
   assigned_for_date: text("assigned_for_date").notNull(), // ISO date string (week start)
   assigned_until_date: text("assigned_until_date"), // ISO date string (week end) or null if ongoing
