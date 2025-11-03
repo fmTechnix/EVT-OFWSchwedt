@@ -31,8 +31,8 @@ export default function Kalender() {
     queryKey: ["/api/termine"],
   });
 
-  const { data: users } = useQuery<Omit<User, "password">[]>({
-    queryKey: ["/api/users"],
+  const { data: users } = useQuery<{ id: string; vorname: string; nachname: string }[]>({
+    queryKey: ["/api/users/public"],
   });
 
   const [formData, setFormData] = useState({

@@ -11,12 +11,22 @@ The system supports three user roles with different access levels:
 
 ## Recent Changes (November 2025)
 
+**Unified Benutzer/Personnel System (November 3, 2025):**
+- Merged Kameraden (crew members) and Benutzer (users) into single unified User model
+- Removed separate `kameraden` table; personnel data now stored in `users` table with vorname, nachname, qualifikationen[]
+- Users table now contains: id, username, password, role, vorname, nachname, qualifikationen[], muss_passwort_aendern
+- Removed `/api/kameraden` endpoints; all personnel management now through `/api/users`
+- Extended `/api/users` with: search, sort (by nachname/vorname/username), PATCH/:id/qualifikationen, POST/:id/reset-password, DELETE/:id, POST/seed
+- Benutzer page completely redesigned: unified view with search, sort, qualification editor, password reset, role assignment
+- Besetzungscheck now uses users.qualifikationen instead of separate kameraden table
+- Navigation updated: "Kameraden" renamed to "Benutzer" (admin-only)
+- Calendar and other pages updated to use user.vorname/nachname instead of user.name
+
 **Self-Service Registration & Role-Based Dashboard (November 3, 2025):**
-- Implemented self-service user registration with first name and last name
+- Implemented self-service user registration with vorname/nachname
 - New users receive auto-generated username (firstname.lastname) and default password "Feuer123"
 - Mandatory password change on first login enforced via `muss_passwort_aendern` flag
-- Moved user management and registration from Settings to Kameraden page (Benutzer tab)
-- Implemented role-based dashboard views: Members see simplified interface (calendar, basic info), Admins/Moderators see full operational dashboard
+- Role-based dashboard views: Members see simplified interface (calendar, basic info), Admins/Moderators see full operational dashboard
 - Enhanced security: Password change endpoint validates old password before allowing updates
 
 **Calendar System & Role Management Implementation:**
@@ -69,14 +79,20 @@ Preferred communication style: Simple, everyday language.
 - `/api/auth/*` - Authentication endpoints (login, logout, me, register, change-password)
   - `/api/auth/register` - Self-service registration with vorname/nachname (creates username as firstname.lastname)
   - `/api/auth/change-password` - Password change with old password validation
-- `/api/users` - User listing and role management (admin only)
-- `/api/users/:id/role` - User role assignment (admin only)
+- `/api/users/public` - GET public user list (id, vorname, nachname only) for calendar attendee names (all authenticated)
+- `/api/users` - User listing with search/sort (admin only)
+  - GET supports query params: search, sortBy (nachname/vorname/username), sortOrder (asc/desc)
+- `/api/users/:id` - PATCH user details (admin only)
+- `/api/users/:id/role` - PATCH user role assignment (admin only)
+- `/api/users/:id/qualifikationen` - PATCH user qualifications (admin only)
+- `/api/users/:id/reset-password` - POST reset password to "Feuer123" (admin only)
+- `/api/users/:id` - DELETE user (admin only)
+- `/api/users/seed` - POST create 77 sample users (admin only)
 - `/api/vehicles` - Vehicle CRUD operations (admin only)
-- `/api/kameraden` - Personnel CRUD operations
 - `/api/qualifikationen` - Qualification management (admin only)
 - `/api/einsatz` - Mission/deployment information
 - `/api/settings` - System settings management (admin only)
-- `/api/besetzungscheck` - Staffing verification endpoint
+- `/api/besetzungscheck` - Staffing verification endpoint (uses users.qualifikationen)
 - `/api/termine` - Calendar event CRUD operations (create/update/delete: moderator/admin, read: all authenticated)
 - `/api/termine/:id/zusagen` - Event RSVP listing (all authenticated)
 - `/api/termine/:id/zusage` - Event RSVP submission (all authenticated)
@@ -90,14 +106,15 @@ Preferred communication style: Simple, everyday language.
 
 **Database Schema Design**: Drizzle ORM schema is defined for PostgreSQL in `shared/schema.ts`:
 
-- **users**: User accounts with roles (admin/moderator/member), authentication credentials, names, and `muss_passwort_aendern` flag for first-login password enforcement
+- **users**: Unified user/personnel model with roles (admin/moderator/member), authentication credentials, vorname, nachname, qualifikationen[] array, and `muss_passwort_aendern` flag for first-login password enforcement
 - **vehicles**: Fire trucks/vehicles with crew capacity and radio call signs
-- **kameraden**: Crew members with qualification arrays stored as references to qualifikationen table
 - **qualifikationen**: Available qualifications/certifications (e.g., TM, AGT, Maschinist)
 - **einsatz**: Mission information including keyword (Stichwort), crew requirements
 - **settings**: System configuration for shift length and minimum qualification requirements
 - **termine**: Calendar events with title, description, date, time, location, and creator reference
 - **termin_zusagen**: Event RSVPs linking users to events with status (zugesagt/abgesagt)
+
+Note: The separate `kameraden` table has been removed. All personnel data is now stored in the `users` table with qualifikationen as an array field.
 
 **Intended Database**: PostgreSQL via Neon serverless (`@neondatabase/serverless`). The Drizzle configuration points to a PostgreSQL database, but the current implementation uses in-memory storage.
 

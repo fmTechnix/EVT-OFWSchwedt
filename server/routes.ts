@@ -169,6 +169,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // User endpoints (unified Benutzer management)
+  // Public user list (for calendar attendee names) - returns only id, vorname, nachname
+  app.get("/api/users/public", requireAuth, async (_req: Request, res: Response) => {
+    try {
+      const users = await storage.getAllUsers();
+      const publicUsers = users.map(u => ({
+        id: u.id,
+        vorname: u.vorname,
+        nachname: u.nachname,
+      }));
+      res.json(publicUsers);
+    } catch (error) {
+      res.status(500).json({ error: "Fehler beim Laden der Benutzer" });
+    }
+  });
+
   app.get("/api/users", requireAdmin, async (req: Request, res: Response) => {
     try {
       let users = await storage.getAllUsers();
