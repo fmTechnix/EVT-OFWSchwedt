@@ -2,7 +2,9 @@
 
 ## Overview
 
-EVT (Einsatzverwaltungstool) is a fire department deployment management system for managing personnel, vehicles, mission readiness, and event coordination. It tracks crew qualifications, vehicle assignments, verifies minimum staffing, and manages calendar events with RSVP functionality. The system supports three user roles: Admin (full access), Moderator (event management), and Member (view deployment, readiness, RSVP). Key capabilities include an automatic crew assignment system based on qualifications and vehicle configurations, a unified user/personnel management system, self-service registration, role-based dashboards, and availability management with automatic crew reassignment.
+EVT (Einsatzverwaltungstool) is a fire department deployment management system for managing personnel, vehicles, mission readiness, and event coordination. It tracks crew qualifications, vehicle assignments, verifies minimum staffing, and manages calendar events with RSVP functionality. The system supports three user roles: Admin (full access), Moderator (event management), and Member (view deployment, readiness, RSVP). Key capabilities include an automatic crew assignment system based on qualifications and vehicle configurations, a unified user/personnel management system, self-service registration, role-based dashboards, availability management with automatic crew reassignment, and **real-time push notifications** for assignment changes.
+
+**Progressive Web App (PWA)**: The application is configured as a PWA, enabling installation on mobile devices (Android, iOS 16.4+) and supporting push notifications. iOS requires installation to home screen for push notification support.
 
 ## User Preferences
 
@@ -13,12 +15,18 @@ Preferred communication style: Simple, everyday language.
 ### Frontend Architecture
 
 **Framework**: React with TypeScript, using Vite.
+**Progressive Web App (PWA)**: 
+  - Web App Manifest (`/manifest.json`) for installation
+  - Service Worker (`/sw.js`) for push notifications and offline support
+  - iOS 16.4+ support with installation instructions in UI
+  - Android full support (no installation required)
 **UI Component Library**: Shadcn/ui (Radix UI, Tailwind CSS).
 **Design System**: "new-york" variant of Shadcn/ui, neutral color palette, drawing from Carbon Design System and Material Design for high information density.
 **State Management**: TanStack Query for server state, React Context API for authentication, local component state with React hooks.
 **Routing**: Wouter.
 **Styling**: Tailwind CSS with custom CSS variables, supports light/dark modes.
 **Form Handling**: React Hook Form with Zod validation.
+**Push Notifications**: Custom hook (`usePushNotifications`) manages subscription lifecycle, iOS detection, and browser permission handling.
 
 ### Backend Architecture
 
@@ -26,8 +34,9 @@ Preferred communication style: Simple, everyday language.
 **Language**: TypeScript with ES modules.
 **Session Management**: Express-session with server-side session data.
 **Authentication**: Session-based, three-tier role system (admin, moderator, member). Middleware (`requireAuth`, `requireAdmin`, `requireModerator`) protects routes. Password storage appears to be plain text (security concern).
-**API Design**: RESTful API endpoints under `/api` for authentication, user management (including qualifications, roles, password reset), vehicle management, qualification management, mission info, system settings, staffing verification, calendar events (CRUD, RSVP, export), vehicle configurations (CRUD, import/export), and automatic crew assignment.
+**API Design**: RESTful API endpoints under `/api` for authentication, user management (including qualifications, roles, password reset), vehicle management, qualification management, mission info, system settings, staffing verification, calendar events (CRUD, RSVP, export), vehicle configurations (CRUD, import/export), automatic crew assignment, and **push notification management** (subscribe, unsubscribe, VAPID public key).
 **Data Layer**: Uses an in-memory storage implementation (`MemStorage`) designed to support database persistence through an `IStorage` interface.
+**Push Notifications**: PushNotificationService handles Web Push with VAPID authentication. Automatically detects reassignments when availability changes and sends notifications to affected users (excluding the user who made the change). VAPID keys configurable via environment variables (dev fallback with security warning).
 
 ### Data Storage Solutions
 
@@ -41,6 +50,9 @@ Preferred communication style: Simple, everyday language.
 - **settings**: System configuration.
 - **termine**: Calendar events with details and creator reference.
 - **termin_zusagen**: Event RSVPs.
+- **push_subscriptions**: Browser push notification subscriptions (endpoint, p256dh, auth keys).
+- **availabilities**: User availability tracking by date.
+- **current_assignments**: Current vehicle/position assignments with trupp partners.
 **Intended Database**: PostgreSQL via Neon serverless.
 **Migration Strategy**: Drizzle Kit for schema migrations.
 
@@ -52,3 +64,4 @@ Preferred communication style: Simple, everyday language.
 **Build Tools**: Vite (frontend), esbuild (server production), tsx (TypeScript dev).
 **UI Dependencies**: Radix UI, Lucide React (icons), date-fns, embla-carousel-react.
 **Validation**: Zod, drizzle-zod.
+**Push Notifications**: web-push library with VAPID authentication for Web Push API.
