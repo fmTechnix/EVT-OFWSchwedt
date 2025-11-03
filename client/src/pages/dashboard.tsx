@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Navigation } from "@/components/navigation";
 import { useAuth } from "@/lib/auth-context";
-import type { Vehicle, User, Einsatz, Settings, Termin, CurrentAssignment, Availability } from "@shared/schema";
+import type { Vehicle, User, Termin, CurrentAssignment, Availability } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, parseISO, isAfter } from "date-fns";
 import { de } from "date-fns/locale";
@@ -24,10 +24,6 @@ export default function Dashboard() {
 
   const { data: users, isLoading: usersLoading } = useQuery<User[]>({
     queryKey: ["/api/users/public"],
-  });
-
-  const { data: einsatz, isLoading: einsatzLoading } = useQuery<Einsatz>({
-    queryKey: ["/api/einsatz"],
   });
 
   const { data: termine, isLoading: termineLoading } = useQuery<Termin[]>({
@@ -83,7 +79,7 @@ export default function Dashboard() {
     },
   });
 
-  const isLoading = vehiclesLoading || usersLoading || einsatzLoading || termineLoading;
+  const isLoading = vehiclesLoading || usersLoading || termineLoading;
   
   // Get next 3 upcoming Termine
   const upcomingTermine = termine
@@ -333,23 +329,6 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            {/* Besetzungsprüfung für Members */}
-            <Card className="shadow-lg hover-elevate transition-all" data-testid="card-besetzung">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <span className="text-2xl">🚒</span>
-                  Besetzungsprüfung
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-sm text-muted-foreground mb-1">Aktuelle Einsatzbereitschaft prüfen</p>
-                <Link href="/mein-einsatz">
-                  <Button className="w-full" data-testid="button-check-einsatz">
-                    Prüfung starten
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -419,34 +398,6 @@ export default function Dashboard() {
                     Sie sind derzeit keinem Fahrzeug zugeteilt. Führen Sie eine automatische Zuteilung durch.
                   </p>
                 )}
-              </CardContent>
-            </Card>
-
-            {/* Besetzung & Bedarf für Admin/Moderator */}
-            <Card className="shadow-lg hover-elevate transition-all" data-testid="card-besetzung">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <span className="text-2xl">🚒</span>
-                  Besetzung & Bedarf
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Stichwort</p>
-                  <p className="font-semibold" data-testid="text-stichwort">{einsatz?.stichwort || "-"}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Mannschaftsbedarf</p>
-                  <p className="text-2xl font-bold" data-testid="text-bedarf">{einsatz?.mannschaftsbedarf || 0}</p>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Einstellungen → Mindestrollen & Stichwort
-                </p>
-                <Link href="/mein-einsatz">
-                  <Button className="w-full" data-testid="button-check-einsatz">
-                    Mein Einsatz prüfen
-                  </Button>
-                </Link>
               </CardContent>
             </Card>
 
