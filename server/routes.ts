@@ -958,6 +958,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // If changing availability for today, trigger automatic reassignment
       if (date === today) {
         try {
+          // Get old assignments before reassignment
+          const oldAssignments = await storage.getCurrentAssignments();
+          
           // Get available users for today
           const availableUsers = await storage.getAvailableUsers(today);
           
@@ -1009,6 +1012,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           
           await storage.setCurrentAssignments(assignmentsToSave);
+          
+          // Detect which users have been reassigned and send notifications
+          const reassignedUserIds = new Set<string>();
+          
+          for (const newAssignment of assignmentsToSave) {
+            const oldAssignment = oldAssignments.find(a => a.user_id === newAssignment.user_id);
+            
+            // User is reassigned if:
+            // 1. They have a new assignment and didn't have one before (new position)
+            // 2. Their vehicle changed
+            // 3. Their position changed
+            if (!oldAssignment || 
+                oldAssignment.vehicle_config_id !== newAssignment.vehicle_config_id ||
+                oldAssignment.position !== newAssignment.position) {
+              reassignedUserIds.add(newAssignment.user_id);
+            }
+          }
+          
+          // Also check for users who lost their assignment
+          for (const oldAssignment of oldAssignments) {
+            const stillAssigned = assignmentsToSave.some(a => a.user_id === oldAssignment.user_id);
+            if (!stillAssigned) {
+              reassignedUserIds.add(oldAssignment.user_id);
+            }
+          }
+          
+          // Send push notifications to reassigned users
+          if (reassignedUserIds.size > 0) {
+            const changedByUser = await storage.getUser(userId);
+            const changedByName = changedByUser ? `${changedByUser.vorname} ${changedByUser.nachname}` : "Ein Kamerad";
+            
+            try {
+              await pushService.sendToMultipleUsers(
+                Array.from(reassignedUserIds).filter(id => id !== userId), // Don't notify the user who made the change
+                {
+                  title: "Neue Zuteilung",
+                  body: `${changedByName} hat die Verfügbarkeit geändert. Deine Zuteilung wurde angepasst.`,
+                  icon: "/logo.png",
+                  data: {
+                    type: "reassignment",
+                    timestamp: new Date().toISOString(),
+                  }
+                }
+              );
+            } catch (pushError) {
+              console.error("Error sending push notifications:", pushError);
+              // Don't fail the availability change if push notifications fail
+            }
+          }
         } catch (error) {
           console.error("Error during automatic reassignment after availability change:", error);
           
