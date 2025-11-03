@@ -135,6 +135,7 @@ export default function Einstellungen() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/qualifikationen"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/kameraden"] });
       toast({
         title: "Qualifikation gelöscht",
         description: "Die Qualifikation wurde erfolgreich entfernt",

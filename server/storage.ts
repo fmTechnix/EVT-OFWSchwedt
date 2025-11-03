@@ -298,6 +298,15 @@ export class MemStorage implements IStorage {
   }
 
   async deleteQualifikation(id: number): Promise<void> {
+    // Get the qualification to find its kuerzel
+    const qual = this.qualifikationen.get(id);
+    if (qual) {
+      // Remove this qualification from all kameraden
+      const kameraden = Array.from(this.kameraden.values());
+      for (const kamerad of kameraden) {
+        kamerad.qualifikationen = kamerad.qualifikationen.filter((q: string) => q !== qual.kuerzel);
+      }
+    }
     this.qualifikationen.delete(id);
   }
 
