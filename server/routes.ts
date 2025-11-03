@@ -2,10 +2,11 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import session from "express-session";
 import { storage } from "./storage";
-import { insertVehicleSchema, insertEinsatzSchema, insertSettingsSchema, insertQualifikationSchema, insertTerminSchema, insertTerminZusageSchema } from "@shared/schema";
+import { insertVehicleSchema, insertEinsatzSchema, insertSettingsSchema, insertQualifikationSchema, insertTerminSchema, insertTerminZusageSchema, insertPushSubscriptionSchema } from "@shared/schema";
 import type { User, InsertUser } from "@shared/schema";
 import { verifyPassword } from "./password-utils";
 import { assignCrewToVehicles } from "./crew-assignment";
+import { PushNotificationService, getVapidPublicKey } from "./push-service";
 import { z } from "zod";
 
 // Extend Express session to include user
@@ -1161,6 +1162,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Crew assignment error:", error);
       res.status(500).json({ error: "Fehler bei der automatischen Zuteilung" });
+    }
+  });
+
+  // Push Notification Endpoints
+  const pushService = new PushNotificationService(storage);
+
+  // Get VAPID public key for frontend
+  app.get("/api/push/vapid-public-key", requireAuth, (req: Request, res: Response) => {
+    res.json({ publicKey: getVapidPublicKey() });
+  });
+
+  // Subscribe to push notifications
+  app.post("/api/push/subscribe", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const subscription = insertPushSubscriptionSchema.parse({
+        ...req.body,
+        user_id: req.session.userId,
+      });
+      
+      await storage.savePushSubscription(subscription);
+      res.status(201).json({ message: "Subscription erfolgreich gespeichert" });
+    } catch (error) {
+      console.error("Error saving push subscription:", error);
+      res.status(400).json({ error: "Ungültige Subscription-Daten" });
+    }
+  });
+
+  // Unsubscribe from push notifications
+  app.post("/api/push/unsubscribe", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const { endpoint } = req.body;
+      if (!endpoint) {
+        return res.status(400).json({ error: "Endpoint fehlt" });
+      }
+      
+      await storage.deletePushSubscription(endpoint);
+      res.json({ message: "Subscription erfolgreich gelöscht" });
+    } catch (error) {
+      console.error("Error deleting push subscription:", error);
+      res.status(500).json({ error: "Fehler beim Löschen der Subscription" });
     }
   });
 
