@@ -2,9 +2,21 @@
 
 ## Overview
 
-EVT (Einsatzverwaltungstool) is a fire department deployment management system designed for managing personnel, vehicles, and mission readiness. The application enables fire departments to track crew qualifications, vehicle assignments, and verify that minimum staffing requirements are met for emergency responses.
+EVT (Einsatzverwaltungstool) is a fire department deployment management system designed for managing personnel, vehicles, mission readiness, and event coordination. The application enables fire departments to track crew qualifications, vehicle assignments, verify minimum staffing requirements for emergency responses, and manage calendar events with RSVP functionality.
 
-The system supports two user roles (admin and member) with different access levels. Admins can manage vehicles, personnel (Kameraden), and system settings, while members can view deployment information and check mission readiness status.
+The system supports three user roles with different access levels:
+- **Admin**: Full system access including user role management, vehicle management, personnel management, system settings, and calendar event creation
+- **Moderator**: Can create and manage calendar events in addition to member privileges
+- **Member**: Can view deployment information, check mission readiness status, and RSVP to calendar events
+
+## Recent Changes (November 2025)
+
+**Calendar System & Role Management Implementation:**
+- Extended user roles from two-tier (admin/member) to three-tier (admin/moderator/member)
+- Implemented complete calendar/event management system with RSVP functionality
+- Added user role assignment interface for admins in settings page
+- Created CSV export functionality for calendar events with participant tracking
+- Security enhancement: Event creator ID now derived server-side from session to prevent forgery
 
 ## User Preferences
 
@@ -42,15 +54,23 @@ Preferred communication style: Simple, everyday language.
 **Authentication**: 
 - Session-based authentication (no JWT)
 - Password storage appears to be plain text in the current implementation (security concern)
-- Middleware functions `requireAuth` and `requireAdmin` protect routes
+- Middleware functions `requireAuth`, `requireAdmin`, and `requireModerator` protect routes
+- Three-tier role system: admin (full access), moderator (calendar management), member (read/RSVP access)
 
 **API Design**: RESTful API endpoints under `/api` namespace:
 - `/api/auth/*` - Authentication endpoints (login, logout, me)
-- `/api/vehicles` - Vehicle CRUD operations
+- `/api/users` - User listing and role management (admin only)
+- `/api/users/:id/role` - User role assignment (admin only)
+- `/api/vehicles` - Vehicle CRUD operations (admin only)
 - `/api/kameraden` - Personnel CRUD operations
+- `/api/qualifikationen` - Qualification management (admin only)
 - `/api/einsatz` - Mission/deployment information
-- `/api/settings` - System settings management
+- `/api/settings` - System settings management (admin only)
 - `/api/besetzungscheck` - Staffing verification endpoint
+- `/api/termine` - Calendar event CRUD operations (create/update/delete: moderator/admin, read: all authenticated)
+- `/api/termine/:id/zusagen` - Event RSVP listing (all authenticated)
+- `/api/termine/:id/zusage` - Event RSVP submission (all authenticated)
+- `/api/termine/export` - CSV export of events with participant data (all authenticated)
 
 **Data Layer**: Uses an in-memory storage implementation (`MemStorage` class) that implements the `IStorage` interface. The architecture is designed to support database persistence through the interface pattern.
 
@@ -60,11 +80,14 @@ Preferred communication style: Simple, everyday language.
 
 **Database Schema Design**: Drizzle ORM schema is defined for PostgreSQL in `shared/schema.ts`:
 
-- **users**: User accounts with roles (admin/member), authentication credentials
+- **users**: User accounts with roles (admin/moderator/member), authentication credentials, names
 - **vehicles**: Fire trucks/vehicles with crew capacity and radio call signs
-- **kameraden**: Crew members with qualification arrays (TM, AGT, Maschinist, GF, Sprechfunker, San)
+- **kameraden**: Crew members with qualification arrays stored as references to qualifikationen table
+- **qualifikationen**: Available qualifications/certifications (e.g., TM, AGT, Maschinist)
 - **einsatz**: Mission information including keyword (Stichwort), crew requirements
 - **settings**: System configuration for shift length and minimum qualification requirements
+- **termine**: Calendar events with title, description, date, time, location, and creator reference
+- **termin_zusagen**: Event RSVPs linking users to events with status (zugesagt/abgesagt)
 
 **Intended Database**: PostgreSQL via Neon serverless (`@neondatabase/serverless`). The Drizzle configuration points to a PostgreSQL database, but the current implementation uses in-memory storage.
 
