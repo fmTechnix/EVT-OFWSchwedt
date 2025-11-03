@@ -49,6 +49,8 @@ export const settings = pgTable("settings", {
   min_agt: integer("min_agt").notNull(),
   min_maschinist: integer("min_maschinist").notNull(),
   min_gf: integer("min_gf").notNull(),
+  rotation_window: integer("rotation_window").notNull().default(4), // Number of weeks to consider for rotation
+  rotation_weights: jsonb("rotation_weights"), // Position-specific rotation weights
 });
 
 export const insertSettingsSchema = createInsertSchema(settings).omit({ id: true });
@@ -175,11 +177,46 @@ export const currentAssignments = pgTable("current_assignments", {
   position: text("position").notNull(), // e.g., "Truppführer", "Angriffstrupp", "Maschinist"
   assigned_at: timestamp("assigned_at").notNull().default(sql`now()`),
   trupp_partner_id: text("trupp_partner_id"), // Optional partner for Trupp positions
+  effective_from: text("effective_from"), // ISO date string for week start (e.g., "2025-11-10")
+  effective_to: text("effective_to"), // ISO date string for week end (e.g., "2025-11-16")
+  assignment_history_id: integer("assignment_history_id"), // Reference to history entry
 });
 
 export const insertCurrentAssignmentSchema = createInsertSchema(currentAssignments).omit({ id: true, assigned_at: true });
 export type InsertCurrentAssignment = z.infer<typeof insertCurrentAssignmentSchema>;
 export type CurrentAssignment = typeof currentAssignments.$inferSelect;
+
+// Assignment History (Zuweisungshistorie für Fairness-Tracking)
+export const assignmentHistory = pgTable("assignment_history", {
+  id: serial("id").primaryKey(),
+  user_id: text("user_id").notNull(),
+  vehicle_config_id: integer("vehicle_config_id").notNull(),
+  position: text("position").notNull(),
+  assigned_for_date: text("assigned_for_date").notNull(), // ISO date string (week start)
+  assigned_until_date: text("assigned_until_date"), // ISO date string (week end) or null if ongoing
+  assignment_batch_id: text("assignment_batch_id"), // UUID to group assignments from same run
+  assigned_by: text("assigned_by"), // "auto" or user_id if manual
+  created_at: timestamp("created_at").notNull().default(sql`now()`),
+});
+
+export const insertAssignmentHistorySchema = createInsertSchema(assignmentHistory).omit({ id: true, created_at: true });
+export type InsertAssignmentHistory = z.infer<typeof insertAssignmentHistorySchema>;
+export type AssignmentHistory = typeof assignmentHistory.$inferSelect;
+
+// Assignment Fairness (Fairness-Metriken pro Benutzer)
+export const assignmentFairness = pgTable("assignment_fairness", {
+  user_id: text("user_id").primaryKey(),
+  total_assignments: integer("total_assignments").notNull().default(0),
+  per_position_counts: jsonb("per_position_counts").notNull().default(sql`'{}'::jsonb`), // { "Maschinist": 5, "Truppführer": 3, ... }
+  last_position: text("last_position"),
+  last_assigned_at: timestamp("last_assigned_at"),
+  rolling_fairness_score: integer("rolling_fairness_score").notNull().default(0), // Lower is better (fewer assignments)
+  updated_at: timestamp("updated_at").notNull().default(sql`now()`),
+});
+
+export const insertAssignmentFairnessSchema = createInsertSchema(assignmentFairness).omit({ updated_at: true });
+export type InsertAssignmentFairness = z.infer<typeof insertAssignmentFairnessSchema>;
+export type AssignmentFairness = typeof assignmentFairness.$inferSelect;
 
 // Push Subscriptions for Web Push Notifications
 export const pushSubscriptions = pgTable("push_subscriptions", {
