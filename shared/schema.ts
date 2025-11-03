@@ -196,6 +196,23 @@ export const insertPushSubscriptionSchema = createInsertSchema(pushSubscriptions
 export type InsertPushSubscription = z.infer<typeof insertPushSubscriptionSchema>;
 export type PushSubscription = typeof pushSubscriptions.$inferSelect;
 
+// Mängelmeldungen (Vehicle Defect Reports)
+export const maengelMeldungen = pgTable("maengel_meldungen", {
+  id: serial("id").primaryKey(),
+  vehicle_id: integer("vehicle_id").notNull(), // Reference to vehicles
+  beschreibung: text("beschreibung").notNull(), // Defect description
+  status: text("status").notNull().default("offen"), // "offen", "in_bearbeitung", "behoben"
+  melder_id: text("melder_id").notNull(), // User who reported (reference to users)
+  fotos: text("fotos").array().notNull().default(sql`'{}'`), // Array of photo filenames/base64
+  erstellt_am: timestamp("erstellt_am").notNull().default(sql`now()`),
+  behoben_am: timestamp("behoben_am"), // When defect was resolved
+  bemerkung: text("bemerkung"), // Optional notes/comments
+});
+
+export const insertMaengelMeldungSchema = createInsertSchema(maengelMeldungen).omit({ id: true, erstellt_am: true });
+export type InsertMaengelMeldung = z.infer<typeof insertMaengelMeldungSchema>;
+export type MaengelMeldung = typeof maengelMeldungen.$inferSelect;
+
 // Besetzungscheck result type
 export type BesetzungscheckResult = {
   vorhanden: {
