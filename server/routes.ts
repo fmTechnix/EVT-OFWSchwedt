@@ -297,7 +297,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/termine", requireModerator, async (req: Request, res: Response) => {
     try {
       const data = insertTerminSchema.parse(req.body);
-      const termin = await storage.createTermin(data);
+      // Always use the session user ID as creator to prevent forgery
+      const terminData = { ...data, ersteller_id: req.session.userId! };
+      const termin = await storage.createTermin(terminData);
       res.status(201).json(termin);
     } catch (error) {
       res.status(400).json({ error: "Ungültige Termindaten" });
@@ -308,7 +310,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       const data = insertTerminSchema.parse(req.body);
-      const termin = await storage.updateTermin(id, data);
+      // Always use the session user ID as creator to prevent forgery
+      const terminData = { ...data, ersteller_id: req.session.userId! };
+      const termin = await storage.updateTermin(id, terminData);
       res.json(termin);
     } catch (error) {
       res.status(400).json({ error: "Ungültige Termindaten" });

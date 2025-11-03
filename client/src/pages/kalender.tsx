@@ -45,10 +45,8 @@ export default function Kalender() {
 
   const createTerminMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest("POST", "/api/termine", {
-        ...formData,
-        ersteller_id: user?.id,
-      });
+      // ersteller_id wird automatisch vom Backend gesetzt
+      return await apiRequest("POST", "/api/termine", formData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/termine"] });
