@@ -24,7 +24,7 @@ The system supports three user roles with different access levels:
 
 **Self-Service Registration & Role-Based Dashboard (November 3, 2025):**
 - Implemented self-service user registration with vorname/nachname
-- New users receive auto-generated username (firstname.lastname) and default password "Feuer123"
+- New users receive auto-generated username (firstnamelastname) and default password "Feuer123"
 - Mandatory password change on first login enforced via `muss_passwort_aendern` flag
 - Role-based dashboard views: Members see simplified interface (calendar, basic info), Admins/Moderators see full operational dashboard
 - Enhanced security: Password change endpoint validates old password before allowing updates

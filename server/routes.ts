@@ -116,8 +116,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Vor- und Nachname erforderlich" });
       }
       
-      // Create username from firstname.lastname
-      const username = `${vorname.toLowerCase()}.${nachname.toLowerCase()}`;
+      // Create username from firstnamelastname
+      const username = `${vorname.toLowerCase()}${nachname.toLowerCase()}`;
       
       // Check if user already exists
       const existingUser = await storage.getUserByUsername(username);

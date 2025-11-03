@@ -60,7 +60,7 @@ export default function Kameraden() {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
       toast({
         title: "Benutzer registriert",
-        description: `Login: ${vorname.toLowerCase()}.${nachname.toLowerCase()} mit Passwort "Feuer123"`,
+        description: `Login: ${vorname.toLowerCase()}${nachname.toLowerCase()} mit Passwort "Feuer123"`,
         duration: 10000,
       });
       setRegisterDialogOpen(false);
@@ -277,7 +277,7 @@ export default function Kameraden() {
                         </div>
                         {vorname && nachname && (
                           <div className="text-sm text-muted-foreground">
-                            Benutzername: {vorname.toLowerCase()}.{nachname.toLowerCase()}
+                            Benutzername: {vorname.toLowerCase()}{nachname.toLowerCase()}
                             <br />
                             Passwort: Feuer123 (muss beim ersten Login geändert werden)
                           </div>
