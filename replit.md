@@ -2,192 +2,53 @@
 
 ## Overview
 
-EVT (Einsatzverwaltungstool) is a fire department deployment management system designed for managing personnel, vehicles, mission readiness, and event coordination. The application enables fire departments to track crew qualifications, vehicle assignments, verify minimum staffing requirements for emergency responses, and manage calendar events with RSVP functionality.
-
-The system supports three user roles with different access levels:
-- **Admin**: Full system access including user role management, vehicle management, personnel management, system settings, and calendar event creation
-- **Moderator**: Can create and manage calendar events in addition to member privileges
-- **Member**: Can view deployment information, check mission readiness status, and RSVP to calendar events
-
-## Recent Changes (November 2025)
-
-**Automatic Crew Assignment System (November 3, 2025):**
-- Expanded qualification system from 6 to 14 qualifications: TM, AGT, MASCH, GF, ZF, FUNK, FUEASS, TH, ABC1, CBRN_ERKKW, FAHRER_B, San, MZ, WT18
-- Created `vehicle_configs` database table with JSONB storage for complex vehicle slot requirements
-- Imported 9 vehicle configurations (HLF 20, LF 20, TLF 4000 St, RW, ELW 1, GW-G, ABC-Erkunder, Wasserträger, MTF) with detailed slot requirements and constraints
-- Implemented comprehensive crew assignment algorithm (`server/crew-assignment.ts`) that:
-  - Assigns crew members to vehicle positions based on qualification requirements
-  - Prioritizes users with preferred qualifications
-  - Respects vehicle-specific constraints (min_agt_total, min_agt_watertrupp, min_maschinist_total, min_gf_total, min_funk_total, min_cbrn_erkkw_total, prefer_th_total, prefer_fueass_total)
-  - Handles fallback assignments when strict requirements cannot be met
-  - Returns detailed warnings for unfulfilled positions
-- Added backend API endpoints:
-  - `/api/vehicle-configs` - CRUD operations for vehicle configurations (GET: all authenticated, POST/PATCH/DELETE: admin only)
-  - `/api/vehicle-configs/:id` - Get specific vehicle configuration (all authenticated)
-  - `/api/vehicle-configs/export/json` - Export configurations as JSON (all authenticated)
-  - `/api/vehicle-configs/import/json` - Import configurations from JSON (admin only)
-  - `/api/crew-assignment` - POST automatic crew assignment algorithm (all authenticated, accepts optional vehicleIds[])
-- Completely rebuilt Fahrzeuge page (`client/src/pages/fahrzeuge.tsx`) with 3 tabs:
-  - **Fahrzeugliste**: Simple vehicle list from database
-  - **Konfigurationen**: Display of all 9 vehicle configurations with detailed slot requirements and constraints
-  - **Automatische Zuteilung**: Interface to run automatic crew assignment with real-time results visualization showing assigned positions, unassigned users, warnings, and statistics
-- Fixed Besetzungscheck to use "MASCH" instead of "Maschinist" for consistency
-- System successfully tested end-to-end: vehicle configurations load correctly, assignment algorithm runs and displays results with warnings
-
-**Unified Benutzer/Personnel System (November 3, 2025):**
-- Merged Kameraden (crew members) and Benutzer (users) into single unified User model
-- Removed separate `kameraden` table; personnel data now stored in `users` table with vorname, nachname, qualifikationen[]
-- Users table now contains: id, username, password, role, vorname, nachname, qualifikationen[], muss_passwort_aendern
-- Removed `/api/kameraden` endpoints; all personnel management now through `/api/users`
-- Extended `/api/users` with: search, sort (by nachname/vorname/username), PATCH/:id/qualifikationen, POST/:id/reset-password, DELETE/:id, POST/seed
-- Benutzer page completely redesigned: unified view with search, sort, qualification editor, password reset, role assignment
-- Besetzungscheck now uses users.qualifikationen instead of separate kameraden table
-- Navigation updated: "Kameraden" renamed to "Benutzer" (admin-only)
-- Calendar and other pages updated to use user.vorname/nachname instead of user.name
-
-**Self-Service Registration & Role-Based Dashboard (November 3, 2025):**
-- Implemented self-service user registration with vorname/nachname
-- New users receive auto-generated username (firstnamelastname) and default password "Feuer123"
-- Mandatory password change on first login enforced via `muss_passwort_aendern` flag
-- Role-based dashboard views: Members see simplified interface (calendar, basic info), Admins/Moderators see full operational dashboard
-- Enhanced security: Password change endpoint validates old password before allowing updates
-
-**Calendar System & Role Management Implementation:**
-- Extended user roles from two-tier (admin/member) to three-tier (admin/moderator/member)
-- Implemented complete calendar/event management system with RSVP functionality
-- Added user role assignment interface for admins
-- Created CSV export functionality for calendar events with participant tracking
-- Security enhancement: Event creator ID now derived server-side from session to prevent forgery
+EVT (Einsatzverwaltungstool) is a fire department deployment management system for managing personnel, vehicles, mission readiness, and event coordination. It tracks crew qualifications, vehicle assignments, verifies minimum staffing, and manages calendar events with RSVP functionality. The system supports three user roles: Admin (full access), Moderator (event management), and Member (view deployment, readiness, RSVP). Key capabilities include an automatic crew assignment system based on qualifications and vehicle configurations, a unified user/personnel management system, self-service registration, role-based dashboards, and availability management with automatic crew reassignment.
 
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
 
-## Test Credentials
-
-For testing purposes, the following default users are available:
-- **Admin**: username "admin", password "admin"
-- **Moderator**: username "moderator", password "moderator123"
-- **Member**: username "member", password "member123"
-
 ## System Architecture
 
 ### Frontend Architecture
 
-**Framework**: React with TypeScript, using Vite as the build tool and development server.
-
-**UI Component Library**: Shadcn/ui built on Radix UI primitives, providing accessible, customizable components styled with Tailwind CSS.
-
-**Design System**: Follows the "new-york" variant of Shadcn/ui with a neutral color palette. The design approach draws from Carbon Design System and Material Design principles, adapted for emergency services context with high information density and operational confidence.
-
-**State Management**: 
-- TanStack Query (React Query) for server state management, data fetching, and caching
-- React Context API for authentication state via `AuthContext`
-- Local component state with React hooks
-
-**Routing**: Wouter, a lightweight routing library providing client-side navigation.
-
-**Styling**: Tailwind CSS with custom CSS variables for theming. Supports light/dark modes through CSS custom properties defined in `index.css`.
-
-**Form Handling**: React Hook Form with Zod validation via `@hookform/resolvers`.
+**Framework**: React with TypeScript, using Vite.
+**UI Component Library**: Shadcn/ui (Radix UI, Tailwind CSS).
+**Design System**: "new-york" variant of Shadcn/ui, neutral color palette, drawing from Carbon Design System and Material Design for high information density.
+**State Management**: TanStack Query for server state, React Context API for authentication, local component state with React hooks.
+**Routing**: Wouter.
+**Styling**: Tailwind CSS with custom CSS variables, supports light/dark modes.
+**Form Handling**: React Hook Form with Zod validation.
 
 ### Backend Architecture
 
-**Runtime**: Node.js with Express.js framework.
-
-**Language**: TypeScript with ES modules (`"type": "module"`).
-
-**Session Management**: Express-session with session data stored server-side. Sessions include `userId` for authentication tracking.
-
-**Authentication**: 
-- Session-based authentication (no JWT)
-- Password storage appears to be plain text in the current implementation (security concern)
-- Middleware functions `requireAuth`, `requireAdmin`, and `requireModerator` protect routes
-- Three-tier role system: admin (full access), moderator (calendar management), member (read/RSVP access)
-
-**API Design**: RESTful API endpoints under `/api` namespace:
-- `/api/auth/*` - Authentication endpoints (login, logout, me, register, change-password)
-  - `/api/auth/register` - Self-service registration with vorname/nachname (creates username as firstname.lastname)
-  - `/api/auth/change-password` - Password change with old password validation
-- `/api/users/public` - GET public user list (id, vorname, nachname only) for calendar attendee names (all authenticated)
-- `/api/users` - User listing with search/sort (admin only)
-  - GET supports query params: search, sortBy (nachname/vorname/username), sortOrder (asc/desc)
-- `/api/users/:id` - PATCH user details (admin only)
-- `/api/users/:id/role` - PATCH user role assignment (admin only)
-- `/api/users/:id/qualifikationen` - PATCH user qualifications (admin only)
-- `/api/users/:id/reset-password` - POST reset password to "Feuer123" (admin only)
-- `/api/users/:id` - DELETE user (admin only)
-- `/api/users/seed` - POST create 77 sample users (admin only)
-- `/api/vehicles` - Vehicle CRUD operations (admin only)
-- `/api/qualifikationen` - Qualification management (admin only)
-- `/api/einsatz` - Mission/deployment information
-- `/api/settings` - System settings management (admin only)
-- `/api/besetzungscheck` - Staffing verification endpoint (uses users.qualifikationen)
-- `/api/termine` - Calendar event CRUD operations (create/update/delete: moderator/admin, read: all authenticated)
-- `/api/termine/:id/zusagen` - Event RSVP listing (all authenticated)
-- `/api/termine/:id/zusage` - Event RSVP submission (all authenticated)
-- `/api/termine/export` - CSV export of events with participant data (all authenticated)
-- `/api/vehicle-configs` - Vehicle configuration CRUD operations (GET: all authenticated, POST/PATCH/DELETE: admin only)
-- `/api/vehicle-configs/:id` - Get specific vehicle configuration (all authenticated)
-- `/api/vehicle-configs/export/json` - Export all configurations as JSON (all authenticated)
-- `/api/vehicle-configs/import/json` - Import configurations from JSON (admin only)
-- `/api/crew-assignment` - POST automatic crew assignment algorithm (all authenticated, accepts optional vehicleIds[])
-
-**Data Layer**: Uses an in-memory storage implementation (`MemStorage` class) that implements the `IStorage` interface. The architecture is designed to support database persistence through the interface pattern.
+**Runtime**: Node.js with Express.js.
+**Language**: TypeScript with ES modules.
+**Session Management**: Express-session with server-side session data.
+**Authentication**: Session-based, three-tier role system (admin, moderator, member). Middleware (`requireAuth`, `requireAdmin`, `requireModerator`) protects routes. Password storage appears to be plain text (security concern).
+**API Design**: RESTful API endpoints under `/api` for authentication, user management (including qualifications, roles, password reset), vehicle management, qualification management, mission info, system settings, staffing verification, calendar events (CRUD, RSVP, export), vehicle configurations (CRUD, import/export), and automatic crew assignment.
+**Data Layer**: Uses an in-memory storage implementation (`MemStorage`) designed to support database persistence through an `IStorage` interface.
 
 ### Data Storage Solutions
 
-**Current Implementation**: In-memory storage using JavaScript Maps for data persistence during runtime. Data is lost on server restart.
+**Current Implementation**: In-memory storage; data is lost on server restart.
+**Database Schema Design**: Drizzle ORM schema for PostgreSQL (`shared/schema.ts`) includes:
+- **users**: Unified user/personnel model with roles, authentication, names, qualifications (array), and `muss_passwort_aendern` flag.
+- **vehicles**: Fire trucks with capacity and call signs.
+- **qualifikationen**: 14 predefined qualifications.
+- **vehicle_configs**: JSONB storage for flexible vehicle slot requirements and constraints.
+- **einsatz**: Mission information.
+- **settings**: System configuration.
+- **termine**: Calendar events with details and creator reference.
+- **termin_zusagen**: Event RSVPs.
+**Intended Database**: PostgreSQL via Neon serverless.
+**Migration Strategy**: Drizzle Kit for schema migrations.
 
-**Database Schema Design**: Drizzle ORM schema is defined for PostgreSQL in `shared/schema.ts`:
+## External Dependencies
 
-- **users**: Unified user/personnel model with roles (admin/moderator/member), authentication credentials, vorname, nachname, qualifikationen[] array, and `muss_passwort_aendern` flag for first-login password enforcement
-- **vehicles**: Fire trucks/vehicles with crew capacity and radio call signs
-- **qualifikationen**: Available qualifications/certifications (14 total: TM, AGT, MASCH, GF, ZF, FUNK, FUEASS, TH, ABC1, CBRN_ERKKW, FAHRER_B, San, MZ, WT18)
-- **vehicle_configs**: Vehicle configurations with JSONB storage for slots (position requirements) and constraints (min AGT, FUNK, etc.)
-- **einsatz**: Mission information including keyword (Stichwort), crew requirements
-- **settings**: System configuration for shift length and minimum qualification requirements
-- **termine**: Calendar events with title, description, date, time, location, and creator reference
-- **termin_zusagen**: Event RSVPs linking users to events with status (zugesagt/abgesagt)
-
-Notes:
-- The separate `kameraden` table has been removed. All personnel data is now stored in the `users` table with qualifikationen as an array field.
-- Vehicle configurations are stored as JSONB to support flexible slot requirements and constraints per vehicle type
-
-**Intended Database**: PostgreSQL via Neon serverless (`@neondatabase/serverless`). The Drizzle configuration points to a PostgreSQL database, but the current implementation uses in-memory storage.
-
-**Migration Strategy**: Drizzle Kit configured for schema migrations with `npm run db:push` command.
-
-### External Dependencies
-
-**Database Service**: 
-- Neon Serverless PostgreSQL (configured but not actively used)
-- Connection via `DATABASE_URL` environment variable
-
-**Session Storage**: 
-- `connect-pg-simple` package suggests PostgreSQL-backed session store capability
-- Current implementation uses default in-memory session store
-
-**Development Tools**:
-- Replit-specific plugins for development environment (`@replit/vite-plugin-*`)
-- Runtime error overlay and cartographer for enhanced debugging
-
-**Build Tools**:
-- Vite for frontend bundling and development server
-- esbuild for server-side code bundling in production
-- tsx for TypeScript execution in development
-
-**UI Dependencies**:
-- Comprehensive Radix UI component primitives
-- Lucide React for iconography
-- date-fns for date manipulation
-- embla-carousel-react for carousel functionality
-
-**Validation**:
-- Zod for schema validation
-- drizzle-zod for generating Zod schemas from Drizzle ORM schemas
-
-**Key Environment Variables**:
-- `DATABASE_URL`: PostgreSQL connection string
-- `SESSION_SECRET`: Secret key for session encryption (defaults to "dev-secret-change-me")
-- `NODE_ENV`: Environment designation (development/production)
+**Database Service**: Neon Serverless PostgreSQL (configured, but not actively used).
+**Session Storage**: `connect-pg-simple` (suggests PostgreSQL-backed, but currently in-memory).
+**Development Tools**: Replit-specific plugins, runtime error overlay, cartographer.
+**Build Tools**: Vite (frontend), esbuild (server production), tsx (TypeScript dev).
+**UI Dependencies**: Radix UI, Lucide React (icons), date-fns, embla-carousel-react.
+**Validation**: Zod, drizzle-zod.
