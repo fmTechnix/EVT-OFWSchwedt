@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { eq, sql, ilike, or, desc, asc } from "drizzle-orm";
+import { eq, sql, ilike, or, desc, asc, inArray } from "drizzle-orm";
 import {
   users,
   vehicles,
@@ -9,6 +9,8 @@ import {
   termine,
   terminZusagen,
   vehicleConfigs,
+  availabilities,
+  currentAssignments,
   type User,
   type InsertUser,
   type Vehicle,
@@ -25,6 +27,10 @@ import {
   type BesetzungscheckResult,
   type VehicleConfig,
   type InsertVehicleConfig,
+  type Availability,
+  type InsertAvailability,
+  type CurrentAssignment,
+  type InsertCurrentAssignment,
 } from "@shared/schema";
 import type { IStorage } from "./storage";
 import { hashPassword } from "./password-utils";
@@ -289,5 +295,77 @@ export class PostgresStorage implements IStorage {
 
   async deleteVehicleConfig(id: number): Promise<void> {
     await db.delete(vehicleConfigs).where(eq(vehicleConfigs.id, id));
+  }
+
+  // Availabilities
+  async getUserAvailability(userId: string, date: string): Promise<Availability | undefined> {
+    const result = await db.select().from(availabilities)
+      .where(sql`${availabilities.user_id} = ${userId} AND ${availabilities.date} = ${date}`);
+    return result[0];
+  }
+
+  async getUserAvailabilities(userId: string): Promise<Availability[]> {
+    return await db.select().from(availabilities)
+      .where(eq(availabilities.user_id, userId))
+      .orderBy(desc(availabilities.date));
+  }
+
+  async setAvailability(insertAvailability: InsertAvailability): Promise<Availability> {
+    const existing = await this.getUserAvailability(insertAvailability.user_id, insertAvailability.date);
+    
+    if (existing) {
+      const result = await db.update(availabilities)
+        .set({ status: insertAvailability.status, reason: insertAvailability.reason })
+        .where(eq(availabilities.id, existing.id))
+        .returning();
+      return result[0];
+    } else {
+      const result = await db.insert(availabilities).values(insertAvailability).returning();
+      return result[0];
+    }
+  }
+
+  async deleteAvailability(id: number): Promise<void> {
+    await db.delete(availabilities).where(eq(availabilities.id, id));
+  }
+
+  async getAvailableUsers(date: string): Promise<User[]> {
+    const unavailableUserIds = await db.select({ user_id: availabilities.user_id })
+      .from(availabilities)
+      .where(sql`${availabilities.date} = ${date} AND ${availabilities.status} = 'unavailable'`);
+    
+    const unavailableIds = unavailableUserIds.map(row => row.user_id);
+    
+    if (unavailableIds.length === 0) {
+      return await db.select().from(users);
+    }
+    
+    return await db.select().from(users)
+      .where(sql`${users.id} NOT IN (${sql.join(unavailableIds.map(id => sql`${id}`), sql`, `)})`);
+  }
+
+  // Current Assignments
+  async getCurrentAssignments(): Promise<CurrentAssignment[]> {
+    return await db.select().from(currentAssignments);
+  }
+
+  async getUserAssignment(userId: string): Promise<CurrentAssignment | undefined> {
+    const result = await db.select().from(currentAssignments)
+      .where(eq(currentAssignments.user_id, userId));
+    return result[0];
+  }
+
+  async setCurrentAssignments(insertAssignments: InsertCurrentAssignment[]): Promise<CurrentAssignment[]> {
+    await this.clearCurrentAssignments();
+    
+    if (insertAssignments.length === 0) {
+      return [];
+    }
+    
+    return await db.insert(currentAssignments).values(insertAssignments).returning();
+  }
+
+  async clearCurrentAssignments(): Promise<void> {
+    await db.delete(currentAssignments);
   }
 }

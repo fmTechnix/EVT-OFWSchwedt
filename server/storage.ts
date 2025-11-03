@@ -8,7 +8,9 @@ import type {
   Termin, InsertTermin,
   TerminZusage, InsertTerminZusage,
   BesetzungscheckResult,
-  VehicleConfig, InsertVehicleConfig
+  VehicleConfig, InsertVehicleConfig,
+  Availability, InsertAvailability,
+  CurrentAssignment, InsertCurrentAssignment
 } from "@shared/schema";
 import { PostgresStorage } from "./pg-storage";
 import { initializeDatabase } from "./init-db";
@@ -66,6 +68,19 @@ export interface IStorage {
   createVehicleConfig(config: InsertVehicleConfig): Promise<VehicleConfig>;
   updateVehicleConfig(id: number, updates: Partial<InsertVehicleConfig>): Promise<VehicleConfig>;
   deleteVehicleConfig(id: number): Promise<void>;
+  
+  // Availabilities
+  getUserAvailability(userId: string, date: string): Promise<Availability | undefined>;
+  getUserAvailabilities(userId: string): Promise<Availability[]>;
+  setAvailability(availability: InsertAvailability): Promise<Availability>;
+  deleteAvailability(id: number): Promise<void>;
+  getAvailableUsers(date: string): Promise<User[]>;
+  
+  // Current Assignments
+  getCurrentAssignments(): Promise<CurrentAssignment[]>;
+  getUserAssignment(userId: string): Promise<CurrentAssignment | undefined>;
+  setCurrentAssignments(assignments: InsertCurrentAssignment[]): Promise<CurrentAssignment[]>;
+  clearCurrentAssignments(): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -458,6 +473,44 @@ export class MemStorage implements IStorage {
   }
 
   async deleteVehicleConfig(_id: number): Promise<void> {
+    throw new Error("Not implemented in MemStorage");
+  }
+
+  // Availabilities
+  async getUserAvailability(_userId: string, _date: string): Promise<Availability | undefined> {
+    throw new Error("Not implemented in MemStorage");
+  }
+
+  async getUserAvailabilities(_userId: string): Promise<Availability[]> {
+    throw new Error("Not implemented in MemStorage");
+  }
+
+  async setAvailability(_availability: InsertAvailability): Promise<Availability> {
+    throw new Error("Not implemented in MemStorage");
+  }
+
+  async deleteAvailability(_id: number): Promise<void> {
+    throw new Error("Not implemented in MemStorage");
+  }
+
+  async getAvailableUsers(_date: string): Promise<User[]> {
+    throw new Error("Not implemented in MemStorage");
+  }
+
+  // Current Assignments
+  async getCurrentAssignments(): Promise<CurrentAssignment[]> {
+    throw new Error("Not implemented in MemStorage");
+  }
+
+  async getUserAssignment(_userId: string): Promise<CurrentAssignment | undefined> {
+    throw new Error("Not implemented in MemStorage");
+  }
+
+  async setCurrentAssignments(_assignments: InsertCurrentAssignment[]): Promise<CurrentAssignment[]> {
+    throw new Error("Not implemented in MemStorage");
+  }
+
+  async clearCurrentAssignments(): Promise<void> {
     throw new Error("Not implemented in MemStorage");
   }
 }

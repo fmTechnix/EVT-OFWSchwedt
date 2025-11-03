@@ -154,6 +154,34 @@ export type VehicleAssignment = {
   constraintIssues: string[];
 };
 
+// User Availability (Verfügbarkeit)
+export const availabilities = pgTable("availabilities", {
+  id: serial("id").primaryKey(),
+  user_id: text("user_id").notNull(),
+  date: text("date").notNull(), // ISO date string (YYYY-MM-DD)
+  status: text("status").notNull(), // "available", "unavailable"
+  reason: text("reason"), // Optional reason (e.g., "Urlaub", "Krankheit")
+  created_at: timestamp("created_at").notNull().default(sql`now()`),
+});
+
+export const insertAvailabilitySchema = createInsertSchema(availabilities).omit({ id: true, created_at: true });
+export type InsertAvailability = z.infer<typeof insertAvailabilitySchema>;
+export type Availability = typeof availabilities.$inferSelect;
+
+// Current Assignments (Aktuelle Zuteilung)
+export const currentAssignments = pgTable("current_assignments", {
+  id: serial("id").primaryKey(),
+  user_id: text("user_id").notNull(),
+  vehicle_config_id: integer("vehicle_config_id").notNull(),
+  position: text("position").notNull(), // e.g., "Truppführer", "Angriffstrupp", "Maschinist"
+  assigned_at: timestamp("assigned_at").notNull().default(sql`now()`),
+  trupp_partner_id: text("trupp_partner_id"), // Optional partner for Trupp positions
+});
+
+export const insertCurrentAssignmentSchema = createInsertSchema(currentAssignments).omit({ id: true, assigned_at: true });
+export type InsertCurrentAssignment = z.infer<typeof insertCurrentAssignmentSchema>;
+export type CurrentAssignment = typeof currentAssignments.$inferSelect;
+
 // Besetzungscheck result type
 export type BesetzungscheckResult = {
   vorhanden: {
