@@ -12,7 +12,7 @@ export function Navigation() {
   const navItems = [
     { href: "/", label: "📊 Dashboard", icon: LayoutDashboard, show: true },
     { href: "/mein-einsatz", label: "🚒 Mein Einsatz", icon: Truck, show: true },
-    { href: "/kameraden", label: "👥 Benutzer", icon: Users, show: user.role === "admin" },
+    { href: "/benutzer", label: "👥 Benutzer", icon: Users, show: user.role === "admin" },
     { href: "/kalender", label: "📅 Kalender", icon: Users, show: true },
     { href: "/fahrzeuge", label: "🚛 Fahrzeuge", icon: TruckIcon, show: user.role === "admin" },
     { href: "/einstellungen", label: "⚙️ Einstellungen", icon: Settings, show: user.role === "admin" },
