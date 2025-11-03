@@ -8,6 +8,7 @@ import {
   qualifikationen,
   termine,
   terminZusagen,
+  vehicleConfigs,
   type User,
   type InsertUser,
   type Vehicle,
@@ -22,6 +23,8 @@ import {
   type TerminZusage,
   type InsertTerminZusage,
   type BesetzungscheckResult,
+  type VehicleConfig,
+  type InsertVehicleConfig,
 } from "@shared/schema";
 import type { IStorage } from "./storage";
 import { hashPassword } from "./password-utils";
@@ -235,7 +238,7 @@ export class PostgresStorage implements IStorage {
 
     for (const user of allUsers) {
       if (user.qualifikationen.includes("AGT")) agtCount++;
-      if (user.qualifikationen.includes("Maschinist")) maschinistCount++;
+      if (user.qualifikationen.includes("MASCH")) maschinistCount++;
       if (user.qualifikationen.includes("GF")) gfCount++;
     }
 
@@ -252,12 +255,39 @@ export class PostgresStorage implements IStorage {
         min_gf: currentSettings.min_gf,
         mannschaftsbedarf: 0,
       },
-      fehlt: {
-        agt: Math.max(0, currentSettings.min_agt - agtCount),
-        maschinist: Math.max(0, currentSettings.min_maschinist - maschinistCount),
-        gf: Math.max(0, currentSettings.min_gf - gfCount),
-      },
-      status: "ok",
+      erfuellt: agtCount >= currentSettings.min_agt && 
+                maschinistCount >= currentSettings.min_maschinist && 
+                gfCount >= currentSettings.min_gf,
     };
+  }
+
+  // Vehicle Configurations
+  async getAllVehicleConfigs(): Promise<VehicleConfig[]> {
+    return await db.select().from(vehicleConfigs).orderBy(asc(vehicleConfigs.type), asc(vehicleConfigs.vehicle));
+  }
+
+  async getVehicleConfig(id: number): Promise<VehicleConfig | undefined> {
+    const result = await db.select().from(vehicleConfigs).where(eq(vehicleConfigs.id, id));
+    return result[0];
+  }
+
+  async getVehicleConfigByName(name: string): Promise<VehicleConfig | undefined> {
+    const result = await db.select().from(vehicleConfigs).where(eq(vehicleConfigs.vehicle, name));
+    return result[0];
+  }
+
+  async createVehicleConfig(insertConfig: InsertVehicleConfig): Promise<VehicleConfig> {
+    const result = await db.insert(vehicleConfigs).values(insertConfig).returning();
+    return result[0];
+  }
+
+  async updateVehicleConfig(id: number, updates: Partial<InsertVehicleConfig>): Promise<VehicleConfig> {
+    const result = await db.update(vehicleConfigs).set(updates).where(eq(vehicleConfigs.id, id)).returning();
+    if (!result[0]) throw new Error("Vehicle config not found");
+    return result[0];
+  }
+
+  async deleteVehicleConfig(id: number): Promise<void> {
+    await db.delete(vehicleConfigs).where(eq(vehicleConfigs.id, id));
   }
 }

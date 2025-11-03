@@ -631,6 +631,137 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Vehicle Configurations endpoints (Admin only)
+  app.get("/api/vehicle-configs", requireAuth, async (_req: Request, res: Response) => {
+    try {
+      const configs = await storage.getAllVehicleConfigs();
+      res.json(configs);
+    } catch (error) {
+      res.status(500).json({ error: "Fehler beim Laden der Fahrzeug-Konfigurationen" });
+    }
+  });
+
+  app.get("/api/vehicle-configs/:id", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const config = await storage.getVehicleConfig(id);
+      if (!config) {
+        return res.status(404).json({ error: "Fahrzeug-Konfiguration nicht gefunden" });
+      }
+      res.json(config);
+    } catch (error) {
+      res.status(500).json({ error: "Fehler beim Laden der Fahrzeug-Konfiguration" });
+    }
+  });
+
+  app.post("/api/vehicle-configs", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const config = await storage.createVehicleConfig(req.body);
+      res.status(201).json(config);
+    } catch (error) {
+      res.status(500).json({ error: "Fehler beim Erstellen der Fahrzeug-Konfiguration" });
+    }
+  });
+
+  app.patch("/api/vehicle-configs/:id", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const config = await storage.updateVehicleConfig(id, req.body);
+      res.json(config);
+    } catch (error) {
+      res.status(500).json({ error: "Fehler beim Aktualisieren der Fahrzeug-Konfiguration" });
+    }
+  });
+
+  app.delete("/api/vehicle-configs/:id", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deleteVehicleConfig(id);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Fehler beim Löschen der Fahrzeug-Konfiguration" });
+    }
+  });
+
+  // Export all vehicle configurations as JSON
+  app.get("/api/vehicle-configs/export/json", requireAuth, async (_req: Request, res: Response) => {
+    try {
+      const configs = await storage.getAllVehicleConfigs();
+      const qualsList = await storage.getAllQualifikationen();
+      
+      // Extract unique base and addon qualifications from configs
+      const baseQuals = new Set<string>();
+      const addonQuals = new Set<string>();
+      
+      for (const config of configs) {
+        const slots = config.slots as any[];
+        for (const slot of slots) {
+          if (slot.requires) {
+            slot.requires.forEach((q: string) => baseQuals.add(q));
+          }
+          if (slot.requires_any) {
+            slot.requires_any.forEach((q: string) => baseQuals.add(q));
+          }
+          if (slot.addons_required) {
+            slot.addons_required.forEach((q: string) => addonQuals.add(q));
+          }
+        }
+      }
+      
+      const exportData = {
+        qual_flags_info: {
+          base: Array.from(baseQuals),
+          addons: Array.from(addonQuals),
+        },
+        vehicles: configs.map(c => ({
+          vehicle: c.vehicle,
+          type: c.type,
+          slots: c.slots,
+          constraints: c.constraints || {},
+        })),
+      };
+      
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+      res.setHeader('Content-Disposition', 'attachment; filename="vehicle-configs.json"');
+      res.json(exportData);
+    } catch (error) {
+      res.status(500).json({ error: "Fehler beim Exportieren der Fahrzeug-Konfigurationen" });
+    }
+  });
+
+  // Import vehicle configurations from JSON
+  app.post("/api/vehicle-configs/import/json", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { vehicles } = req.body;
+      
+      if (!vehicles || !Array.isArray(vehicles)) {
+        return res.status(400).json({ error: "Ungültiges Format" });
+      }
+      
+      let imported = 0;
+      let skipped = 0;
+      
+      for (const vehicleData of vehicles) {
+        const existing = await storage.getVehicleConfigByName(vehicleData.vehicle);
+        if (existing) {
+          skipped++;
+        } else {
+          await storage.createVehicleConfig({
+            vehicle: vehicleData.vehicle,
+            type: vehicleData.type,
+            slots: vehicleData.slots,
+            constraints: vehicleData.constraints || null,
+          });
+          imported++;
+        }
+      }
+      
+      res.json({ imported, skipped, total: vehicles.length });
+    } catch (error) {
+      res.status(500).json({ error: "Fehler beim Importieren der Fahrzeug-Konfigurationen" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
