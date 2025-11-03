@@ -810,7 +810,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const availabilitySchema = z.object({
         date: z.string(),
         status: z.enum(["available", "unavailable"]),
-        reason: z.string().optional(),
+        reason: z.string().nullable().optional(),
       });
       
       const validation = availabilitySchema.safeParse(req.body);
