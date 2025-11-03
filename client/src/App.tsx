@@ -8,6 +8,7 @@ import Login from "@/pages/login";
 import Dashboard from "@/pages/dashboard";
 import Fahrzeuge from "@/pages/fahrzeuge";
 import Kameraden from "@/pages/kameraden";
+import Kalender from "@/pages/kalender";
 import MeinEinsatz from "@/pages/mein-einsatz";
 import Einstellungen from "@/pages/einstellungen";
 import NotFound from "@/pages/not-found";
@@ -80,6 +81,12 @@ function Router() {
       <Route path="/kameraden">
         <ProtectedRoute>
           <Kameraden />
+        </ProtectedRoute>
+      </Route>
+      
+      <Route path="/kalender">
+        <ProtectedRoute>
+          <Kalender />
         </ProtectedRoute>
       </Route>
       
