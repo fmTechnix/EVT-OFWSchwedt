@@ -11,7 +11,8 @@ import type {
   VehicleConfig, InsertVehicleConfig,
   Availability, InsertAvailability,
   CurrentAssignment, InsertCurrentAssignment,
-  PushSubscription, InsertPushSubscription
+  PushSubscription, InsertPushSubscription,
+  MaengelMeldung, InsertMaengelMeldung
 } from "@shared/schema";
 import { PostgresStorage } from "./pg-storage";
 import { initializeDatabase } from "./init-db";
@@ -88,6 +89,14 @@ export interface IStorage {
   savePushSubscription(subscription: InsertPushSubscription): Promise<PushSubscription>;
   getUserPushSubscriptions(userId: string): Promise<PushSubscription[]>;
   deletePushSubscription(endpoint: string): Promise<void>;
+  
+  // Mängelmeldungen
+  getAllMaengelMeldungen(): Promise<MaengelMeldung[]>;
+  getMaengelMeldung(id: number): Promise<MaengelMeldung | undefined>;
+  getMaengelMeldungenByVehicle(vehicleId: number): Promise<MaengelMeldung[]>;
+  createMaengelMeldung(meldung: InsertMaengelMeldung): Promise<MaengelMeldung>;
+  updateMaengelMeldung(id: number, updates: Partial<InsertMaengelMeldung>): Promise<MaengelMeldung>;
+  deleteMaengelMeldung(id: number): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -96,12 +105,14 @@ export class MemStorage implements IStorage {
   private qualifikationen: Map<number, Qualifikation>;
   private termine: Map<number, Termin>;
   private terminZusagen: Map<number, TerminZusage>;
+  private maengelMeldungen: Map<number, MaengelMeldung>;
   private einsatz: Einsatz;
   private settings: Settings;
   private nextVehicleId: number;
   private nextQualifikationId: number;
   private nextTerminId: number;
   private nextZusageId: number;
+  private nextMaengelMeldungId: number;
 
   constructor() {
     this.users = new Map();
@@ -109,10 +120,12 @@ export class MemStorage implements IStorage {
     this.qualifikationen = new Map();
     this.termine = new Map();
     this.terminZusagen = new Map();
+    this.maengelMeldungen = new Map();
     this.nextVehicleId = 1;
     this.nextQualifikationId = 1;
     this.nextTerminId = 1;
     this.nextZusageId = 1;
+    this.nextMaengelMeldungId = 1;
 
     // Initialize default qualifikationen (must be before users)
     this.initializeQualifikationen();
@@ -519,6 +532,76 @@ export class MemStorage implements IStorage {
 
   async clearCurrentAssignments(): Promise<void> {
     throw new Error("Not implemented in MemStorage");
+  }
+
+  // Push Subscriptions (stub)
+  async savePushSubscription(_subscription: InsertPushSubscription): Promise<PushSubscription> {
+    throw new Error("Not implemented in MemStorage");
+  }
+
+  async getUserPushSubscriptions(_userId: string): Promise<PushSubscription[]> {
+    throw new Error("Not implemented in MemStorage");
+  }
+
+  async deletePushSubscription(_endpoint: string): Promise<void> {
+    throw new Error("Not implemented in MemStorage");
+  }
+
+  // Mängelmeldungen
+  async getAllMaengelMeldungen(): Promise<MaengelMeldung[]> {
+    return Array.from(this.maengelMeldungen.values());
+  }
+
+  async getMaengelMeldung(id: number): Promise<MaengelMeldung | undefined> {
+    return this.maengelMeldungen.get(id);
+  }
+
+  async getMaengelMeldungenByVehicle(vehicleId: number): Promise<MaengelMeldung[]> {
+    return Array.from(this.maengelMeldungen.values()).filter(
+      (meldung) => meldung.vehicle_id === vehicleId
+    );
+  }
+
+  async createMaengelMeldung(insertMeldung: InsertMaengelMeldung): Promise<MaengelMeldung> {
+    const id = this.nextMaengelMeldungId++;
+    const meldung: MaengelMeldung = {
+      id,
+      vehicle_id: insertMeldung.vehicle_id,
+      beschreibung: insertMeldung.beschreibung,
+      status: insertMeldung.status || "offen",
+      melder_id: insertMeldung.melder_id,
+      fotos: insertMeldung.fotos || [],
+      bemerkung: insertMeldung.bemerkung || null,
+      erstellt_am: new Date(),
+      behoben_am: null,
+    };
+    this.maengelMeldungen.set(id, meldung);
+    return meldung;
+  }
+
+  async updateMaengelMeldung(id: number, updates: Partial<InsertMaengelMeldung>): Promise<MaengelMeldung> {
+    const meldung = this.maengelMeldungen.get(id);
+    if (!meldung) {
+      throw new Error(`Mängelmeldung mit ID ${id} nicht gefunden`);
+    }
+    
+    // Only update fields that are provided (not undefined)
+    const updatedMeldung: MaengelMeldung = { ...meldung };
+    
+    if (updates.status !== undefined) updatedMeldung.status = updates.status;
+    if (updates.bemerkung !== undefined) updatedMeldung.bemerkung = updates.bemerkung;
+    
+    // If status is being set to "behoben", set behoben_am
+    if (updates.status === "behoben" && !meldung.behoben_am) {
+      updatedMeldung.behoben_am = new Date();
+    }
+    
+    this.maengelMeldungen.set(id, updatedMeldung);
+    return updatedMeldung;
+  }
+
+  async deleteMaengelMeldung(id: number): Promise<void> {
+    this.maengelMeldungen.delete(id);
   }
 }
 

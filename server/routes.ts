@@ -2,7 +2,7 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import session from "express-session";
 import { storage } from "./storage";
-import { insertVehicleSchema, insertEinsatzSchema, insertSettingsSchema, insertQualifikationSchema, insertTerminSchema, insertTerminZusageSchema, insertPushSubscriptionSchema } from "@shared/schema";
+import { insertVehicleSchema, insertEinsatzSchema, insertSettingsSchema, insertQualifikationSchema, insertTerminSchema, insertTerminZusageSchema, insertPushSubscriptionSchema, insertMaengelMeldungSchema } from "@shared/schema";
 import type { User, InsertUser } from "@shared/schema";
 import { verifyPassword } from "./password-utils";
 import { assignCrewToVehicles } from "./crew-assignment";
@@ -1214,6 +1214,127 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Crew assignment error:", error);
       res.status(500).json({ error: "Fehler bei der automatischen Zuteilung" });
+    }
+  });
+
+  // Mängelmeldungen (Vehicle Defect Reports)
+  
+  // Get all Mängelmeldungen
+  app.get("/api/maengelmeldungen", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const meldungen = await storage.getAllMaengelMeldungen();
+      res.json(meldungen);
+    } catch (error) {
+      console.error("Error fetching Mängelmeldungen:", error);
+      res.status(500).json({ error: "Fehler beim Laden der Mängelmeldungen" });
+    }
+  });
+  
+  // Get Mängelmeldung by ID
+  app.get("/api/maengelmeldungen/:id", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const meldung = await storage.getMaengelMeldung(id);
+      
+      if (!meldung) {
+        return res.status(404).json({ error: "Mängelmeldung nicht gefunden" });
+      }
+      
+      res.json(meldung);
+    } catch (error) {
+      console.error("Error fetching Mängelmeldung:", error);
+      res.status(500).json({ error: "Fehler beim Laden der Mängelmeldung" });
+    }
+  });
+  
+  // Get Mängelmeldungen by Vehicle ID
+  app.get("/api/vehicles/:vehicleId/maengelmeldungen", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const vehicleId = parseInt(req.params.vehicleId);
+      const meldungen = await storage.getMaengelMeldungenByVehicle(vehicleId);
+      res.json(meldungen);
+    } catch (error) {
+      console.error("Error fetching Mängelmeldungen:", error);
+      res.status(500).json({ error: "Fehler beim Laden der Mängelmeldungen" });
+    }
+  });
+  
+  // Create new Mängelmeldung
+  app.post("/api/maengelmeldungen", requireAuth, async (req: Request, res: Response) => {
+    try {
+      // Validate photo sizes (max 5 photos, each max 2MB base64 ≈ 1.5MB original)
+      const MAX_PHOTOS = 5;
+      const MAX_PHOTO_SIZE = 2 * 1024 * 1024; // 2MB in base64
+      
+      if (req.body.fotos && req.body.fotos.length > MAX_PHOTOS) {
+        return res.status(400).json({ error: `Maximal ${MAX_PHOTOS} Fotos erlaubt` });
+      }
+      
+      if (req.body.fotos) {
+        for (const foto of req.body.fotos) {
+          if (foto.length > MAX_PHOTO_SIZE) {
+            return res.status(400).json({ error: "Foto zu groß (max 2MB pro Foto)" });
+          }
+        }
+      }
+      
+      const meldungData = insertMaengelMeldungSchema.parse({
+        ...req.body,
+        melder_id: req.session.userId, // Set melder_id to current user
+      });
+      
+      const meldung = await storage.createMaengelMeldung(meldungData);
+      res.status(201).json(meldung);
+    } catch (error) {
+      console.error("Error creating Mängelmeldung:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Ungültige Daten", details: error.errors });
+      }
+      res.status(500).json({ error: "Fehler beim Erstellen der Mängelmeldung" });
+    }
+  });
+  
+  // Update Mängelmeldung (status, bemerkung) - Admin/Moderator only for status changes
+  app.put("/api/maengelmeldungen/:id", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      // Validate updates with Zod (only allow status and bemerkung)
+      const updateSchema = z.object({
+        status: z.enum(["offen", "in_bearbeitung", "behoben"]).optional(),
+        bemerkung: z.string().nullable().optional(),
+      });
+      
+      const updates = updateSchema.parse(req.body);
+      
+      // Check if user is admin/moderator for status changes
+      if (updates.status) {
+        const user = await storage.getUser(req.session.userId!);
+        if (!user || (user.role !== "admin" && user.role !== "moderator")) {
+          return res.status(403).json({ error: "Nur Administratoren und Moderatoren können den Status ändern" });
+        }
+      }
+      
+      const meldung = await storage.updateMaengelMeldung(id, updates);
+      res.json(meldung);
+    } catch (error) {
+      console.error("Error updating Mängelmeldung:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Ungültige Daten", details: error.errors });
+      }
+      res.status(500).json({ error: "Fehler beim Aktualisieren der Mängelmeldung" });
+    }
+  });
+  
+  // Delete Mängelmeldung (admin only)
+  app.delete("/api/maengelmeldungen/:id", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deleteMaengelMeldung(id);
+      res.json({ message: "Mängelmeldung erfolgreich gelöscht" });
+    } catch (error) {
+      console.error("Error deleting Mängelmeldung:", error);
+      res.status(500).json({ error: "Fehler beim Löschen der Mängelmeldung" });
     }
   });
 

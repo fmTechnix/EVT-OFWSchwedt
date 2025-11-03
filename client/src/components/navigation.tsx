@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, Truck, Users, TruckIcon, Settings, LogOut } from "lucide-react";
+import { LayoutDashboard, Truck, Users, TruckIcon, Settings, LogOut, AlertCircle } from "lucide-react";
 
 export function Navigation() {
   const [location] = useLocation();
@@ -10,12 +10,13 @@ export function Navigation() {
   if (!user) return null;
 
   const navItems = [
-    { href: "/", label: "📊 Dashboard", icon: LayoutDashboard, show: true },
-    { href: "/mein-einsatz", label: "🚒 Mein Einsatz", icon: Truck, show: true },
-    { href: "/benutzer", label: "👥 Benutzer", icon: Users, show: user.role === "admin" },
-    { href: "/kalender", label: "📅 Kalender", icon: Users, show: true },
-    { href: "/fahrzeuge", label: "🚛 Fahrzeuge", icon: TruckIcon, show: user.role === "admin" },
-    { href: "/einstellungen", label: "⚙️ Einstellungen", icon: Settings, show: user.role === "admin" },
+    { href: "/", label: "Dashboard", icon: LayoutDashboard, show: true },
+    { href: "/mein-einsatz", label: "Mein Einsatz", icon: Truck, show: true },
+    { href: "/maengelmeldungen", label: "Mängelmeldung", icon: AlertCircle, show: true },
+    { href: "/benutzer", label: "Benutzer", icon: Users, show: user.role === "admin" },
+    { href: "/kalender", label: "Kalender", icon: Users, show: true },
+    { href: "/fahrzeuge", label: "Fahrzeuge", icon: TruckIcon, show: user.role === "admin" },
+    { href: "/einstellungen", label: "Einstellungen", icon: Settings, show: user.role === "admin" },
   ];
 
   return (
@@ -50,7 +51,8 @@ export function Navigation() {
             className="text-white hover:bg-red-700"
             data-testid="button-logout"
           >
-            ⎋ Logout
+            <LogOut className="w-4 h-4 mr-2" />
+            Logout
           </Button>
         </nav>
       </div>

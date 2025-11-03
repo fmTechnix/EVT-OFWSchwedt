@@ -12,6 +12,7 @@ import {
   availabilities,
   currentAssignments,
   pushSubscriptions,
+  maengelMeldungen,
   type User,
   type InsertUser,
   type Vehicle,
@@ -34,6 +35,8 @@ import {
   type InsertCurrentAssignment,
   type PushSubscription,
   type InsertPushSubscription,
+  type MaengelMeldung,
+  type InsertMaengelMeldung,
 } from "@shared/schema";
 import type { IStorage } from "./storage";
 import { hashPassword } from "./password-utils";
@@ -402,5 +405,57 @@ export class PostgresStorage implements IStorage {
 
   async deletePushSubscription(endpoint: string): Promise<void> {
     await db.delete(pushSubscriptions).where(eq(pushSubscriptions.endpoint, endpoint));
+  }
+
+  // Mängelmeldungen
+  async getAllMaengelMeldungen(): Promise<MaengelMeldung[]> {
+    return await db.select().from(maengelMeldungen).orderBy(desc(maengelMeldungen.erstellt_am));
+  }
+
+  async getMaengelMeldung(id: number): Promise<MaengelMeldung | undefined> {
+    const result = await db.select().from(maengelMeldungen)
+      .where(eq(maengelMeldungen.id, id));
+    return result[0];
+  }
+
+  async getMaengelMeldungenByVehicle(vehicleId: number): Promise<MaengelMeldung[]> {
+    return await db.select().from(maengelMeldungen)
+      .where(eq(maengelMeldungen.vehicle_id, vehicleId))
+      .orderBy(desc(maengelMeldungen.erstellt_am));
+  }
+
+  async createMaengelMeldung(insertMeldung: InsertMaengelMeldung): Promise<MaengelMeldung> {
+    const result = await db.insert(maengelMeldungen).values(insertMeldung).returning();
+    return result[0];
+  }
+
+  async updateMaengelMeldung(id: number, updates: Partial<InsertMaengelMeldung>): Promise<MaengelMeldung> {
+    // Filter out undefined values to prevent setting columns to NULL
+    const cleanUpdates: any = {};
+    for (const [key, value] of Object.entries(updates)) {
+      if (value !== undefined) {
+        cleanUpdates[key] = value;
+      }
+    }
+    
+    // If status is being set to "behoben", also set behoben_am
+    if (cleanUpdates.status === "behoben") {
+      const current = await this.getMaengelMeldung(id);
+      if (current && !current.behoben_am) {
+        cleanUpdates.behoben_am = new Date();
+      }
+    }
+    
+    const result = await db.update(maengelMeldungen)
+      .set(cleanUpdates)
+      .where(eq(maengelMeldungen.id, id))
+      .returning();
+    
+    if (!result[0]) throw new Error("Mängelmeldung not found");
+    return result[0];
+  }
+
+  async deleteMaengelMeldung(id: number): Promise<void> {
+    await db.delete(maengelMeldungen).where(eq(maengelMeldungen.id, id));
   }
 }

@@ -11,6 +11,7 @@ import Kameraden from "@/pages/kameraden";
 import Kalender from "@/pages/kalender";
 import MeinEinsatz from "@/pages/mein-einsatz";
 import Einstellungen from "@/pages/einstellungen";
+import Maengelmeldungen from "@/pages/maengelmeldungen";
 import NotFound from "@/pages/not-found";
 
 function ProtectedRoute({ children, adminOnly = false }: { children: React.ReactNode; adminOnly?: boolean }) {
@@ -87,6 +88,12 @@ function Router() {
       <Route path="/kalender">
         <ProtectedRoute>
           <Kalender />
+        </ProtectedRoute>
+      </Route>
+      
+      <Route path="/maengelmeldungen">
+        <ProtectedRoute>
+          <Maengelmeldungen />
         </ProtectedRoute>
       </Route>
       
