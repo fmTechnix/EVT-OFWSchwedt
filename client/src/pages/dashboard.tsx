@@ -38,12 +38,12 @@ export default function Dashboard() {
   
   const { data: myAssignment, isLoading: assignmentLoading } = useQuery<CurrentAssignment | null>({
     queryKey: ["/api/my-assignment"],
-    enabled: user?.role === "member",
+    enabled: !!user,
   });
 
   const { data: allAssignments, isLoading: allAssignmentsLoading } = useQuery<CurrentAssignment[]>({
     queryKey: ["/api/current-assignments"],
-    enabled: user?.role === "member" && !!myAssignment,
+    enabled: !!user && !!myAssignment,
   });
 
   const { data: availability, isLoading: availabilityLoading } = useQuery<Availability | null>({
@@ -53,7 +53,7 @@ export default function Dashboard() {
 
   const { data: vehicleConfigs } = useQuery<any[]>({
     queryKey: ["/api/vehicle-configs"],
-    enabled: user?.role === "member" && !!myAssignment,
+    enabled: !!user && !!myAssignment,
   });
 
   const availabilityMutation = useMutation({
@@ -353,6 +353,75 @@ export default function Dashboard() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Meine Zuteilung für Admin/Moderator */}
+            <Card className="shadow-lg hover-elevate transition-all lg:col-span-3" data-testid="card-my-assignment">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <span className="text-2xl">🚛</span>
+                  Meine Zuteilung
+                </CardTitle>
+                <CardDescription>
+                  Ihre aktuelle Fahrzeug- und Positionszuteilung
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {assignmentLoading ? (
+                  <Skeleton className="h-20 w-full" />
+                ) : myAssignment ? (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Fahrzeug</p>
+                        <p className="text-xl font-bold" data-testid="text-my-vehicle">
+                          {vehicleConfigs?.find(vc => vc.id === myAssignment.vehicle_config_id)?.vehicle || `ID: ${myAssignment.vehicle_config_id}`}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Position</p>
+                        <p className="text-xl font-bold" data-testid="text-my-position">
+                          {myAssignment.position}
+                        </p>
+                      </div>
+                      {myAssignment.trupp_partner_id && (
+                        <div>
+                          <p className="text-sm text-muted-foreground">Trupp-Partner</p>
+                          <p className="text-xl font-bold" data-testid="text-my-partner">
+                            {users?.find(u => u.id === myAssignment.trupp_partner_id)
+                              ? `${users.find(u => u.id === myAssignment.trupp_partner_id)?.vorname} ${users.find(u => u.id === myAssignment.trupp_partner_id)?.nachname}`
+                              : "Wird geladen..."}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                    {allAssignments && allAssignments.length > 0 && (
+                      <div className="mt-4">
+                        <p className="text-sm font-semibold mb-2">Gesamte Fahrzeugbesetzung:</p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                          {allAssignments
+                            .filter(a => a.vehicle_config_id === myAssignment.vehicle_config_id)
+                            .map((assignment, idx) => {
+                              const assignedUser = users?.find(u => u.id === assignment.user_id);
+                              return (
+                                <div key={idx} className="flex items-center justify-between text-sm p-2 rounded border">
+                                  <span className="text-muted-foreground font-medium">{assignment.position}</span>
+                                  <Badge variant={assignment.user_id === user?.id ? "default" : "outline"}>
+                                    {assignedUser ? `${assignedUser.vorname} ${assignedUser.nachname}` : "Unbekannt"}
+                                  </Badge>
+                                </div>
+                              );
+                            })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground" data-testid="text-no-assignment">
+                    Sie sind derzeit keinem Fahrzeug zugeteilt. Führen Sie eine automatische Zuteilung durch.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
             {/* Besetzung & Bedarf für Admin/Moderator */}
             <Card className="shadow-lg hover-elevate transition-all" data-testid="card-besetzung">
               <CardHeader>
