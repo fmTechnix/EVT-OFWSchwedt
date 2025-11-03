@@ -23,7 +23,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { User, Qualifikation } from "@shared/schema";
 import { useAuth } from "@/lib/auth-context";
 import { Skeleton } from "@/components/ui/skeleton";
-import { UserPlus, Trash2, Key, Search, Users } from "lucide-react";
+import { UserPlus, Trash2, Key, Search, Users, Download, Upload } from "lucide-react";
 
 export default function Kameraden() {
   const [vorname, setVorname] = useState("");
@@ -157,25 +157,74 @@ export default function Kameraden() {
     },
   });
 
-  const seedMutation = useMutation({
-    mutationFn: async () => {
-      return await apiRequest("POST", "/api/users/seed", {});
+  const handleExport = async () => {
+    try {
+      const response = await fetch("/api/users/export", {
+        method: "GET",
+        credentials: "include",
+      });
+      
+      if (!response.ok) {
+        throw new Error("Export fehlgeschlagen");
+      }
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "benutzer.csv";
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      toast({
+        title: "Export erfolgreich",
+        description: "Benutzerdaten wurden als CSV exportiert",
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Fehler",
+        description: "Export fehlgeschlagen",
+      });
+    }
+  };
+
+  const importMutation = useMutation({
+    mutationFn: async (csvData: string) => {
+      return await apiRequest("POST", "/api/users/import", { csvData });
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
       toast({
-        title: "Beispieldaten erstellt",
-        description: "77 Beispielbenutzer wurden erfolgreich generiert",
+        title: "Import erfolgreich",
+        description: `${data.imported} Benutzer importiert, ${data.skipped} übersprungen`,
       });
     },
     onError: () => {
       toast({
         variant: "destructive",
         title: "Fehler",
-        description: "Beispieldaten konnten nicht erstellt werden",
+        description: "Import fehlgeschlagen",
       });
     },
   });
+
+  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const csvData = event.target?.result as string;
+      importMutation.mutate(csvData);
+    };
+    reader.readAsText(file);
+    
+    // Reset input
+    e.target.value = "";
+  };
 
   const handleSubmitRegister = (e: React.FormEvent) => {
     e.preventDefault();
@@ -294,11 +343,29 @@ export default function Kameraden() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => seedMutation.mutate()}
-                  disabled={seedMutation.isPending}
-                  data-testid="button-seed-users"
+                  onClick={handleExport}
+                  data-testid="button-export-users"
                 >
-                  {seedMutation.isPending ? "Generiere..." : "77 Beispieldaten"}
+                  <Download className="h-4 w-4 mr-2" />
+                  Export
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  asChild
+                  data-testid="button-import-users"
+                >
+                  <label className="cursor-pointer">
+                    <Upload className="h-4 w-4 mr-2" />
+                    Import
+                    <input
+                      type="file"
+                      accept=".csv"
+                      onChange={handleImport}
+                      className="hidden"
+                      disabled={importMutation.isPending}
+                    />
+                  </label>
                 </Button>
               </div>
             </div>

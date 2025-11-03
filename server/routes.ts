@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import session from "express-session";
 import { storage } from "./storage";
 import { insertVehicleSchema, insertEinsatzSchema, insertSettingsSchema, insertQualifikationSchema, insertTerminSchema, insertTerminZusageSchema } from "@shared/schema";
-import type { User } from "@shared/schema";
+import type { User, InsertUser } from "@shared/schema";
 
 // Extend Express session to include user
 declare module "express-session" {
