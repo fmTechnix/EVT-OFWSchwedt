@@ -1137,8 +1137,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           trupp_partner_id: string | null;
         }> = [];
 
-        for (const vehicleAssignment of result) {
-          const vehicleConfig = vehicleAssignment.vehicleConfig;
+        for (const vehicleAssignment of result.assignments) {
+          const vehicleConfig = vehicleConfigs.find(vc => vc.vehicle.rufname === vehicleAssignment.vehicle);
+          
+          if (!vehicleConfig) {
+            console.warn(`Vehicle config not found for vehicle: ${vehicleAssignment.vehicle}`);
+            continue;
+          }
+          
           for (const slot of vehicleAssignment.slots) {
             if (slot.assignedUser) {
               let truppPartnerId: string | null = null;
