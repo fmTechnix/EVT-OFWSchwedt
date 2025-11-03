@@ -1,22 +1,143 @@
-import { type User, type InsertUser } from "@shared/schema";
 import { randomUUID } from "crypto";
-
-// modify the interface with any CRUD methods
-// you might need
+import type {
+  User, InsertUser,
+  Vehicle, InsertVehicle,
+  Kamerad, InsertKamerad,
+  Einsatz, InsertEinsatz,
+  Settings, InsertSettings,
+  BesetzungscheckResult
+} from "@shared/schema";
 
 export interface IStorage {
+  // Users
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  
+  // Vehicles
+  getAllVehicles(): Promise<Vehicle[]>;
+  createVehicle(vehicle: InsertVehicle): Promise<Vehicle>;
+  deleteVehicle(id: number): Promise<void>;
+  
+  // Kameraden
+  getAllKameraden(): Promise<Kamerad[]>;
+  createKamerad(kamerad: InsertKamerad): Promise<Kamerad>;
+  deleteKamerad(id: number): Promise<void>;
+  seedKameraden(): Promise<void>;
+  
+  // Einsatz
+  getEinsatz(): Promise<Einsatz>;
+  updateEinsatz(einsatz: InsertEinsatz): Promise<Einsatz>;
+  
+  // Settings
+  getSettings(): Promise<Settings>;
+  updateSettings(settings: InsertSettings): Promise<Settings>;
+  
+  // Besetzungscheck
+  getBesetzungscheck(): Promise<BesetzungscheckResult>;
 }
 
 export class MemStorage implements IStorage {
   private users: Map<string, User>;
+  private vehicles: Map<number, Vehicle>;
+  private kameraden: Map<number, Kamerad>;
+  private einsatz: Einsatz;
+  private settings: Settings;
+  private nextVehicleId: number;
+  private nextKameradId: number;
 
   constructor() {
     this.users = new Map();
+    this.vehicles = new Map();
+    this.kameraden = new Map();
+    this.nextVehicleId = 1;
+    this.nextKameradId = 1;
+
+    // Initialize default users
+    this.initializeUsers();
+    
+    // Initialize default vehicles
+    this.initializeVehicles();
+    
+    // Initialize default kameraden
+    this.initializeKameraden();
+    
+    // Initialize default einsatz
+    this.einsatz = {
+      id: 1,
+      stichwort: "B: Kleinbrand",
+      bemerkung: "",
+      mannschaftsbedarf: 9,
+    };
+    
+    // Initialize default settings
+    this.settings = {
+      id: 1,
+      schichtlaenge_std: 12,
+      min_agt: 2,
+      min_maschinist: 1,
+      min_gf: 1,
+    };
   }
 
+  private initializeUsers() {
+    const admin: User = {
+      id: randomUUID(),
+      username: "admin",
+      password: "admin", // In production, this should be hashed
+      role: "admin",
+      name: "Admin",
+    };
+    
+    const member: User = {
+      id: randomUUID(),
+      username: "member",
+      password: "member", // In production, this should be hashed
+      role: "member",
+      name: "Mitglied",
+    };
+    
+    this.users.set(admin.id, admin);
+    this.users.set(member.id, member);
+  }
+
+  private initializeVehicles() {
+    const vehicle1: Vehicle = {
+      id: this.nextVehicleId++,
+      name: "HLF 20",
+      funk: "Florian Schwedt 1/46/1",
+      besatzung: 9,
+    };
+    
+    const vehicle2: Vehicle = {
+      id: this.nextVehicleId++,
+      name: "DLK 23/12",
+      funk: "Florian Schwedt 1/33/1",
+      besatzung: 3,
+    };
+    
+    this.vehicles.set(vehicle1.id, vehicle1);
+    this.vehicles.set(vehicle2.id, vehicle2);
+  }
+
+  private initializeKameraden() {
+    const kamerad1: Kamerad = {
+      id: this.nextKameradId++,
+      name: "Max Mustermann",
+      qualifikationen: ["TM", "Sprechfunker"],
+    };
+    
+    const kamerad2: Kamerad = {
+      id: this.nextKameradId++,
+      name: "Anna Beispiel",
+      qualifikationen: ["TM", "AGT"],
+    };
+    
+    this.kameraden.set(kamerad1.id, kamerad1);
+    this.kameraden.set(kamerad2.id, kamerad2);
+  }
+
+  // User methods
   async getUser(id: string): Promise<User | undefined> {
     return this.users.get(id);
   }
@@ -32,6 +153,138 @@ export class MemStorage implements IStorage {
     const user: User = { ...insertUser, id };
     this.users.set(id, user);
     return user;
+  }
+
+  // Vehicle methods
+  async getAllVehicles(): Promise<Vehicle[]> {
+    return Array.from(this.vehicles.values());
+  }
+
+  async createVehicle(insertVehicle: InsertVehicle): Promise<Vehicle> {
+    const id = this.nextVehicleId++;
+    const vehicle: Vehicle = { id, ...insertVehicle };
+    this.vehicles.set(id, vehicle);
+    return vehicle;
+  }
+
+  async deleteVehicle(id: number): Promise<void> {
+    this.vehicles.delete(id);
+  }
+
+  // Kamerad methods
+  async getAllKameraden(): Promise<Kamerad[]> {
+    return Array.from(this.kameraden.values());
+  }
+
+  async createKamerad(insertKamerad: InsertKamerad): Promise<Kamerad> {
+    const id = this.nextKameradId++;
+    const kamerad: Kamerad = { id, ...insertKamerad };
+    this.kameraden.set(id, kamerad);
+    return kamerad;
+  }
+
+  async deleteKamerad(id: number): Promise<void> {
+    this.kameraden.delete(id);
+  }
+
+  async seedKameraden(): Promise<void> {
+    // Clear existing kameraden
+    this.kameraden.clear();
+    this.nextKameradId = 1;
+    
+    const firstNames = [
+      "Max", "Anna", "Felix", "Laura", "Uwe", "Marco", "Sebastian", "Lisa",
+      "Markus", "Nina", "Timo", "Kevin", "Julia", "Tom", "Sarah", "Jonas",
+      "Miriam", "Kai", "Sven", "Lea"
+    ];
+    
+    const lastNames = [
+      "Müller", "Schmidt", "Meier", "Schulz", "Fischer", "Weber", "Wagner",
+      "Becker", "Hoffmann", "Keller", "König", "Krause", "Brandt", "Jäger",
+      "Vogel", "Berg", "Arnold", "Lorenz", "Roth", "Pohl"
+    ];
+    
+    const allQuals = ["TM", "AGT", "Maschinist", "GF", "Sprechfunker", "San"];
+    
+    for (let i = 0; i < 77; i++) {
+      const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
+      const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
+      const name = `${firstName} ${lastName}`;
+      
+      const qualifikationen = new Set<string>();
+      
+      // Always TM
+      qualifikationen.add("TM");
+      
+      // Randomly assign others with weighted variety
+      if (Math.random() < 0.45) qualifikationen.add("AGT");
+      if (Math.random() < 0.25) qualifikationen.add("Maschinist");
+      if (Math.random() < 0.15) qualifikationen.add("GF");
+      if (Math.random() < 0.55) qualifikationen.add("Sprechfunker");
+      if (Math.random() < 0.30) qualifikationen.add("San");
+      
+      const kamerad: Kamerad = {
+        id: this.nextKameradId++,
+        name,
+        qualifikationen: Array.from(qualifikationen).sort(),
+      };
+      
+      this.kameraden.set(kamerad.id, kamerad);
+    }
+  }
+
+  // Einsatz methods
+  async getEinsatz(): Promise<Einsatz> {
+    return this.einsatz;
+  }
+
+  async updateEinsatz(insertEinsatz: InsertEinsatz): Promise<Einsatz> {
+    this.einsatz = { id: 1, ...insertEinsatz };
+    return this.einsatz;
+  }
+
+  // Settings methods
+  async getSettings(): Promise<Settings> {
+    return this.settings;
+  }
+
+  async updateSettings(insertSettings: InsertSettings): Promise<Settings> {
+    this.settings = { id: 1, ...insertSettings };
+    return this.settings;
+  }
+
+  // Besetzungscheck
+  async getBesetzungscheck(): Promise<BesetzungscheckResult> {
+    const kameraden = await this.getAllKameraden();
+    const settings = await this.getSettings();
+    const einsatz = await this.getEinsatz();
+    
+    const countWithQual = (qual: string): number => {
+      return kameraden.filter(k => k.qualifikationen.includes(qual)).length;
+    };
+    
+    const vorhanden = {
+      agt: countWithQual("AGT"),
+      maschinist: countWithQual("Maschinist"),
+      gf: countWithQual("GF"),
+      gesamt: kameraden.length,
+    };
+    
+    const minima = {
+      min_agt: settings.min_agt,
+      min_maschinist: settings.min_maschinist,
+      min_gf: settings.min_gf,
+      mannschaftsbedarf: einsatz.mannschaftsbedarf,
+    };
+    
+    const erfuellt = (
+      vorhanden.agt >= minima.min_agt &&
+      vorhanden.maschinist >= minima.min_maschinist &&
+      vorhanden.gf >= minima.min_gf &&
+      vorhanden.gesamt >= minima.mannschaftsbedarf
+    );
+    
+    return { vorhanden, minima, erfuellt };
   }
 }
 
