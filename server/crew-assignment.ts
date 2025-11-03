@@ -116,11 +116,15 @@ function checkVehicleConstraints(
   
   // Check min_agt_watertrupp
   if (constraints.min_agt_watertrupp !== undefined) {
-    // Find Wassertrupp positions (usually slots 3-5 or positions marked as water trupp)
-    const waterTruppSlots = assignments.filter(
-      a => a.position.toLowerCase().includes("angriffstrupp") || 
-           a.position.toLowerCase().includes("wassertrupp")
-    );
+    // Find Wassertrupp positions - check for both full names and abbreviations
+    // WT = Wassertrupp (WTF, WTM), AT = Angriffstrupp (ATF, ATM)
+    const waterTruppSlots = assignments.filter(a => {
+      const pos = a.position.toLowerCase();
+      return pos.includes("wassertrupp") || 
+             pos.includes("angriffstrupp") ||
+             pos.startsWith("wt") ||  // WTF, WTM
+             pos.startsWith("at");    // ATF, ATM
+    });
     const waterAgtCount = waterTruppSlots.filter(
       a => a.assignedUser && hasQualification(a.assignedUser, "AGT")
     ).length;
