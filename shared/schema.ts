@@ -82,7 +82,7 @@ export const termine = pgTable("termine", {
   ersteller_id: text("ersteller_id").notNull(), // User ID who created it
 });
 
-export const insertTerminSchema = createInsertSchema(termine).omit({ id: true });
+export const insertTerminSchema = createInsertSchema(termine).omit({ id: true, ersteller_id: true });
 export type InsertTermin = z.infer<typeof insertTerminSchema>;
 export type Termin = typeof termine.$inferSelect;
 

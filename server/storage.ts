@@ -45,8 +45,8 @@ export interface IStorage {
   // Termine
   getAllTermine(): Promise<Termin[]>;
   getTermin(id: number): Promise<Termin | undefined>;
-  createTermin(termin: InsertTermin): Promise<Termin>;
-  updateTermin(id: number, termin: InsertTermin): Promise<Termin>;
+  createTermin(termin: Omit<Termin, 'id'>): Promise<Termin>;
+  updateTermin(id: number, termin: Omit<Termin, 'id'>): Promise<Termin>;
   deleteTermin(id: number): Promise<void>;
   
   // Termin Zusagen
@@ -389,15 +389,15 @@ export class MemStorage implements IStorage {
     return this.termine.get(id);
   }
 
-  async createTermin(insertTermin: InsertTermin): Promise<Termin> {
+  async createTermin(terminData: Omit<Termin, 'id'>): Promise<Termin> {
     const id = this.nextTerminId++;
-    const termin: Termin = { id, ...insertTermin };
+    const termin: Termin = { id, ...terminData };
     this.termine.set(id, termin);
     return termin;
   }
 
-  async updateTermin(id: number, insertTermin: InsertTermin): Promise<Termin> {
-    const termin: Termin = { id, ...insertTermin };
+  async updateTermin(id: number, terminData: Omit<Termin, 'id'>): Promise<Termin> {
+    const termin: Termin = { id, ...terminData };
     this.termine.set(id, termin);
     return termin;
   }

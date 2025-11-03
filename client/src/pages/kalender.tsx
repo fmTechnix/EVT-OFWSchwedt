@@ -272,7 +272,7 @@ export default function Kalender() {
 
 function TerminCard({ termin, users, currentUserId }: {
   termin: Termin;
-  users: Omit<User, "password">[];
+  users: { id: string; vorname: string; nachname: string }[];
   currentUserId?: string;
 }) {
   const { toast } = useToast();
