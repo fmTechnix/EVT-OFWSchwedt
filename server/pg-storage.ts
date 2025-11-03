@@ -11,6 +11,7 @@ import {
   vehicleConfigs,
   availabilities,
   currentAssignments,
+  pushSubscriptions,
   type User,
   type InsertUser,
   type Vehicle,
@@ -31,6 +32,8 @@ import {
   type InsertAvailability,
   type CurrentAssignment,
   type InsertCurrentAssignment,
+  type PushSubscription,
+  type InsertPushSubscription,
 } from "@shared/schema";
 import type { IStorage } from "./storage";
 import { hashPassword } from "./password-utils";
@@ -373,5 +376,31 @@ export class PostgresStorage implements IStorage {
 
   async clearCurrentAssignments(): Promise<void> {
     await db.delete(currentAssignments);
+  }
+
+  // Push Subscriptions
+  async savePushSubscription(subscription: InsertPushSubscription): Promise<PushSubscription> {
+    const existing = await db.select().from(pushSubscriptions)
+      .where(eq(pushSubscriptions.endpoint, subscription.endpoint));
+    
+    if (existing.length > 0) {
+      const result = await db.update(pushSubscriptions)
+        .set(subscription)
+        .where(eq(pushSubscriptions.endpoint, subscription.endpoint))
+        .returning();
+      return result[0];
+    }
+    
+    const result = await db.insert(pushSubscriptions).values(subscription).returning();
+    return result[0];
+  }
+
+  async getUserPushSubscriptions(userId: string): Promise<PushSubscription[]> {
+    return await db.select().from(pushSubscriptions)
+      .where(eq(pushSubscriptions.user_id, userId));
+  }
+
+  async deletePushSubscription(endpoint: string): Promise<void> {
+    await db.delete(pushSubscriptions).where(eq(pushSubscriptions.endpoint, endpoint));
   }
 }

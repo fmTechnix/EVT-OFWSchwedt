@@ -10,7 +10,8 @@ import type {
   BesetzungscheckResult,
   VehicleConfig, InsertVehicleConfig,
   Availability, InsertAvailability,
-  CurrentAssignment, InsertCurrentAssignment
+  CurrentAssignment, InsertCurrentAssignment,
+  PushSubscription, InsertPushSubscription
 } from "@shared/schema";
 import { PostgresStorage } from "./pg-storage";
 import { initializeDatabase } from "./init-db";
@@ -82,6 +83,11 @@ export interface IStorage {
   getUserAssignment(userId: string): Promise<CurrentAssignment | undefined>;
   setCurrentAssignments(assignments: InsertCurrentAssignment[]): Promise<CurrentAssignment[]>;
   clearCurrentAssignments(): Promise<void>;
+  
+  // Push Subscriptions
+  savePushSubscription(subscription: InsertPushSubscription): Promise<PushSubscription>;
+  getUserPushSubscriptions(userId: string): Promise<PushSubscription[]>;
+  deletePushSubscription(endpoint: string): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
