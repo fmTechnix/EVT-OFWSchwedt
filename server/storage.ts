@@ -22,7 +22,6 @@ export interface IStorage {
   changePassword(id: string, newPassword: string): Promise<User>;
   resetPassword(id: string): Promise<User>;
   deleteUser(id: string): Promise<void>;
-  seedBenutzer(): Promise<void>;
   
   // Vehicles
   getAllVehicles(): Promise<Vehicle[]>;
@@ -165,6 +164,70 @@ export class MemStorage implements IStorage {
     this.users.set(admin.id, admin);
     this.users.set(moderator.id, moderator);
     this.users.set(member.id, member);
+    
+    // Create 77 example users
+    this.createExampleUsers();
+  }
+  
+  private createExampleUsers() {
+    const firstNames = [
+      "Max", "Anna", "Felix", "Laura", "Uwe", "Marco", "Sebastian", "Lisa",
+      "Markus", "Nina", "Timo", "Kevin", "Julia", "Tom", "Sarah", "Jonas",
+      "Miriam", "Kai", "Sven", "Lea"
+    ];
+    
+    const lastNames = [
+      "Müller", "Schmidt", "Meier", "Schulz", "Fischer", "Weber", "Wagner",
+      "Becker", "Hoffmann", "Keller", "König", "Krause", "Brandt", "Jäger",
+      "Vogel", "Berg", "Arnold", "Lorenz", "Roth", "Pohl"
+    ];
+    
+    for (let i = 0; i < 77; i++) {
+      const vorname = firstNames[Math.floor(Math.random() * firstNames.length)];
+      const nachname = lastNames[Math.floor(Math.random() * lastNames.length)];
+      
+      // Generate username without number first
+      let baseUsername = `${vorname.toLowerCase()}${nachname.toLowerCase()}`;
+      let username = baseUsername;
+      let counter = 2;
+      
+      // Check if username already exists, if so, append number
+      while (this.getUserByUsernameSync(username)) {
+        username = `${baseUsername}${counter}`;
+        counter++;
+      }
+      
+      const qualifikationen = new Set<string>();
+      
+      // Always TM
+      qualifikationen.add("TM");
+      
+      // Randomly assign others with weighted variety
+      if (Math.random() < 0.45) qualifikationen.add("AGT");
+      if (Math.random() < 0.25) qualifikationen.add("Maschinist");
+      if (Math.random() < 0.15) qualifikationen.add("GF");
+      if (Math.random() < 0.55) qualifikationen.add("Sprechfunker");
+      if (Math.random() < 0.30) qualifikationen.add("San");
+      
+      const user: User = {
+        id: randomUUID(),
+        username,
+        password: "Feuer123",
+        role: "member",
+        vorname,
+        nachname,
+        qualifikationen: Array.from(qualifikationen).sort(),
+        muss_passwort_aendern: true,
+      };
+      
+      this.users.set(user.id, user);
+    }
+  }
+  
+  private getUserByUsernameSync(username: string): User | undefined {
+    return Array.from(this.users.values()).find(
+      (user) => user.username === username,
+    );
   }
 
   private initializeVehicles() {
@@ -267,62 +330,6 @@ export class MemStorage implements IStorage {
 
   async deleteUser(id: string): Promise<void> {
     this.users.delete(id);
-  }
-
-  async seedBenutzer(): Promise<void> {
-    // Keep admin, moderator, member - just add 77 more users
-    const firstNames = [
-      "Max", "Anna", "Felix", "Laura", "Uwe", "Marco", "Sebastian", "Lisa",
-      "Markus", "Nina", "Timo", "Kevin", "Julia", "Tom", "Sarah", "Jonas",
-      "Miriam", "Kai", "Sven", "Lea"
-    ];
-    
-    const lastNames = [
-      "Müller", "Schmidt", "Meier", "Schulz", "Fischer", "Weber", "Wagner",
-      "Becker", "Hoffmann", "Keller", "König", "Krause", "Brandt", "Jäger",
-      "Vogel", "Berg", "Arnold", "Lorenz", "Roth", "Pohl"
-    ];
-    
-    for (let i = 0; i < 77; i++) {
-      const vorname = firstNames[Math.floor(Math.random() * firstNames.length)];
-      const nachname = lastNames[Math.floor(Math.random() * lastNames.length)];
-      
-      // Generate username without number first
-      let baseUsername = `${vorname.toLowerCase()}${nachname.toLowerCase()}`;
-      let username = baseUsername;
-      let counter = 2;
-      
-      // Check if username already exists, if so, append number
-      while (await this.getUserByUsername(username)) {
-        username = `${baseUsername}${counter}`;
-        counter++;
-      }
-      
-      const qualifikationen = new Set<string>();
-      
-      // Always TM
-      qualifikationen.add("TM");
-      
-      // Randomly assign others with weighted variety
-      if (Math.random() < 0.45) qualifikationen.add("AGT");
-      if (Math.random() < 0.25) qualifikationen.add("Maschinist");
-      if (Math.random() < 0.15) qualifikationen.add("GF");
-      if (Math.random() < 0.55) qualifikationen.add("Sprechfunker");
-      if (Math.random() < 0.30) qualifikationen.add("San");
-      
-      const user: User = {
-        id: randomUUID(),
-        username,
-        password: "Feuer123",
-        role: "member",
-        vorname,
-        nachname,
-        qualifikationen: Array.from(qualifikationen).sort(),
-        muss_passwort_aendern: true,
-      };
-      
-      this.users.set(user.id, user);
-    }
   }
 
   // Vehicle methods

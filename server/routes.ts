@@ -297,12 +297,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/users/seed", requireAdmin, async (_req: Request, res: Response) => {
+  app.get("/api/users/export", requireAdmin, async (_req: Request, res: Response) => {
     try {
-      await storage.seedBenutzer();
-      res.json({ success: true });
+      const users = await storage.getAllUsers();
+      
+      // Create CSV content
+      const headers = ["Username", "Vorname", "Nachname", "Rolle", "Qualifikationen", "Passwort ändern"];
+      const rows = users.map(user => [
+        user.username,
+        user.vorname,
+        user.nachname,
+        user.role,
+        user.qualifikationen.join(";"),
+        user.muss_passwort_aendern ? "Ja" : "Nein"
+      ]);
+      
+      const csvContent = [
+        headers.join(","),
+        ...rows.map(row => row.map(cell => `"${cell}"`).join(","))
+      ].join("\n");
+      
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader("Content-Disposition", 'attachment; filename="benutzer.csv"');
+      res.send("\ufeff" + csvContent); // UTF-8 BOM for Excel compatibility
     } catch (error) {
-      res.status(500).json({ error: "Fehler beim Generieren der Beispieldaten" });
+      res.status(500).json({ error: "Fehler beim Exportieren der Benutzerdaten" });
+    }
+  });
+
+  app.post("/api/users/import", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { csvData } = req.body;
+      
+      if (!csvData || typeof csvData !== "string") {
+        return res.status(400).json({ error: "CSV-Daten fehlen" });
+      }
+      
+      const lines = csvData.split("\n").filter(line => line.trim());
+      if (lines.length < 2) {
+        return res.status(400).json({ error: "CSV-Datei muss mindestens einen Header und eine Datenzeile enthalten" });
+      }
+      
+      // Skip header
+      const dataLines = lines.slice(1);
+      let imported = 0;
+      let skipped = 0;
+      
+      for (const line of dataLines) {
+        // Parse CSV line (simple parser, handles quoted values)
+        const matches = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
+        if (!matches || matches.length < 4) {
+          skipped++;
+          continue;
+        }
+        
+        const [username, vorname, nachname, role, qualifikationen] = matches.map(
+          cell => cell.replace(/^"|"$/g, "").trim()
+        );
+        
+        // Check if user already exists
+        const existingUser = await storage.getUserByUsername(username);
+        if (existingUser) {
+          skipped++;
+          continue;
+        }
+        
+        const user: InsertUser = {
+          username,
+          vorname,
+          nachname,
+          password: "Feuer123",
+          role: role || "member",
+          qualifikationen: qualifikationen ? qualifikationen.split(";").filter(q => q.trim()) : ["TM"],
+          muss_passwort_aendern: true,
+        };
+        
+        await storage.createUser(user);
+        imported++;
+      }
+      
+      res.json({ success: true, imported, skipped });
+    } catch (error) {
+      res.status(500).json({ error: "Fehler beim Importieren der Benutzerdaten" });
     }
   });
 
