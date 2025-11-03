@@ -18,15 +18,21 @@ The system supports three user roles with different access levels:
 - Implemented comprehensive crew assignment algorithm (`server/crew-assignment.ts`) that:
   - Assigns crew members to vehicle positions based on qualification requirements
   - Prioritizes users with preferred qualifications
-  - Respects vehicle-specific constraints (min AGT, min FUNK, etc.)
+  - Respects vehicle-specific constraints (min_agt_total, min_agt_watertrupp, min_maschinist_total, min_gf_total, min_funk_total, min_cbrn_erkkw_total, prefer_th_total, prefer_fueass_total)
   - Handles fallback assignments when strict requirements cannot be met
   - Returns detailed warnings for unfulfilled positions
 - Added backend API endpoints:
-  - `/api/vehicle-configs` - CRUD operations for vehicle configurations (admin only)
-  - `/api/vehicle-configs/export/json` - Export configurations as JSON
+  - `/api/vehicle-configs` - CRUD operations for vehicle configurations (GET: all authenticated, POST/PATCH/DELETE: admin only)
+  - `/api/vehicle-configs/:id` - Get specific vehicle configuration (all authenticated)
+  - `/api/vehicle-configs/export/json` - Export configurations as JSON (all authenticated)
   - `/api/vehicle-configs/import/json` - Import configurations from JSON (admin only)
-  - `/api/crew-assignment` - Run automatic crew assignment algorithm
+  - `/api/crew-assignment` - POST automatic crew assignment algorithm (all authenticated, accepts optional vehicleIds[])
+- Completely rebuilt Fahrzeuge page (`client/src/pages/fahrzeuge.tsx`) with 3 tabs:
+  - **Fahrzeugliste**: Simple vehicle list from database
+  - **Konfigurationen**: Display of all 9 vehicle configurations with detailed slot requirements and constraints
+  - **Automatische Zuteilung**: Interface to run automatic crew assignment with real-time results visualization showing assigned positions, unassigned users, warnings, and statistics
 - Fixed Besetzungscheck to use "MASCH" instead of "Maschinist" for consistency
+- System successfully tested end-to-end: vehicle configurations load correctly, assignment algorithm runs and displays results with warnings
 
 **Unified Benutzer/Personnel System (November 3, 2025):**
 - Merged Kameraden (crew members) and Benutzer (users) into single unified User model
