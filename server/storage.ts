@@ -2,7 +2,6 @@ import { randomUUID } from "crypto";
 import type {
   User, InsertUser,
   Vehicle, InsertVehicle,
-  Kamerad, InsertKamerad,
   Einsatz, InsertEinsatz,
   Settings, InsertSettings,
   Qualifikation, InsertQualifikation,
@@ -12,24 +11,23 @@ import type {
 } from "@shared/schema";
 
 export interface IStorage {
-  // Users
+  // Users (unified Benutzer with qualifications)
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   getAllUsers(): Promise<User[]>;
   createUser(user: InsertUser): Promise<User>;
+  updateUser(id: string, updates: Partial<Omit<User, 'id'>>): Promise<User>;
   updateUserRole(id: string, role: string): Promise<User>;
+  updateUserQualifikationen(id: string, qualifikationen: string[]): Promise<User>;
   changePassword(id: string, newPassword: string): Promise<User>;
+  resetPassword(id: string): Promise<User>;
+  deleteUser(id: string): Promise<void>;
+  seedBenutzer(): Promise<void>;
   
   // Vehicles
   getAllVehicles(): Promise<Vehicle[]>;
   createVehicle(vehicle: InsertVehicle): Promise<Vehicle>;
   deleteVehicle(id: number): Promise<void>;
-  
-  // Kameraden
-  getAllKameraden(): Promise<Kamerad[]>;
-  createKamerad(kamerad: InsertKamerad): Promise<Kamerad>;
-  deleteKamerad(id: number): Promise<void>;
-  seedKameraden(): Promise<void>;
   
   // Einsatz
   getEinsatz(): Promise<Einsatz>;
@@ -63,14 +61,12 @@ export interface IStorage {
 export class MemStorage implements IStorage {
   private users: Map<string, User>;
   private vehicles: Map<number, Vehicle>;
-  private kameraden: Map<number, Kamerad>;
   private qualifikationen: Map<number, Qualifikation>;
   private termine: Map<number, Termin>;
   private terminZusagen: Map<number, TerminZusage>;
   private einsatz: Einsatz;
   private settings: Settings;
   private nextVehicleId: number;
-  private nextKameradId: number;
   private nextQualifikationId: number;
   private nextTerminId: number;
   private nextZusageId: number;
@@ -78,27 +74,22 @@ export class MemStorage implements IStorage {
   constructor() {
     this.users = new Map();
     this.vehicles = new Map();
-    this.kameraden = new Map();
     this.qualifikationen = new Map();
     this.termine = new Map();
     this.terminZusagen = new Map();
     this.nextVehicleId = 1;
-    this.nextKameradId = 1;
     this.nextQualifikationId = 1;
     this.nextTerminId = 1;
     this.nextZusageId = 1;
 
-    // Initialize default users
-    this.initializeUsers();
-    
-    // Initialize default qualifikationen (must be before kameraden)
+    // Initialize default qualifikationen (must be before users)
     this.initializeQualifikationen();
+    
+    // Initialize default users with qualifikationen
+    this.initializeUsers();
     
     // Initialize default vehicles
     this.initializeVehicles();
-    
-    // Initialize default kameraden
-    this.initializeKameraden();
     
     // Initialize default einsatz
     this.einsatz = {
@@ -116,39 +107,6 @@ export class MemStorage implements IStorage {
       min_maschinist: 1,
       min_gf: 1,
     };
-  }
-
-  private initializeUsers() {
-    const admin: User = {
-      id: randomUUID(),
-      username: "admin",
-      password: "admin", // In production, this should be hashed
-      role: "admin",
-      name: "Admin",
-      muss_passwort_aendern: false,
-    };
-    
-    const moderator: User = {
-      id: randomUUID(),
-      username: "moderator",
-      password: "moderator", // In production, this should be hashed
-      role: "moderator",
-      name: "Moderator",
-      muss_passwort_aendern: false,
-    };
-    
-    const member: User = {
-      id: randomUUID(),
-      username: "member",
-      password: "member", // In production, this should be hashed
-      role: "member",
-      name: "Mitglied",
-      muss_passwort_aendern: false,
-    };
-    
-    this.users.set(admin.id, admin);
-    this.users.set(moderator.id, moderator);
-    this.users.set(member.id, member);
   }
 
   private initializeQualifikationen() {
@@ -170,6 +128,45 @@ export class MemStorage implements IStorage {
     }
   }
 
+  private initializeUsers() {
+    const admin: User = {
+      id: randomUUID(),
+      username: "admin",
+      password: "admin123",
+      role: "admin",
+      vorname: "Admin",
+      nachname: "User",
+      qualifikationen: ["TM", "AGT", "Maschinist", "GF"],
+      muss_passwort_aendern: false,
+    };
+    
+    const moderator: User = {
+      id: randomUUID(),
+      username: "moderator",
+      password: "moderator123",
+      role: "moderator",
+      vorname: "Moderator",
+      nachname: "User",
+      qualifikationen: ["TM", "Sprechfunker"],
+      muss_passwort_aendern: false,
+    };
+    
+    const member: User = {
+      id: randomUUID(),
+      username: "member",
+      password: "member123",
+      role: "member",
+      vorname: "Member",
+      nachname: "User",
+      qualifikationen: ["TM"],
+      muss_passwort_aendern: false,
+    };
+    
+    this.users.set(admin.id, admin);
+    this.users.set(moderator.id, moderator);
+    this.users.set(member.id, member);
+  }
+
   private initializeVehicles() {
     const vehicle1: Vehicle = {
       id: this.nextVehicleId++,
@@ -189,23 +186,6 @@ export class MemStorage implements IStorage {
     this.vehicles.set(vehicle2.id, vehicle2);
   }
 
-  private initializeKameraden() {
-    const kamerad1: Kamerad = {
-      id: this.nextKameradId++,
-      name: "Max Mustermann",
-      qualifikationen: ["TM", "Sprechfunker"],
-    };
-    
-    const kamerad2: Kamerad = {
-      id: this.nextKameradId++,
-      name: "Anna Beispiel",
-      qualifikationen: ["TM", "AGT"],
-    };
-    
-    this.kameraden.set(kamerad1.id, kamerad1);
-    this.kameraden.set(kamerad2.id, kamerad2);
-  }
-
   // User methods
   async getUser(id: string): Promise<User | undefined> {
     return this.users.get(id);
@@ -223,9 +203,23 @@ export class MemStorage implements IStorage {
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = randomUUID();
-    const user: User = { ...insertUser, id };
+    const user: User = { 
+      ...insertUser,
+      id,
+      qualifikationen: insertUser.qualifikationen || [],
+    };
     this.users.set(id, user);
     return user;
+  }
+
+  async updateUser(id: string, updates: Partial<Omit<User, 'id'>>): Promise<User> {
+    const user = this.users.get(id);
+    if (!user) {
+      throw new Error("User not found");
+    }
+    const updatedUser = { ...user, ...updates };
+    this.users.set(id, updatedUser);
+    return updatedUser;
   }
 
   async updateUserRole(id: string, role: string): Promise<User> {
@@ -238,15 +232,86 @@ export class MemStorage implements IStorage {
     return user;
   }
 
+  async updateUserQualifikationen(id: string, qualifikationen: string[]): Promise<User> {
+    const user = this.users.get(id);
+    if (!user) {
+      throw new Error("User not found");
+    }
+    user.qualifikationen = qualifikationen;
+    this.users.set(id, user);
+    return user;
+  }
+
   async changePassword(id: string, newPassword: string): Promise<User> {
     const user = this.users.get(id);
     if (!user) {
       throw new Error("User not found");
     }
-    user.password = newPassword; // In production, this should be hashed
+    user.password = newPassword;
     user.muss_passwort_aendern = false;
     this.users.set(id, user);
     return user;
+  }
+
+  async resetPassword(id: string): Promise<User> {
+    const user = this.users.get(id);
+    if (!user) {
+      throw new Error("User not found");
+    }
+    user.password = "Feuer123";
+    user.muss_passwort_aendern = true;
+    this.users.set(id, user);
+    return user;
+  }
+
+  async deleteUser(id: string): Promise<void> {
+    this.users.delete(id);
+  }
+
+  async seedBenutzer(): Promise<void> {
+    // Keep admin, moderator, member - just add 77 more users
+    const firstNames = [
+      "Max", "Anna", "Felix", "Laura", "Uwe", "Marco", "Sebastian", "Lisa",
+      "Markus", "Nina", "Timo", "Kevin", "Julia", "Tom", "Sarah", "Jonas",
+      "Miriam", "Kai", "Sven", "Lea"
+    ];
+    
+    const lastNames = [
+      "Müller", "Schmidt", "Meier", "Schulz", "Fischer", "Weber", "Wagner",
+      "Becker", "Hoffmann", "Keller", "König", "Krause", "Brandt", "Jäger",
+      "Vogel", "Berg", "Arnold", "Lorenz", "Roth", "Pohl"
+    ];
+    
+    for (let i = 0; i < 77; i++) {
+      const vorname = firstNames[Math.floor(Math.random() * firstNames.length)];
+      const nachname = lastNames[Math.floor(Math.random() * lastNames.length)];
+      const username = `${vorname.toLowerCase()}.${nachname.toLowerCase()}${i}`;
+      
+      const qualifikationen = new Set<string>();
+      
+      // Always TM
+      qualifikationen.add("TM");
+      
+      // Randomly assign others with weighted variety
+      if (Math.random() < 0.45) qualifikationen.add("AGT");
+      if (Math.random() < 0.25) qualifikationen.add("Maschinist");
+      if (Math.random() < 0.15) qualifikationen.add("GF");
+      if (Math.random() < 0.55) qualifikationen.add("Sprechfunker");
+      if (Math.random() < 0.30) qualifikationen.add("San");
+      
+      const user: User = {
+        id: randomUUID(),
+        username,
+        password: "Feuer123",
+        role: "member",
+        vorname,
+        nachname,
+        qualifikationen: Array.from(qualifikationen).sort(),
+        muss_passwort_aendern: true,
+      };
+      
+      this.users.set(user.id, user);
+    }
   }
 
   // Vehicle methods
@@ -263,68 +328,6 @@ export class MemStorage implements IStorage {
 
   async deleteVehicle(id: number): Promise<void> {
     this.vehicles.delete(id);
-  }
-
-  // Kamerad methods
-  async getAllKameraden(): Promise<Kamerad[]> {
-    return Array.from(this.kameraden.values());
-  }
-
-  async createKamerad(insertKamerad: InsertKamerad): Promise<Kamerad> {
-    const id = this.nextKameradId++;
-    const kamerad: Kamerad = { id, ...insertKamerad };
-    this.kameraden.set(id, kamerad);
-    return kamerad;
-  }
-
-  async deleteKamerad(id: number): Promise<void> {
-    this.kameraden.delete(id);
-  }
-
-  async seedKameraden(): Promise<void> {
-    // Clear existing kameraden
-    this.kameraden.clear();
-    this.nextKameradId = 1;
-    
-    const firstNames = [
-      "Max", "Anna", "Felix", "Laura", "Uwe", "Marco", "Sebastian", "Lisa",
-      "Markus", "Nina", "Timo", "Kevin", "Julia", "Tom", "Sarah", "Jonas",
-      "Miriam", "Kai", "Sven", "Lea"
-    ];
-    
-    const lastNames = [
-      "Müller", "Schmidt", "Meier", "Schulz", "Fischer", "Weber", "Wagner",
-      "Becker", "Hoffmann", "Keller", "König", "Krause", "Brandt", "Jäger",
-      "Vogel", "Berg", "Arnold", "Lorenz", "Roth", "Pohl"
-    ];
-    
-    const allQuals = ["TM", "AGT", "Maschinist", "GF", "Sprechfunker", "San"];
-    
-    for (let i = 0; i < 77; i++) {
-      const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
-      const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
-      const name = `${firstName} ${lastName}`;
-      
-      const qualifikationen = new Set<string>();
-      
-      // Always TM
-      qualifikationen.add("TM");
-      
-      // Randomly assign others with weighted variety
-      if (Math.random() < 0.45) qualifikationen.add("AGT");
-      if (Math.random() < 0.25) qualifikationen.add("Maschinist");
-      if (Math.random() < 0.15) qualifikationen.add("GF");
-      if (Math.random() < 0.55) qualifikationen.add("Sprechfunker");
-      if (Math.random() < 0.30) qualifikationen.add("San");
-      
-      const kamerad: Kamerad = {
-        id: this.nextKameradId++,
-        name,
-        qualifikationen: Array.from(qualifikationen).sort(),
-      };
-      
-      this.kameraden.set(kamerad.id, kamerad);
-    }
   }
 
   // Einsatz methods
@@ -360,13 +363,12 @@ export class MemStorage implements IStorage {
   }
 
   async deleteQualifikation(id: number): Promise<void> {
-    // Get the qualification to find its kuerzel
     const qual = this.qualifikationen.get(id);
     if (qual) {
-      // Remove this qualification from all kameraden
-      const kameraden = Array.from(this.kameraden.values());
-      for (const kamerad of kameraden) {
-        kamerad.qualifikationen = kamerad.qualifikationen.filter((q: string) => q !== qual.kuerzel);
+      // Remove this qualification from all users
+      const users = Array.from(this.users.values());
+      for (const user of users) {
+        user.qualifikationen = user.qualifikationen.filter((q: string) => q !== qual.kuerzel);
       }
     }
     this.qualifikationen.delete(id);
@@ -375,7 +377,6 @@ export class MemStorage implements IStorage {
   // Termine methods
   async getAllTermine(): Promise<Termin[]> {
     return Array.from(this.termine.values()).sort((a, b) => {
-      // Sort by date, then by time
       if (a.datum !== b.datum) {
         return a.datum.localeCompare(b.datum);
       }
@@ -402,7 +403,6 @@ export class MemStorage implements IStorage {
 
   async deleteTermin(id: number): Promise<void> {
     this.termine.delete(id);
-    // Also delete all associated Zusagen
     const zusagen = Array.from(this.terminZusagen.values()).filter(z => z.termin_id === id);
     for (const zusage of zusagen) {
       this.terminZusagen.delete(zusage.id);
@@ -423,16 +423,13 @@ export class MemStorage implements IStorage {
   }
 
   async createOrUpdateZusage(insertZusage: InsertTerminZusage): Promise<TerminZusage> {
-    // Check if a zusage already exists for this user and termin
     const existing = await this.getUserZusage(insertZusage.termin_id, insertZusage.user_id);
     
     if (existing) {
-      // Update existing
       existing.status = insertZusage.status;
       this.terminZusagen.set(existing.id, existing);
       return existing;
     } else {
-      // Create new
       const id = this.nextZusageId++;
       const zusage: TerminZusage = { id, ...insertZusage };
       this.terminZusagen.set(id, zusage);
@@ -440,21 +437,21 @@ export class MemStorage implements IStorage {
     }
   }
 
-  // Besetzungscheck
+  // Besetzungscheck - now uses users instead of kameraden
   async getBesetzungscheck(): Promise<BesetzungscheckResult> {
-    const kameraden = await this.getAllKameraden();
+    const users = await this.getAllUsers();
     const settings = await this.getSettings();
     const einsatz = await this.getEinsatz();
     
     const countWithQual = (qual: string): number => {
-      return kameraden.filter(k => k.qualifikationen.includes(qual)).length;
+      return users.filter(u => u.qualifikationen.includes(qual)).length;
     };
     
     const vorhanden = {
       agt: countWithQual("AGT"),
       maschinist: countWithQual("Maschinist"),
       gf: countWithQual("GF"),
-      gesamt: kameraden.length,
+      gesamt: users.length,
     };
     
     const minima = {
