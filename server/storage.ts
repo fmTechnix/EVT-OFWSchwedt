@@ -18,6 +18,7 @@ export interface IStorage {
   getAllUsers(): Promise<User[]>;
   createUser(user: InsertUser): Promise<User>;
   updateUserRole(id: string, role: string): Promise<User>;
+  changePassword(id: string, newPassword: string): Promise<User>;
   
   // Vehicles
   getAllVehicles(): Promise<Vehicle[]>;
@@ -124,6 +125,7 @@ export class MemStorage implements IStorage {
       password: "admin", // In production, this should be hashed
       role: "admin",
       name: "Admin",
+      muss_passwort_aendern: false,
     };
     
     const moderator: User = {
@@ -132,6 +134,7 @@ export class MemStorage implements IStorage {
       password: "moderator", // In production, this should be hashed
       role: "moderator",
       name: "Moderator",
+      muss_passwort_aendern: false,
     };
     
     const member: User = {
@@ -140,6 +143,7 @@ export class MemStorage implements IStorage {
       password: "member", // In production, this should be hashed
       role: "member",
       name: "Mitglied",
+      muss_passwort_aendern: false,
     };
     
     this.users.set(admin.id, admin);
@@ -230,6 +234,17 @@ export class MemStorage implements IStorage {
       throw new Error("User not found");
     }
     user.role = role;
+    this.users.set(id, user);
+    return user;
+  }
+
+  async changePassword(id: string, newPassword: string): Promise<User> {
+    const user = this.users.get(id);
+    if (!user) {
+      throw new Error("User not found");
+    }
+    user.password = newPassword; // In production, this should be hashed
+    user.muss_passwort_aendern = false;
     this.users.set(id, user);
     return user;
   }

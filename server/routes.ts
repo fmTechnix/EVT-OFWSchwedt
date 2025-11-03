@@ -108,6 +108,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(sanitizeUser(user));
   });
 
+  app.post("/api/auth/register", async (req: Request, res: Response) => {
+    try {
+      const { vorname, nachname } = req.body;
+      
+      if (!vorname || !nachname) {
+        return res.status(400).json({ error: "Vor- und Nachname erforderlich" });
+      }
+      
+      // Create username from firstname.lastname
+      const username = `${vorname.toLowerCase()}.${nachname.toLowerCase()}`;
+      
+      // Check if user already exists
+      const existingUser = await storage.getUserByUsername(username);
+      if (existingUser) {
+        return res.status(409).json({ error: "Benutzer existiert bereits" });
+      }
+      
+      // Create new user with default password "Feuer123" and must change password
+      const newUser = await storage.createUser({
+        username,
+        password: "Feuer123",
+        role: "member",
+        name: `${vorname} ${nachname}`,
+        muss_passwort_aendern: true,
+      });
+      
+      res.status(201).json(sanitizeUser(newUser));
+    } catch (error) {
+      res.status(500).json({ error: "Registrierung fehlgeschlagen" });
+    }
+  });
+
+  app.post("/api/auth/change-password", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const { oldPassword, newPassword } = req.body;
+      
+      if (!oldPassword || !newPassword) {
+        return res.status(400).json({ error: "Altes und neues Passwort erforderlich" });
+      }
+      
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) {
+        return res.status(404).json({ error: "Benutzer nicht gefunden" });
+      }
+      
+      // Verify old password
+      if (user.password !== oldPassword) {
+        return res.status(401).json({ error: "Altes Passwort ist falsch" });
+      }
+      
+      // Change password
+      const updatedUser = await storage.changePassword(user.id, newPassword);
+      res.json(sanitizeUser(updatedUser));
+    } catch (error) {
+      res.status(500).json({ error: "Passwort-Änderung fehlgeschlagen" });
+    }
+  });
+
   // Vehicle endpoints
   app.get("/api/vehicles", requireAuth, async (_req: Request, res: Response) => {
     try {
