@@ -915,6 +915,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Alias for /api/availability (plural form for consistency)
+  app.get("/api/availabilities", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const userId = req.session?.userId;
+      
+      if (!userId) {
+        return res.status(401).json({ error: "Nicht angemeldet" });
+      }
+      
+      const availabilities = await storage.getUserAvailabilities(userId);
+      res.json(availabilities);
+    } catch (error) {
+      res.status(500).json({ error: "Fehler beim Abrufen der Verfügbarkeiten" });
+    }
+  });
+
   // Set user availability for a specific date
   app.post("/api/availability", requireAuth, async (req: Request, res: Response) => {
     try {
@@ -1138,7 +1154,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }> = [];
 
         for (const vehicleAssignment of result.assignments) {
-          const vehicleConfig = vehicleConfigs.find(vc => vc.vehicle.rufname === vehicleAssignment.vehicle);
+          // Find vehicle config by matching the vehicle name string
+          const vehicleConfig = vehicleConfigs.find(vc => vc.vehicle === vehicleAssignment.vehicle);
           
           if (!vehicleConfig) {
             console.warn(`Vehicle config not found for vehicle: ${vehicleAssignment.vehicle}`);

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Navigation } from "@/components/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -36,26 +36,30 @@ export default function MeinEinsatz() {
   const [weekStart, setWeekStart] = useState(getNextMonday());
   
   // Generate week days (Monday-Sunday)
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  const weekDays = useMemo(() => {
+    return Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  }, [weekStart]);
 
   const { data: availabilities, isLoading: availabilitiesLoading } = useQuery<Availability[]>({
-    queryKey: ["/api/availabilities", user?.id],
+    queryKey: ["/api/availabilities"],
     enabled: !!user,
   });
 
   const [weekAvailability, setWeekAvailability] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
-    if (availabilities) {
-      const availabilityMap: Record<string, boolean> = {};
-      weekDays.forEach((day) => {
-        const dateStr = format(day, "yyyy-MM-dd");
+    const availabilityMap: Record<string, boolean> = {};
+    weekDays.forEach((day) => {
+      const dateStr = format(day, "yyyy-MM-dd");
+      if (availabilities) {
         const avail = availabilities.find((a) => a.date === dateStr);
         availabilityMap[dateStr] = avail?.status === "available";
-      });
-      setWeekAvailability(availabilityMap);
-    }
-  }, [availabilities, weekStart]);
+      } else {
+        availabilityMap[dateStr] = false;
+      }
+    });
+    setWeekAvailability(availabilityMap);
+  }, [availabilities, weekDays]);
 
   const saveAvailabilityMutation = useMutation({
     mutationFn: async () => {
@@ -120,10 +124,11 @@ export default function MeinEinsatz() {
                     const dayDate = format(day, "dd.MM.", { locale: de });
                     
                     return (
-                      <button
+                      <Button
                         key={dateStr}
                         onClick={() => toggleDay(dateStr)}
-                        className={`p-4 rounded-lg border-2 transition-all ${
+                        variant="outline"
+                        className={`p-4 h-auto border-2 transition-all ${
                           isAvailable
                             ? "bg-green-500/10 border-green-500 hover:bg-green-500/20"
                             : "bg-destructive/10 border-destructive/30 hover:bg-destructive/20"
@@ -144,7 +149,7 @@ export default function MeinEinsatz() {
                             {isAvailable ? "Verfügbar" : "Nicht verfügbar"}
                           </div>
                         </div>
-                      </button>
+                      </Button>
                     );
                   })}
                 </div>
