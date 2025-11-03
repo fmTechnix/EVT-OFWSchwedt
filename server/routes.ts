@@ -4,6 +4,7 @@ import session from "express-session";
 import { storage } from "./storage";
 import { insertVehicleSchema, insertEinsatzSchema, insertSettingsSchema, insertQualifikationSchema, insertTerminSchema, insertTerminZusageSchema } from "@shared/schema";
 import type { User, InsertUser } from "@shared/schema";
+import { verifyPassword } from "./password-utils";
 
 // Extend Express session to include user
 declare module "express-session" {
@@ -75,7 +76,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { username, password } = req.body;
       
       const user = await storage.getUserByUsername(username);
-      if (!user || user.password !== password) {
+      if (!user) {
+        return res.status(401).json({ error: "Ungültige Anmeldedaten" });
+      }
+      
+      const validPassword = await verifyPassword(password, user.password);
+      if (!validPassword) {
         return res.status(401).json({ error: "Ungültige Anmeldedaten" });
       }
       

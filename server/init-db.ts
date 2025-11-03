@@ -1,6 +1,7 @@
 import { db } from "./db";
 import { users, vehicles, qualifikationen, settings, einsatz } from "@shared/schema";
 import { sql } from "drizzle-orm";
+import { hashPassword } from "./password-utils";
 
 export async function initializeDatabase() {
   // Check if already initialized (check if admin user exists)
@@ -23,11 +24,11 @@ export async function initializeDatabase() {
   ];
   await db.insert(qualifikationen).values(quals);
 
-  // Initialize users
+  // Initialize users with hashed passwords
   const defaultUsers = [
     {
       username: "admin",
-      password: "admin",
+      password: await hashPassword("admin"),
       role: "admin",
       vorname: "Admin",
       nachname: "User",
@@ -36,7 +37,7 @@ export async function initializeDatabase() {
     },
     {
       username: "moderator",
-      password: "moderator123",
+      password: await hashPassword("moderator123"),
       role: "moderator",
       vorname: "Moderator",
       nachname: "User",
@@ -45,7 +46,7 @@ export async function initializeDatabase() {
     },
     {
       username: "member",
-      password: "member123",
+      password: await hashPassword("member123"),
       role: "member",
       vorname: "Member",
       nachname: "User",

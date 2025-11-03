@@ -24,6 +24,7 @@ import {
   type BesetzungscheckResult,
 } from "@shared/schema";
 import type { IStorage } from "./storage";
+import { hashPassword } from "./password-utils";
 
 export class PostgresStorage implements IStorage {
   // Users
@@ -42,7 +43,8 @@ export class PostgresStorage implements IStorage {
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const result = await db.insert(users).values(insertUser).returning();
+    const hashedPassword = await hashPassword(insertUser.password);
+    const result = await db.insert(users).values({ ...insertUser, password: hashedPassword }).returning();
     return result[0];
   }
 
@@ -65,13 +67,15 @@ export class PostgresStorage implements IStorage {
   }
 
   async changePassword(id: string, newPassword: string): Promise<User> {
-    const result = await db.update(users).set({ password: newPassword, muss_passwort_aendern: false }).where(eq(users.id, id)).returning();
+    const hashedPassword = await hashPassword(newPassword);
+    const result = await db.update(users).set({ password: hashedPassword, muss_passwort_aendern: false }).where(eq(users.id, id)).returning();
     if (!result[0]) throw new Error("User not found");
     return result[0];
   }
 
   async resetPassword(id: string): Promise<User> {
-    const result = await db.update(users).set({ password: "Feuer123", muss_passwort_aendern: true }).where(eq(users.id, id)).returning();
+    const hashedPassword = await hashPassword("Feuer123");
+    const result = await db.update(users).set({ password: hashedPassword, muss_passwort_aendern: true }).where(eq(users.id, id)).returning();
     if (!result[0]) throw new Error("User not found");
     return result[0];
   }
@@ -86,9 +90,7 @@ export class PostgresStorage implements IStorage {
   }
 
   async createVehicle(insertVehicle: InsertVehicle): Promise<Vehicle> {
-    const maxId = await db.select({ max: sql<number>`COALESCE(MAX(${vehicles.id}), 0)` }).from(vehicles);
-    const newId = (maxId[0]?.max || 0) + 1;
-    const result = await db.insert(vehicles).values({ ...insertVehicle, id: newId }).returning();
+    const result = await db.insert(vehicles).values(insertVehicle).returning();
     return result[0];
   }
 
@@ -155,9 +157,7 @@ export class PostgresStorage implements IStorage {
   }
 
   async createQualifikation(insertQualifikation: InsertQualifikation): Promise<Qualifikation> {
-    const maxId = await db.select({ max: sql<number>`COALESCE(MAX(${qualifikationen.id}), 0)` }).from(qualifikationen);
-    const newId = (maxId[0]?.max || 0) + 1;
-    const result = await db.insert(qualifikationen).values({ ...insertQualifikation, id: newId }).returning();
+    const result = await db.insert(qualifikationen).values(insertQualifikation).returning();
     return result[0];
   }
 
@@ -185,9 +185,7 @@ export class PostgresStorage implements IStorage {
   }
 
   async createTermin(terminData: Omit<Termin, 'id'>): Promise<Termin> {
-    const maxId = await db.select({ max: sql<number>`COALESCE(MAX(${termine.id}), 0)` }).from(termine);
-    const newId = (maxId[0]?.max || 0) + 1;
-    const result = await db.insert(termine).values({ ...terminData, id: newId }).returning();
+    const result = await db.insert(termine).values(terminData).returning();
     return result[0];
   }
 
@@ -221,9 +219,7 @@ export class PostgresStorage implements IStorage {
       const result = await db.update(terminZusagen).set({ status: insertZusage.status }).where(eq(terminZusagen.id, existing.id)).returning();
       return result[0];
     } else {
-      const maxId = await db.select({ max: sql<number>`COALESCE(MAX(${terminZusagen.id}), 0)` }).from(terminZusagen);
-      const newId = (maxId[0]?.max || 0) + 1;
-      const result = await db.insert(terminZusagen).values({ ...insertZusage, id: newId }).returning();
+      const result = await db.insert(terminZusagen).values(insertZusage).returning();
       return result[0];
     }
   }
