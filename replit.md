@@ -2,7 +2,7 @@
 
 ## Overview
 
-EVT (Einsatzverwaltungstool) is a fire department deployment management system for managing personnel, vehicles, mission readiness, and event coordination. It tracks crew qualifications, vehicle assignments, verifies minimum staffing, and manages calendar events with RSVP functionality. The system supports three user roles: Admin (full access), Moderator (event management), and Member (view deployment, readiness, RSVP). Key capabilities include an automatic crew assignment system based on qualifications and vehicle configurations, a unified user/personnel management system, self-service registration, role-based dashboards, availability management with automatic crew reassignment, and **real-time push notifications** for assignment changes.
+EVT (Einsatzverwaltungstool) is a fire department deployment management system for managing personnel, vehicles, mission readiness, and event coordination. It tracks crew qualifications, vehicle assignments, verifies minimum staffing, and manages calendar events with RSVP functionality. The system supports three user roles: Admin (full access), Moderator (event management), and Member (view deployment, readiness, RSVP). Key capabilities include an automatic crew assignment system based on qualifications and vehicle configurations, a unified user/personnel management system, self-service registration, role-based dashboards, availability management with automatic crew reassignment, **real-time push notifications** for assignment changes, and **fairness/rotation system** ensuring equitable position distribution with driver positions rotating fastest.
 
 **Progressive Web App (PWA)**: The application is configured as a PWA, enabling installation on mobile devices (Android, iOS 16.4+) and supporting push notifications. iOS requires installation to home screen for push notification support.
 
@@ -37,6 +37,7 @@ Preferred communication style: Simple, everyday language.
 **API Design**: RESTful API endpoints under `/api` for authentication, user management (including qualifications, roles, password reset), vehicle management, qualification management, mission info, system settings, staffing verification, calendar events (CRUD, RSVP, export), vehicle configurations (CRUD, import/export), automatic crew assignment, and **push notification management** (subscribe, unsubscribe, VAPID public key).
 **Data Layer**: Uses an in-memory storage implementation (`MemStorage`) designed to support database persistence through an `IStorage` interface.
 **Push Notifications**: PushNotificationService handles Web Push with VAPID authentication. Automatically detects reassignments when availability changes and sends notifications to affected users (excluding the user who made the change). VAPID keys configurable via environment variables (dev fallback with security warning).
+**Fairness/Rotation System**: FairnessScorer class implements position rotation with configurable weights. Tracks assignment history and metrics per user. Scoring combines qualification fit, recency penalty (0-10+ points), scarcity bonus (1.5-3 points), and position weights (Maschinist=3.0, Führung=2.0, Standard=1.0). Batch-loads user data for performance (O(users) instead of O(users × slots) queries). Automatic history tracking after each assignment. Configurable rotation window (default 4 weeks) in settings.
 
 ### Data Storage Solutions
 
@@ -47,12 +48,14 @@ Preferred communication style: Simple, everyday language.
 - **qualifikationen**: 14 predefined qualifications.
 - **vehicle_configs**: JSONB storage for flexible vehicle slot requirements and constraints.
 - **einsatz**: Mission information.
-- **settings**: System configuration.
+- **settings**: System configuration including rotation_window (weeks) and rotation_weights (JSONB).
 - **termine**: Calendar events with details and creator reference.
 - **termin_zusagen**: Event RSVPs.
 - **push_subscriptions**: Browser push notification subscriptions (endpoint, p256dh, auth keys).
 - **availabilities**: User availability tracking by date.
-- **current_assignments**: Current vehicle/position assignments with trupp partners.
+- **current_assignments**: Current vehicle/position assignments with trupp partners, effective_from/to dates, history reference.
+- **assignment_history**: Complete assignment audit trail (user_id, vehicle_name, position, assigned_for_date, batch_id, assigned_by).
+- **assignment_fairness**: Aggregated per-user metrics (total_assignments, per_position_counts JSONB, last_position, last_assigned_at, rolling_fairness_score).
 **Intended Database**: PostgreSQL via Neon serverless.
 **Migration Strategy**: Drizzle Kit for schema migrations.
 
