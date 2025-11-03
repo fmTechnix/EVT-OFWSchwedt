@@ -6,6 +6,8 @@ import type {
   Einsatz, InsertEinsatz,
   Settings, InsertSettings,
   Qualifikation, InsertQualifikation,
+  Termin, InsertTermin,
+  TerminZusage, InsertTerminZusage,
   BesetzungscheckResult
 } from "@shared/schema";
 
@@ -13,7 +15,9 @@ export interface IStorage {
   // Users
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
+  getAllUsers(): Promise<User[]>;
   createUser(user: InsertUser): Promise<User>;
+  updateUserRole(id: string, role: string): Promise<User>;
   
   // Vehicles
   getAllVehicles(): Promise<Vehicle[]>;
@@ -39,6 +43,18 @@ export interface IStorage {
   createQualifikation(qualifikation: InsertQualifikation): Promise<Qualifikation>;
   deleteQualifikation(id: number): Promise<void>;
   
+  // Termine
+  getAllTermine(): Promise<Termin[]>;
+  getTermin(id: number): Promise<Termin | undefined>;
+  createTermin(termin: InsertTermin): Promise<Termin>;
+  updateTermin(id: number, termin: InsertTermin): Promise<Termin>;
+  deleteTermin(id: number): Promise<void>;
+  
+  // Termin Zusagen
+  getTerminZusagen(terminId: number): Promise<TerminZusage[]>;
+  getUserZusage(terminId: number, userId: string): Promise<TerminZusage | undefined>;
+  createOrUpdateZusage(zusage: InsertTerminZusage): Promise<TerminZusage>;
+  
   // Besetzungscheck
   getBesetzungscheck(): Promise<BesetzungscheckResult>;
 }
@@ -48,20 +64,28 @@ export class MemStorage implements IStorage {
   private vehicles: Map<number, Vehicle>;
   private kameraden: Map<number, Kamerad>;
   private qualifikationen: Map<number, Qualifikation>;
+  private termine: Map<number, Termin>;
+  private terminZusagen: Map<number, TerminZusage>;
   private einsatz: Einsatz;
   private settings: Settings;
   private nextVehicleId: number;
   private nextKameradId: number;
   private nextQualifikationId: number;
+  private nextTerminId: number;
+  private nextZusageId: number;
 
   constructor() {
     this.users = new Map();
     this.vehicles = new Map();
     this.kameraden = new Map();
     this.qualifikationen = new Map();
+    this.termine = new Map();
+    this.terminZusagen = new Map();
     this.nextVehicleId = 1;
     this.nextKameradId = 1;
     this.nextQualifikationId = 1;
+    this.nextTerminId = 1;
+    this.nextZusageId = 1;
 
     // Initialize default users
     this.initializeUsers();
@@ -102,6 +126,14 @@ export class MemStorage implements IStorage {
       name: "Admin",
     };
     
+    const moderator: User = {
+      id: randomUUID(),
+      username: "moderator",
+      password: "moderator", // In production, this should be hashed
+      role: "moderator",
+      name: "Moderator",
+    };
+    
     const member: User = {
       id: randomUUID(),
       username: "member",
@@ -111,6 +143,7 @@ export class MemStorage implements IStorage {
     };
     
     this.users.set(admin.id, admin);
+    this.users.set(moderator.id, moderator);
     this.users.set(member.id, member);
   }
 
@@ -180,9 +213,23 @@ export class MemStorage implements IStorage {
     );
   }
 
+  async getAllUsers(): Promise<User[]> {
+    return Array.from(this.users.values());
+  }
+
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = randomUUID();
     const user: User = { ...insertUser, id };
+    this.users.set(id, user);
+    return user;
+  }
+
+  async updateUserRole(id: string, role: string): Promise<User> {
+    const user = this.users.get(id);
+    if (!user) {
+      throw new Error("User not found");
+    }
+    user.role = role;
     this.users.set(id, user);
     return user;
   }
@@ -308,6 +355,74 @@ export class MemStorage implements IStorage {
       }
     }
     this.qualifikationen.delete(id);
+  }
+
+  // Termine methods
+  async getAllTermine(): Promise<Termin[]> {
+    return Array.from(this.termine.values()).sort((a, b) => {
+      // Sort by date, then by time
+      if (a.datum !== b.datum) {
+        return a.datum.localeCompare(b.datum);
+      }
+      return a.uhrzeit.localeCompare(b.uhrzeit);
+    });
+  }
+
+  async getTermin(id: number): Promise<Termin | undefined> {
+    return this.termine.get(id);
+  }
+
+  async createTermin(insertTermin: InsertTermin): Promise<Termin> {
+    const id = this.nextTerminId++;
+    const termin: Termin = { id, ...insertTermin };
+    this.termine.set(id, termin);
+    return termin;
+  }
+
+  async updateTermin(id: number, insertTermin: InsertTermin): Promise<Termin> {
+    const termin: Termin = { id, ...insertTermin };
+    this.termine.set(id, termin);
+    return termin;
+  }
+
+  async deleteTermin(id: number): Promise<void> {
+    this.termine.delete(id);
+    // Also delete all associated Zusagen
+    const zusagen = Array.from(this.terminZusagen.values()).filter(z => z.termin_id === id);
+    for (const zusage of zusagen) {
+      this.terminZusagen.delete(zusage.id);
+    }
+  }
+
+  // Termin Zusagen methods
+  async getTerminZusagen(terminId: number): Promise<TerminZusage[]> {
+    return Array.from(this.terminZusagen.values()).filter(
+      (zusage) => zusage.termin_id === terminId
+    );
+  }
+
+  async getUserZusage(terminId: number, userId: string): Promise<TerminZusage | undefined> {
+    return Array.from(this.terminZusagen.values()).find(
+      (zusage) => zusage.termin_id === terminId && zusage.user_id === userId
+    );
+  }
+
+  async createOrUpdateZusage(insertZusage: InsertTerminZusage): Promise<TerminZusage> {
+    // Check if a zusage already exists for this user and termin
+    const existing = await this.getUserZusage(insertZusage.termin_id, insertZusage.user_id);
+    
+    if (existing) {
+      // Update existing
+      existing.status = insertZusage.status;
+      this.terminZusagen.set(existing.id, existing);
+      return existing;
+    } else {
+      // Create new
+      const id = this.nextZusageId++;
+      const zusage: TerminZusage = { id, ...insertZusage };
+      this.terminZusagen.set(id, zusage);
+      return zusage;
+    }
   }
 
   // Besetzungscheck

@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -8,7 +8,7 @@ export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
-  role: text("role").notNull(), // "admin" or "member"
+  role: text("role").notNull(), // "admin", "moderator", or "member"
   name: text("name").notNull(),
 });
 
@@ -78,6 +78,33 @@ export type Qualifikation = typeof qualifikationen.$inferSelect;
 
 // Available qualifications (kept for backwards compatibility)
 export const QUALIFIKATIONEN = ["TM", "AGT", "Maschinist", "GF", "Sprechfunker", "San"] as const;
+
+// Termine (Calendar events)
+export const termine = pgTable("termine", {
+  id: integer("id").primaryKey(),
+  titel: text("titel").notNull(),
+  beschreibung: text("beschreibung").notNull(),
+  datum: text("datum").notNull(), // ISO date string (YYYY-MM-DD)
+  uhrzeit: text("uhrzeit").notNull(), // Time string (HH:MM)
+  ort: text("ort").notNull(),
+  ersteller_id: text("ersteller_id").notNull(), // User ID who created it
+});
+
+export const insertTerminSchema = createInsertSchema(termine).omit({ id: true });
+export type InsertTermin = z.infer<typeof insertTerminSchema>;
+export type Termin = typeof termine.$inferSelect;
+
+// Termin Zusagen (Event responses)
+export const terminZusagen = pgTable("termin_zusagen", {
+  id: integer("id").primaryKey(),
+  termin_id: integer("termin_id").notNull(),
+  user_id: text("user_id").notNull(),
+  status: text("status").notNull(), // "zugesagt" or "abgesagt"
+});
+
+export const insertTerminZusageSchema = createInsertSchema(terminZusagen).omit({ id: true });
+export type InsertTerminZusage = z.infer<typeof insertTerminZusageSchema>;
+export type TerminZusage = typeof terminZusagen.$inferSelect;
 
 // Besetzungscheck result type
 export type BesetzungscheckResult = {
