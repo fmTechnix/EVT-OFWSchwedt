@@ -392,6 +392,7 @@ export class MemStorage implements IStorage {
       id: 1, 
       ...insertSettings,
       rotation_window: insertSettings.rotation_window ?? 4,
+      rotation_weights: insertSettings.rotation_weights ?? null,
     };
     return this.settings;
   }
