@@ -15,6 +15,8 @@ import {
   maengelMeldungen,
   assignmentHistory,
   assignmentFairness,
+  availabilityTemplates,
+  userReminderSettings,
   type User,
   type InsertUser,
   type Vehicle,
@@ -43,6 +45,10 @@ import {
   type InsertAssignmentHistory,
   type AssignmentFairness,
   type InsertAssignmentFairness,
+  type AvailabilityTemplate,
+  type InsertAvailabilityTemplate,
+  type UserReminderSettings,
+  type InsertUserReminderSettings,
 } from "@shared/schema";
 import type { IStorage } from "./storage";
 import { hashPassword } from "./password-utils";
@@ -360,6 +366,121 @@ export class PostgresStorage implements IStorage {
     
     return await db.select().from(users)
       .where(sql`${users.id} NOT IN (${sql.join(unavailableIds.map(id => sql`${id}`), sql`, `)})`);
+  }
+
+  // Availability Templates
+  async getUserTemplates(userId: string): Promise<AvailabilityTemplate[]> {
+    return await db.select().from(availabilityTemplates)
+      .where(eq(availabilityTemplates.user_id, userId))
+      .orderBy(desc(availabilityTemplates.created_at));
+  }
+
+  async createTemplate(template: InsertAvailabilityTemplate): Promise<AvailabilityTemplate> {
+    const result = await db.insert(availabilityTemplates).values(template).returning();
+    return result[0];
+  }
+
+  async updateTemplate(id: number, updates: Partial<InsertAvailabilityTemplate>): Promise<AvailabilityTemplate> {
+    const result = await db.update(availabilityTemplates).set(updates).where(eq(availabilityTemplates.id, id)).returning();
+    if (!result[0]) throw new Error("Template nicht gefunden");
+    return result[0];
+  }
+
+  async deleteTemplate(id: number): Promise<void> {
+    await db.delete(availabilityTemplates).where(eq(availabilityTemplates.id, id));
+  }
+
+  async applyTemplateToWeek(userId: string, templateId: number, weekStartDate: string): Promise<Availability[]> {
+    const template = await db.select().from(availabilityTemplates)
+      .where(eq(availabilityTemplates.id, templateId))
+      .limit(1);
+    
+    if (!template[0]) {
+      throw new Error("Template nicht gefunden");
+    }
+
+    const templateData = template[0];
+    const weekdayMap: Record<string, number> = {
+      'sunday': 0,
+      'monday': 1,
+      'tuesday': 2,
+      'wednesday': 3,
+      'thursday': 4,
+      'friday': 5,
+      'saturday': 6
+    };
+
+    const startDate = new Date(weekStartDate);
+    const results: Availability[] = [];
+
+    for (const weekday of templateData.weekdays) {
+      const targetDay = weekdayMap[weekday];
+      const currentDay = startDate.getDay();
+      const daysToAdd = (targetDay - currentDay + 7) % 7;
+      
+      const targetDate = new Date(startDate);
+      targetDate.setDate(startDate.getDate() + daysToAdd);
+      const dateString = targetDate.toISOString().split('T')[0];
+
+      const existingAvailability = await db.select().from(availabilities)
+        .where(sql`${availabilities.user_id} = ${userId} AND ${availabilities.date} = ${dateString}`)
+        .limit(1);
+
+      if (existingAvailability.length > 0) {
+        const updated = await db.update(availabilities)
+          .set({
+            status: templateData.status,
+            start_time: templateData.start_time,
+            end_time: templateData.end_time,
+          })
+          .where(eq(availabilities.id, existingAvailability[0].id))
+          .returning();
+        results.push(updated[0]);
+      } else {
+        const inserted = await db.insert(availabilities)
+          .values({
+            user_id: userId,
+            date: dateString,
+            status: templateData.status,
+            start_time: templateData.start_time,
+            end_time: templateData.end_time,
+            reason: null,
+          })
+          .returning();
+        results.push(inserted[0]);
+      }
+    }
+
+    return results;
+  }
+
+  // User Reminder Settings
+  async getReminderSettings(userId: string): Promise<UserReminderSettings | undefined> {
+    const result = await db.select().from(userReminderSettings)
+      .where(eq(userReminderSettings.user_id, userId));
+    return result[0];
+  }
+
+  async updateReminderSettings(userId: string, settings: Partial<InsertUserReminderSettings>): Promise<UserReminderSettings> {
+    const existing = await this.getReminderSettings(userId);
+    
+    if (existing) {
+      const result = await db.update(userReminderSettings)
+        .set({ ...settings, updated_at: sql`now()` })
+        .where(eq(userReminderSettings.user_id, userId))
+        .returning();
+      return result[0];
+    } else {
+      const result = await db.insert(userReminderSettings)
+        .values({ user_id: userId, ...settings })
+        .returning();
+      return result[0];
+    }
+  }
+
+  async getUsersWithRemindersEnabled(): Promise<UserReminderSettings[]> {
+    return await db.select().from(userReminderSettings)
+      .where(eq(userReminderSettings.reminder_enabled, true));
   }
 
   // Current Assignments

@@ -14,7 +14,9 @@ import type {
   PushSubscription, InsertPushSubscription,
   MaengelMeldung, InsertMaengelMeldung,
   AssignmentHistory, InsertAssignmentHistory,
-  AssignmentFairness, InsertAssignmentFairness
+  AssignmentFairness, InsertAssignmentFairness,
+  AvailabilityTemplate, InsertAvailabilityTemplate,
+  UserReminderSettings, InsertUserReminderSettings
 } from "@shared/schema";
 import { PostgresStorage } from "./pg-storage";
 import { initializeDatabase } from "./init-db";
@@ -80,6 +82,18 @@ export interface IStorage {
   setAvailability(availability: InsertAvailability): Promise<Availability>;
   deleteAvailability(id: number): Promise<void>;
   getAvailableUsers(date: string): Promise<User[]>;
+  
+  // Availability Templates
+  getUserTemplates(userId: string): Promise<AvailabilityTemplate[]>;
+  createTemplate(template: InsertAvailabilityTemplate): Promise<AvailabilityTemplate>;
+  updateTemplate(id: number, updates: Partial<InsertAvailabilityTemplate>): Promise<AvailabilityTemplate>;
+  deleteTemplate(id: number): Promise<void>;
+  applyTemplateToWeek(userId: string, templateId: number, weekStartDate: string): Promise<Availability[]>;
+  
+  // User Reminder Settings
+  getReminderSettings(userId: string): Promise<UserReminderSettings | undefined>;
+  updateReminderSettings(userId: string, settings: Partial<InsertUserReminderSettings>): Promise<UserReminderSettings>;
+  getUsersWithRemindersEnabled(): Promise<UserReminderSettings[]>;
   
   // Current Assignments
   getCurrentAssignments(): Promise<CurrentAssignment[]>;
@@ -655,6 +669,40 @@ export class MemStorage implements IStorage {
   }
 
   async resetFairnessMetrics(_userId: string): Promise<void> {
+    throw new Error("Not implemented in MemStorage");
+  }
+
+  // Availability Templates
+  async getUserTemplates(_userId: string): Promise<AvailabilityTemplate[]> {
+    throw new Error("Not implemented in MemStorage");
+  }
+
+  async createTemplate(_template: InsertAvailabilityTemplate): Promise<AvailabilityTemplate> {
+    throw new Error("Not implemented in MemStorage");
+  }
+
+  async updateTemplate(_id: number, _updates: Partial<InsertAvailabilityTemplate>): Promise<AvailabilityTemplate> {
+    throw new Error("Not implemented in MemStorage");
+  }
+
+  async deleteTemplate(_id: number): Promise<void> {
+    throw new Error("Not implemented in MemStorage");
+  }
+
+  async applyTemplateToWeek(_userId: string, _templateId: number, _weekStartDate: string): Promise<Availability[]> {
+    throw new Error("Not implemented in MemStorage");
+  }
+
+  // User Reminder Settings
+  async getReminderSettings(_userId: string): Promise<UserReminderSettings | undefined> {
+    throw new Error("Not implemented in MemStorage");
+  }
+
+  async updateReminderSettings(_userId: string, _settings: Partial<InsertUserReminderSettings>): Promise<UserReminderSettings> {
+    throw new Error("Not implemented in MemStorage");
+  }
+
+  async getUsersWithRemindersEnabled(): Promise<UserReminderSettings[]> {
     throw new Error("Not implemented in MemStorage");
   }
 }
