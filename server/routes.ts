@@ -60,44 +60,101 @@ async function requireModerator(req: Request, res: Response, next: Function) {
 }
 
 // Helper function to determine vehicle type from name
+// Check specific types before general ones to avoid misclassification
 function determineVehicleType(vehicleName: string): string {
-  const name = vehicleName.toUpperCase();
-  if (name.includes("HLF") || name.includes("LF")) return "LF";
-  if (name.includes("TLF")) return "TLF";
-  if (name.includes("DLK") || name.includes("DL")) return "DL";
-  if (name.includes("RW")) return "RW";
-  if (name.includes("MTW")) return "MTW";
-  if (name.includes("ELW")) return "ELW";
-  if (name.includes("GW")) return "GW";
-  if (name.includes("AB")) return "AB";
+  const name = vehicleName.toUpperCase().trim();
+  
+  // Check specific types first (HLF, TLF before LF)
+  if (/\bHLF\b/.test(name)) return "LF";
+  if (/\bTLF\b/.test(name)) return "TLF";
+  if (/\bDLK\b/.test(name) || name.includes("DREHLEITER")) return "DL";
+  if (/\bDL[\s-]/.test(name)) return "DL";
+  if (/\bRW\b/.test(name) || name.includes("RÜSTWAGEN") || name.includes("RUESTWAGEN")) return "RW";
+  if (/\bMTW\b/.test(name) || name.includes("MANNSCHAFTS")) return "MTW";
+  if (/\bELW\b/.test(name) || name.includes("EINSATZLEIT")) return "ELW";
+  if (/\bGW\b/.test(name) || name.includes("GERÄTEWAGEN") || name.includes("GERAETEWAGEN")) return "GW";
+  if (/\bAB\b/.test(name) || name.includes("ABROLLBEHÄLTER") || name.includes("ABROLLBEHAELTER")) return "AB";
+  // Check LF last (most general)
+  if (/\bLF\b/.test(name) || name.includes("LÖSCHFAHRZEUG") || name.includes("LOESCHFAHRZEUG")) return "LF";
+  
   return "Sonstiges";
 }
 
 // Helper function to create default vehicle configuration
-function createDefaultVehicleConfig(vehicleName: string): InsertVehicleConfig {
+function createDefaultVehicleConfig(vehicleName: string): InsertVehicleConfig | null {
   const vehicleType = determineVehicleType(vehicleName);
   
-  // Standard 9-Slot-Konfiguration für Löschfahrzeuge
-  const defaultSlots: VehicleSlot[] = [
-    { position: "GF", requires: ["GF"] },
-    { position: "MA", requires: ["MASCH"] },
-    { position: "MELDER", requires: ["FUNK"] },
-    { position: "ATF", requires: ["AGT"] },
-    { position: "ATM", requires: ["AGT"] },
-    { position: "WTF", requires: ["AGT"] },
-    { position: "WTM", requires: ["AGT"] },
-    { position: "STF", requires: [] },
-    { position: "STM", requires: [] },
-  ];
+  let defaultSlots: VehicleSlot[];
+  let constraints: any;
+  
+  switch (vehicleType) {
+    case "LF":
+    case "TLF":
+      // Standard 9-Slot-Konfiguration für Löschfahrzeuge
+      defaultSlots = [
+        { position: "GF", requires: ["GF"] },
+        { position: "MA", requires: ["MASCH"] },
+        { position: "MELDER", requires: ["FUNK"] },
+        { position: "ATF", requires: ["AGT"] },
+        { position: "ATM", requires: ["AGT"] },
+        { position: "WTF", requires: ["AGT"] },
+        { position: "WTM", requires: ["AGT"] },
+        { position: "STF", requires: [] },
+        { position: "STM", requires: [] },
+      ];
+      constraints = {
+        min_agt_total: 4,
+        min_funk_total: 1,
+      };
+      break;
+      
+    case "DL":
+      // Drehleiter-Konfiguration (3 Personen)
+      defaultSlots = [
+        { position: "GF", requires: ["GF"] },
+        { position: "MA", requires: ["MASCH"] },
+        { position: "MELDER", requires: ["FUNK"] },
+      ];
+      constraints = {
+        min_funk_total: 1,
+      };
+      break;
+      
+    case "RW":
+      // Rüstwagen-Konfiguration (3 Personen: TF, MA, TM)
+      defaultSlots = [
+        { position: "TF", requires: [] },
+        { position: "MA", requires: ["MASCH"] },
+        { position: "TM", requires: [] },
+      ];
+      constraints = {};
+      break;
+      
+    case "MTW":
+    case "ELW":
+      // Mannschaftstransportwagen / Einsatzleitwagen (6 Personen)
+      defaultSlots = [
+        { position: "Fahrer", requires: [] },
+        { position: "Beifahrer", requires: [] },
+        { position: "Platz 3", requires: [] },
+        { position: "Platz 4", requires: [] },
+        { position: "Platz 5", requires: [] },
+        { position: "Platz 6", requires: [] },
+      ];
+      constraints = {};
+      break;
+      
+    default:
+      // Für unbekannte Fahrzeugtypen keine Auto-Konfiguration erstellen
+      // Admin muss manuell konfigurieren
+      return null;
+  }
   
   return {
     vehicle: vehicleName,
     type: vehicleType,
     slots: defaultSlots,
-    constraints: {
-      min_agt_total: 4,
-      min_funk_total: 1,
-    },
+    constraints: constraints,
   };
 }
 
@@ -541,14 +598,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const data = insertVehicleSchema.parse(req.body);
       const vehicle = await storage.createVehicle(data);
       
-      // Check if a vehicle configuration already exists for this vehicle
-      const existingConfig = await storage.getVehicleConfigByName(vehicle.name);
+      // Check if a vehicle configuration already exists for this vehicle (case-insensitive)
+      const allConfigs = await storage.getAllVehicleConfigs();
+      const existingConfig = allConfigs.find(
+        c => c.vehicle.toLowerCase() === vehicle.name.toLowerCase()
+      );
       
       if (!existingConfig) {
         // Create a default vehicle configuration
         const defaultConfig = createDefaultVehicleConfig(vehicle.name);
-        await storage.createVehicleConfig(defaultConfig);
-        console.log(`✓ Automatische Standardkonfiguration für ${vehicle.name} erstellt`);
+        
+        if (defaultConfig) {
+          await storage.createVehicleConfig(defaultConfig);
+          console.log(`✓ Automatische Standardkonfiguration für ${vehicle.name} (Typ: ${defaultConfig.type}) erstellt`);
+        } else {
+          console.log(`ℹ Keine automatische Konfiguration für ${vehicle.name} - bitte manuell konfigurieren`);
+        }
+      } else {
+        console.log(`ℹ Konfiguration für ${vehicle.name} existiert bereits: ${existingConfig.vehicle}`);
       }
       
       res.status(201).json(vehicle);
