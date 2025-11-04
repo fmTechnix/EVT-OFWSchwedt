@@ -1433,6 +1433,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get current crew assignments
+  app.get("/api/crew-assignment", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const assignments = await storage.getCurrentAssignments();
+      const vehicleConfigs = await storage.getAllVehicleConfigs();
+      
+      const assignmentMap = new Map<number, Array<typeof assignments[0]>>();
+      assignments.forEach(a => {
+        if (!assignmentMap.has(a.vehicle_config_id)) {
+          assignmentMap.set(a.vehicle_config_id, []);
+        }
+        assignmentMap.get(a.vehicle_config_id)!.push(a);
+      });
+      
+      const vehicleAssignments = [];
+      
+      for (const vehicleConfig of vehicleConfigs) {
+        const configAssignments = assignmentMap.get(vehicleConfig.id) || [];
+        
+        const slots = await Promise.all((vehicleConfig.slots as any[]).map(async (slot) => {
+          const assignment = configAssignments.find(a => a.position === slot.position);
+          let assignedUser = null;
+          
+          if (assignment) {
+            const user = await storage.getUser(assignment.user_id);
+            if (user) {
+              assignedUser = {
+                id: user.id,
+                vorname: user.vorname,
+                nachname: user.nachname,
+                qualifikationen: user.qualifikationen
+              };
+            }
+          }
+          
+          return {
+            position: slot.position,
+            assignedUser,
+            required: slot.requires || [],
+            prefer: slot.prefers || [],
+            addons_required: slot.addons_required || [],
+            allow_fallback: slot.allow_fallback !== false
+          };
+        }));
+        
+        const fulfilled = slots.every(slot => slot.assignedUser !== null);
+        
+        vehicleAssignments.push({
+          vehicle: vehicleConfig.vehicle,
+          type: vehicleConfig.type,
+          slots,
+          fulfilled,
+          constraintsMet: true,
+          warnings: []
+        });
+      }
+      
+      const totalFulfilled = vehicleAssignments.filter(va => va.fulfilled).length;
+      
+      res.json({
+        assignments: vehicleAssignments,
+        unassignedUsers: [],
+        totalFulfilled,
+        totalVehicles: vehicleAssignments.length,
+        warnings: []
+      });
+    } catch (error) {
+      console.error("Error fetching current assignments:", error);
+      res.status(500).json({ error: "Fehler beim Abrufen der aktuellen Zuteilungen" });
+    }
+  });
+
   // Automatic Crew Assignment endpoint
   app.post("/api/crew-assignment", requireAuth, async (req: Request, res: Response) => {
     try {

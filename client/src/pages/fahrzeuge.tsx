@@ -597,8 +597,11 @@ interface CrewAssignmentResult {
 }
 
 function ZuteilungTab() {
-  const [result, setResult] = useState<CrewAssignmentResult | null>(null);
   const { toast } = useToast();
+
+  const { data: result, isLoading } = useQuery<CrewAssignmentResult>({
+    queryKey: ["/api/crew-assignment"],
+  });
 
   const assignmentMutation = useMutation({
     mutationFn: async (): Promise<CrewAssignmentResult> => {
@@ -606,7 +609,7 @@ function ZuteilungTab() {
       return await response.json();
     },
     onSuccess: (data: CrewAssignmentResult) => {
-      setResult(data);
+      queryClient.invalidateQueries({ queryKey: ["/api/crew-assignment"] });
       toast({
         title: "Zuteilung abgeschlossen",
         description: `${data.totalFulfilled}/${data.totalVehicles} Fahrzeuge vollständig besetzt`,
@@ -646,7 +649,24 @@ function ZuteilungTab() {
         </CardContent>
       </Card>
 
-      {result && (
+      {isLoading ? (
+        <div className="grid grid-cols-1 gap-6">
+          {[1, 2, 3].map((i) => (
+            <Card key={i}>
+              <CardHeader>
+                <Skeleton className="h-6 w-48" />
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {[1, 2, 3].map((j) => (
+                    <Skeleton key={j} className="h-16 w-full" />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : result && result.assignments.length > 0 ? (
         <>
           {result.warnings.length > 0 && (
             <Card className="border-yellow-500 bg-yellow-50 dark:bg-yellow-950">
@@ -690,15 +710,13 @@ function ZuteilungTab() {
             </Card>
           )}
         </>
-      )}
-
-      {!result && (
+      ) : (
         <Card>
           <CardContent className="py-12">
             <div className="text-center space-y-4">
               <Users className="h-16 w-16 mx-auto text-muted-foreground" />
               <p className="text-muted-foreground max-w-md mx-auto">
-                Klicken Sie auf "Automatische Zuteilung starten", um Kameraden optimal zu Fahrzeugpositionen zuzuweisen.
+                Noch keine Zuteilung vorhanden. Klicken Sie auf "Automatische Zuteilung starten", um Kameraden optimal zu Fahrzeugpositionen zuzuweisen.
               </p>
             </div>
           </CardContent>
