@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import session from "express-session";
 import { storage } from "./storage";
 import { insertVehicleSchema, insertEinsatzSchema, insertSettingsSchema, insertQualifikationSchema, insertTerminSchema, insertTerminZusageSchema, insertPushSubscriptionSchema, insertMaengelMeldungSchema } from "@shared/schema";
-import type { User, InsertUser } from "@shared/schema";
+import type { User, InsertUser, VehicleSlot, InsertVehicleConfig } from "@shared/schema";
 import { verifyPassword } from "./password-utils";
 import { assignCrewToVehicles } from "./crew-assignment";
 import { PushNotificationService, getVapidPublicKey } from "./push-service";
@@ -57,6 +57,48 @@ async function requireModerator(req: Request, res: Response, next: Function) {
   }
   
   next();
+}
+
+// Helper function to determine vehicle type from name
+function determineVehicleType(vehicleName: string): string {
+  const name = vehicleName.toUpperCase();
+  if (name.includes("HLF") || name.includes("LF")) return "LF";
+  if (name.includes("TLF")) return "TLF";
+  if (name.includes("DLK") || name.includes("DL")) return "DL";
+  if (name.includes("RW")) return "RW";
+  if (name.includes("MTW")) return "MTW";
+  if (name.includes("ELW")) return "ELW";
+  if (name.includes("GW")) return "GW";
+  if (name.includes("AB")) return "AB";
+  return "Sonstiges";
+}
+
+// Helper function to create default vehicle configuration
+function createDefaultVehicleConfig(vehicleName: string): InsertVehicleConfig {
+  const vehicleType = determineVehicleType(vehicleName);
+  
+  // Standard 9-Slot-Konfiguration für Löschfahrzeuge
+  const defaultSlots: VehicleSlot[] = [
+    { position: "GF", requires: ["GF"] },
+    { position: "MA", requires: ["MASCH"] },
+    { position: "MELDER", requires: ["FUNK"] },
+    { position: "ATF", requires: ["AGT"] },
+    { position: "ATM", requires: ["AGT"] },
+    { position: "WTF", requires: ["AGT"] },
+    { position: "WTM", requires: ["AGT"] },
+    { position: "STF", requires: [] },
+    { position: "STM", requires: [] },
+  ];
+  
+  return {
+    vehicle: vehicleName,
+    type: vehicleType,
+    slots: defaultSlots,
+    constraints: {
+      min_agt_total: 4,
+      min_funk_total: 1,
+    },
+  };
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -498,8 +540,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const data = insertVehicleSchema.parse(req.body);
       const vehicle = await storage.createVehicle(data);
+      
+      // Check if a vehicle configuration already exists for this vehicle
+      const existingConfig = await storage.getVehicleConfigByName(vehicle.name);
+      
+      if (!existingConfig) {
+        // Create a default vehicle configuration
+        const defaultConfig = createDefaultVehicleConfig(vehicle.name);
+        await storage.createVehicleConfig(defaultConfig);
+        console.log(`✓ Automatische Standardkonfiguration für ${vehicle.name} erstellt`);
+      }
+      
       res.status(201).json(vehicle);
     } catch (error) {
+      console.error("Vehicle creation error:", error);
       res.status(400).json({ error: "Ungültige Fahrzeugdaten" });
     }
   });
