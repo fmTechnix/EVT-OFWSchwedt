@@ -12,6 +12,8 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/lib/auth-context";
 import { addDays, startOfWeek, format } from "date-fns";
 import { de } from "date-fns/locale";
+import { AvailabilityTemplates } from "@/components/availability-templates";
+import { ReminderSettings } from "@/components/reminder-settings";
 
 export default function MeinEinsatz() {
   const { toast } = useToast();
@@ -165,6 +167,12 @@ export default function MeinEinsatz() {
             )}
           </CardContent>
         </Card>
+
+        {/* Templates and Reminder Settings */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <AvailabilityTemplates weekStartDate={format(weekStart, "yyyy-MM-dd")} />
+          <ReminderSettings />
+        </div>
 
         {/* Besetzungscheck Section */}
         {isLoading || einsatzLoading ? (
