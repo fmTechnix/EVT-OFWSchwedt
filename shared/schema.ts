@@ -283,6 +283,37 @@ export const insertMaengelMeldungSchema = createInsertSchema(maengelMeldungen).o
 export type InsertMaengelMeldung = z.infer<typeof insertMaengelMeldungSchema>;
 export type MaengelMeldung = typeof maengelMeldungen.$inferSelect;
 
+// Alarm Events (DE-Alarm Integration)
+export const alarmEvents = pgTable("alarm_events", {
+  id: serial("id").primaryKey(),
+  alarm_id: text("alarm_id").notNull().unique(), // Unique ID from DE-Alarm system
+  einsatznummer: text("einsatznummer").notNull(), // Mission number
+  alarmierungszeit: timestamp("alarmierungszeit").notNull(), // Alarm timestamp
+  ort: text("ort").notNull(), // Location
+  ortsteil: text("ortsteil"), // District
+  ortslage: text("ortslage"), // Specific location
+  strasse: text("strasse"), // Street (optional for privacy)
+  hausnummer: text("hausnummer"), // House number (optional for privacy)
+  objekt: text("objekt"), // Object/building (optional)
+  zusaetzliche_ortsangaben: text("zusaetzliche_ortsangaben"), // Additional location info
+  einsatzkoordinaten_lat: text("einsatzkoordinaten_lat"), // Latitude
+  einsatzkoordinaten_lon: text("einsatzkoordinaten_lon"), // Longitude
+  einsatzart: text("einsatzart").notNull(), // Mission type (e.g., "Brandeinsatz")
+  stichwort: text("stichwort").notNull(), // Keyword (e.g., "B:Klein")
+  sondersignal: boolean("sondersignal").notNull().default(false), // Emergency signal
+  besonderheiten: text("besonderheiten"), // Special notes
+  alarmierte_einsatzmittel: text("alarmierte_einsatzmittel").array().notNull().default(sql`'{}'`), // Alarmed units
+  alarmierte_wachen: text("alarmierte_wachen").array().notNull().default(sql`'{}'`), // Alarmed stations
+  empfangen_am: timestamp("empfangen_am").notNull().default(sql`now()`), // When EVT received the alarm
+  verarbeitet: boolean("verarbeitet").notNull().default(false), // Whether alarm was processed
+  crew_neu_zugeteilt: boolean("crew_neu_zugeteilt").notNull().default(false), // Whether crew was automatically reassigned
+  raw_data: jsonb("raw_data"), // Store complete raw JSON for debugging
+});
+
+export const insertAlarmEventSchema = createInsertSchema(alarmEvents).omit({ id: true, empfangen_am: true });
+export type InsertAlarmEvent = z.infer<typeof insertAlarmEventSchema>;
+export type AlarmEvent = typeof alarmEvents.$inferSelect;
+
 // Besetzungscheck result type
 export type BesetzungscheckResult = {
   vorhanden: {

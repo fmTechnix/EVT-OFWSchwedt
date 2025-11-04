@@ -16,7 +16,8 @@ import type {
   AssignmentHistory, InsertAssignmentHistory,
   AssignmentFairness, InsertAssignmentFairness,
   AvailabilityTemplate, InsertAvailabilityTemplate,
-  UserReminderSettings, InsertUserReminderSettings
+  UserReminderSettings, InsertUserReminderSettings,
+  AlarmEvent, InsertAlarmEvent
 } from "@shared/schema";
 import { PostgresStorage } from "./pg-storage";
 import { initializeDatabase } from "./init-db";
@@ -124,6 +125,13 @@ export interface IStorage {
   getAllFairnessMetrics(): Promise<AssignmentFairness[]>;
   updateFairnessMetrics(userId: string, position: string): Promise<AssignmentFairness>;
   resetFairnessMetrics(userId: string): Promise<void>;
+  
+  // Alarm Events (DE-Alarm Integration)
+  getAllAlarmEvents(): Promise<AlarmEvent[]>;
+  getAlarmEvent(id: number): Promise<AlarmEvent | undefined>;
+  getUnprocessedAlarmEvents(): Promise<AlarmEvent[]>;
+  createAlarmEvent(event: InsertAlarmEvent): Promise<AlarmEvent>;
+  markAlarmAsProcessed(id: number, crewReassigned: boolean): Promise<AlarmEvent>;
 }
 
 export class MemStorage implements IStorage {
@@ -670,6 +678,27 @@ export class MemStorage implements IStorage {
 
   async resetFairnessMetrics(_userId: string): Promise<void> {
     throw new Error("Not implemented in MemStorage");
+  }
+
+  // Alarm Events (DE-Alarm Integration)
+  async getAllAlarmEvents(): Promise<AlarmEvent[]> {
+    throw new Error("Not implemented in MemStorage - use PostgresStorage");
+  }
+
+  async getAlarmEvent(_id: number): Promise<AlarmEvent | undefined> {
+    throw new Error("Not implemented in MemStorage - use PostgresStorage");
+  }
+
+  async getUnprocessedAlarmEvents(): Promise<AlarmEvent[]> {
+    throw new Error("Not implemented in MemStorage - use PostgresStorage");
+  }
+
+  async createAlarmEvent(_event: InsertAlarmEvent): Promise<AlarmEvent> {
+    throw new Error("Not implemented in MemStorage - use PostgresStorage");
+  }
+
+  async markAlarmAsProcessed(_id: number, _crewReassigned: boolean): Promise<AlarmEvent> {
+    throw new Error("Not implemented in MemStorage - use PostgresStorage");
   }
 
   // Availability Templates

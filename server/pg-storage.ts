@@ -17,6 +17,7 @@ import {
   assignmentFairness,
   availabilityTemplates,
   userReminderSettings,
+  alarmEvents,
   type User,
   type InsertUser,
   type Vehicle,
@@ -49,6 +50,8 @@ import {
   type InsertAvailabilityTemplate,
   type UserReminderSettings,
   type InsertUserReminderSettings,
+  type AlarmEvent,
+  type InsertAlarmEvent,
 } from "@shared/schema";
 import type { IStorage } from "./storage";
 import { hashPassword } from "./password-utils";
@@ -661,5 +664,39 @@ export class PostgresStorage implements IStorage {
 
   async resetFairnessMetrics(userId: string): Promise<void> {
     await db.delete(assignmentFairness).where(eq(assignmentFairness.user_id, userId));
+  }
+
+  // Alarm Events (DE-Alarm Integration)
+  async getAllAlarmEvents(): Promise<AlarmEvent[]> {
+    return await db.select().from(alarmEvents).orderBy(desc(alarmEvents.alarmierungszeit));
+  }
+
+  async getAlarmEvent(id: number): Promise<AlarmEvent | undefined> {
+    const result = await db.select().from(alarmEvents).where(eq(alarmEvents.id, id));
+    return result[0];
+  }
+
+  async getUnprocessedAlarmEvents(): Promise<AlarmEvent[]> {
+    return await db.select().from(alarmEvents)
+      .where(eq(alarmEvents.verarbeitet, false))
+      .orderBy(asc(alarmEvents.alarmierungszeit));
+  }
+
+  async createAlarmEvent(event: InsertAlarmEvent): Promise<AlarmEvent> {
+    const result = await db.insert(alarmEvents).values(event).returning();
+    return result[0];
+  }
+
+  async markAlarmAsProcessed(id: number, crewReassigned: boolean): Promise<AlarmEvent> {
+    const result = await db.update(alarmEvents)
+      .set({
+        verarbeitet: true,
+        crew_neu_zugeteilt: crewReassigned,
+      })
+      .where(eq(alarmEvents.id, id))
+      .returning();
+    
+    if (!result[0]) throw new Error("Alarm event not found");
+    return result[0];
   }
 }
