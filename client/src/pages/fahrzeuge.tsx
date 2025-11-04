@@ -30,14 +30,10 @@ export default function Fahrzeuge() {
         </h1>
 
         <Tabs defaultValue="fahrzeuge" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="fahrzeuge" data-testid="tab-fahrzeuge">
               <Truck className="h-4 w-4 mr-2" />
-              Fahrzeugliste
-            </TabsTrigger>
-            <TabsTrigger value="konfigurationen" data-testid="tab-konfigurationen">
-              <Settings className="h-4 w-4 mr-2" />
-              Konfigurationen
+              Fahrzeuge
             </TabsTrigger>
             <TabsTrigger value="zuteilung" data-testid="tab-zuteilung">
               <Users className="h-4 w-4 mr-2" />
@@ -46,11 +42,7 @@ export default function Fahrzeuge() {
           </TabsList>
 
           <TabsContent value="fahrzeuge" className="mt-6">
-            <FahrzeuglisteTab />
-          </TabsContent>
-
-          <TabsContent value="konfigurationen" className="mt-6">
-            <KonfigurationenTab />
+            <FahrzeugeTab />
           </TabsContent>
 
           <TabsContent value="zuteilung" className="mt-6">
@@ -62,16 +54,17 @@ export default function Fahrzeuge() {
   );
 }
 
-function FahrzeuglisteTab() {
-  const [name, setName] = useState("");
-  const [funk, setFunk] = useState("");
-  const [besatzung, setBesatzung] = useState("9");
-  const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
+function FahrzeugeTab() {
+  const [editingConfig, setEditingConfig] = useState<VehicleConfig | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [newVehicleName, setNewVehicleName] = useState("");
+  const [newVehicleFunk, setNewVehicleFunk] = useState("");
+  const [newVehicleBesatzung, setNewVehicleBesatzung] = useState("9");
   const { toast } = useToast();
-
-  const { data: vehicles, isLoading } = useQuery<Vehicle[]>({
-    queryKey: ["/api/vehicles"],
+  
+  const { data: configs, isLoading } = useQuery<VehicleConfig[]>({
+    queryKey: ["/api/vehicle-configs"],
   });
 
   const createMutation = useMutation({
@@ -80,32 +73,35 @@ function FahrzeuglisteTab() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
-      setName("");
-      setFunk("");
-      setBesatzung("9");
+      queryClient.invalidateQueries({ queryKey: ["/api/vehicle-configs"] });
+      setCreateDialogOpen(false);
+      setNewVehicleName("");
+      setNewVehicleFunk("");
+      setNewVehicleBesatzung("9");
       toast({
-        title: "Fahrzeug hinzugefügt",
-        description: "Das Fahrzeug wurde erfolgreich hinzugefügt",
+        title: "Fahrzeug erstellt",
+        description: "Das Fahrzeug wurde mit Standard-Konfiguration erstellt",
       });
     },
     onError: () => {
       toast({
         variant: "destructive",
         title: "Fehler",
-        description: "Fahrzeug konnte nicht hinzugefügt werden",
+        description: "Fahrzeug konnte nicht erstellt werden",
       });
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      return await apiRequest("DELETE", `/api/vehicles/${id}`, {});
+      return await apiRequest("DELETE", `/api/vehicle-configs/${id}`, {});
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/vehicle-configs"] });
       queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
       toast({
         title: "Fahrzeug gelöscht",
-        description: "Das Fahrzeug wurde erfolgreich gelöscht",
+        description: "Das Fahrzeug wurde gelöscht",
       });
     },
     onError: () => {
@@ -117,312 +113,56 @@ function FahrzeuglisteTab() {
     },
   });
 
-  const seedMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/vehicles/seed", {});
-      return await response.json();
-    },
-    onSuccess: (data: { created: number; skipped: number; message: string }) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
-      toast({
-        title: "Fahrzeuge erstellt",
-        description: data.message,
-        duration: 5000,
-      });
-    },
-    onError: () => {
-      toast({
-        variant: "destructive",
-        title: "Fehler",
-        description: "Fahrzeuge konnten nicht erstellt werden",
-      });
-    },
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: InsertVehicle }) => {
-      return await apiRequest("PATCH", `/api/vehicles/${id}`, data);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
-      setEditDialogOpen(false);
-      setEditingVehicle(null);
-      toast({
-        title: "Fahrzeug aktualisiert",
-        description: "Das Fahrzeug wurde erfolgreich aktualisiert",
-      });
-    },
-    onError: () => {
-      toast({
-        variant: "destructive",
-        title: "Fehler",
-        description: "Fahrzeug konnte nicht aktualisiert werden",
-      });
-    },
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim()) return;
-    
-    createMutation.mutate({
-      name: name.trim(),
-      funk: funk.trim(),
-      besatzung: parseInt(besatzung) || 0,
-    });
-  };
-
-  const handleDelete = (id: number, vehicleName: string) => {
-    if (confirm(`Fahrzeug "${vehicleName}" wirklich löschen?`)) {
-      deleteMutation.mutate(id);
-    }
-  };
-
-  const handleEdit = (vehicle: Vehicle) => {
-    setEditingVehicle(vehicle);
-    setEditDialogOpen(true);
-  };
-
-  const handleUpdateSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingVehicle) return;
-    
-    updateMutation.mutate({
-      id: editingVehicle.id,
-      data: {
-        name: editingVehicle.name,
-        funk: editingVehicle.funk,
-        besatzung: editingVehicle.besatzung,
-      },
-    });
-  };
-
-  return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <Card className="shadow-lg">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Fahrzeugliste</CardTitle>
-              <CardDescription>Einfache Fahrzeugverwaltung für Funk und Besatzung</CardDescription>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => seedMutation.mutate()}
-              disabled={seedMutation.isPending}
-              data-testid="button-seed-vehicles"
-            >
-              <Truck className="h-4 w-4 mr-2" />
-              {seedMutation.isPending ? "Erstelle..." : "Aus Konfigurationen"}
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="space-y-3">
-              {[1, 2, 3].map((i) => <Skeleton key={i} className="h-12 w-full" />)}
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Funkrufname</TableHead>
-                    <TableHead className="text-center">Besatzung</TableHead>
-                    <TableHead className="w-40">Aktionen</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {vehicles?.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
-                        Noch keine Fahrzeuge vorhanden
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    vehicles?.map((vehicle) => (
-                      <TableRow key={vehicle.id} data-testid={`row-vehicle-${vehicle.id}`}>
-                        <TableCell className="font-semibold" data-testid={`text-name-${vehicle.id}`}>
-                          {vehicle.name}
-                        </TableCell>
-                        <TableCell data-testid={`text-funk-${vehicle.id}`}>
-                          {vehicle.funk}
-                        </TableCell>
-                        <TableCell className="text-center" data-testid={`text-besatzung-${vehicle.id}`}>
-                          {vehicle.besatzung}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleEdit(vehicle)}
-                              data-testid={`button-edit-${vehicle.id}`}
-                            >
-                              Bearbeiten
-                            </Button>
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => handleDelete(vehicle.id, vehicle.name)}
-                              disabled={deleteMutation.isPending}
-                              data-testid={`button-delete-${vehicle.id}`}
-                            >
-                              Löschen
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle>Neues Fahrzeug</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="z.B. HLF 20"
-                required
-                data-testid="input-name"
-                className="h-11"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="funk">Funkrufname</Label>
-              <Input
-                id="funk"
-                value={funk}
-                onChange={(e) => setFunk(e.target.value)}
-                placeholder="z.B. Florian Schwedt 1/46/1"
-                data-testid="input-funk"
-                className="h-11"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="besatzung">Besatzung</Label>
-              <Input
-                id="besatzung"
-                type="number"
-                min="0"
-                value={besatzung}
-                onChange={(e) => setBesatzung(e.target.value)}
-                required
-                data-testid="input-besatzung"
-                className="h-11"
-              />
-            </div>
-
-            <Button
-              type="submit"
-              className="w-full h-11"
-              disabled={createMutation.isPending}
-              data-testid="button-add-vehicle"
-            >
-              {createMutation.isPending ? "Wird gespeichert..." : "Fahrzeug hinzufügen"}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Fahrzeug bearbeiten</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleUpdateSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit-name">Name</Label>
-              <Input
-                id="edit-name"
-                value={editingVehicle?.name || ""}
-                onChange={(e) => setEditingVehicle(prev => prev ? { ...prev, name: e.target.value } : null)}
-                placeholder="z.B. HLF 20"
-                required
-                data-testid="input-edit-name"
-                className="h-11"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="edit-funk">Funkrufname</Label>
-              <Input
-                id="edit-funk"
-                value={editingVehicle?.funk || ""}
-                onChange={(e) => setEditingVehicle(prev => prev ? { ...prev, funk: e.target.value } : null)}
-                placeholder="z.B. Florian Schwedt 01/43-01"
-                required
-                data-testid="input-edit-funk"
-                className="h-11"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="edit-besatzung">Besatzung</Label>
-              <Input
-                id="edit-besatzung"
-                type="number"
-                min="1"
-                value={editingVehicle?.besatzung || ""}
-                onChange={(e) => setEditingVehicle(prev => prev ? { ...prev, besatzung: parseInt(e.target.value) || 0 } : null)}
-                placeholder="z.B. 9"
-                required
-                data-testid="input-edit-besatzung"
-                className="h-11"
-              />
-            </div>
-
-            <div className="flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setEditDialogOpen(false)}
-                data-testid="button-cancel-edit"
-              >
-                Abbrechen
-              </Button>
-              <Button
-                type="submit"
-                disabled={updateMutation.isPending}
-                data-testid="button-save-edit"
-              >
-                {updateMutation.isPending ? "Speichert..." : "Speichern"}
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-}
-
-function KonfigurationenTab() {
-  const [editingConfig, setEditingConfig] = useState<VehicleConfig | null>(null);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  
-  const { data: configs, isLoading } = useQuery<VehicleConfig[]>({
-    queryKey: ["/api/vehicle-configs"],
-  });
-
   const handleEdit = (config: VehicleConfig) => {
     setEditingConfig(config);
     setEditDialogOpen(true);
+  };
+
+  const handleDelete = (config: VehicleConfig) => {
+    if (confirm(`Fahrzeug "${config.vehicle}" wirklich löschen?`)) {
+      deleteMutation.mutate(config.id);
+    }
+  };
+
+  const handleCreateSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const trimmedName = newVehicleName.trim();
+    const trimmedFunk = newVehicleFunk.trim();
+    const besatzungNum = parseInt(newVehicleBesatzung);
+    
+    if (!trimmedName) {
+      toast({
+        variant: "destructive",
+        title: "Fehler",
+        description: "Fahrzeugname darf nicht leer sein",
+      });
+      return;
+    }
+    
+    if (!trimmedFunk) {
+      toast({
+        variant: "destructive",
+        title: "Fehler",
+        description: "Funkrufname darf nicht leer sein",
+      });
+      return;
+    }
+    
+    if (isNaN(besatzungNum) || besatzungNum < 1) {
+      toast({
+        variant: "destructive",
+        title: "Fehler",
+        description: "Besatzungsgröße muss eine Zahl größer als 0 sein",
+      });
+      return;
+    }
+    
+    createMutation.mutate({
+      name: trimmedName,
+      funk: trimmedFunk,
+      besatzung: besatzungNum,
+    });
   };
 
   if (isLoading) {
@@ -439,22 +179,38 @@ function KonfigurationenTab() {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Fahrzeug-Konfigurationen</CardTitle>
-          <CardDescription>
-            Detaillierte Konfigurationen für automatische Besatzungszuteilung
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Fahrzeuge</CardTitle>
+              <CardDescription>
+                Fahrzeuge verwalten und Besatzungskonfiguration anpassen
+              </CardDescription>
+            </div>
+            <Button
+              onClick={() => setCreateDialogOpen(true)}
+              data-testid="button-create-vehicle"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Neues Fahrzeug
+            </Button>
+          </div>
         </CardHeader>
       </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {configs?.map((config) => (
-          <VehicleConfigCard key={config.id} config={config} onEdit={handleEdit} />
+          <VehicleConfigCard 
+            key={config.id} 
+            config={config} 
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+          />
         ))}
         
         {configs?.length === 0 && (
           <Card className="col-span-full">
             <CardContent className="py-12 text-center text-muted-foreground">
-              Keine Fahrzeug-Konfigurationen vorhanden
+              Keine Fahrzeuge vorhanden. Klicke auf "Neues Fahrzeug" um zu starten.
             </CardContent>
           </Card>
         )}
@@ -470,6 +226,71 @@ function KonfigurationenTab() {
           }}
         />
       )}
+
+      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Neues Fahrzeug anlegen</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleCreateSubmit} className="space-y-4">
+            <div>
+              <Label htmlFor="new-vehicle-name">Fahrzeugname</Label>
+              <Input
+                id="new-vehicle-name"
+                value={newVehicleName}
+                onChange={(e) => setNewVehicleName(e.target.value)}
+                placeholder="z.B. HLF 20, MTF, DL 30"
+                required
+                data-testid="input-new-vehicle-name"
+              />
+            </div>
+            <div>
+              <Label htmlFor="new-vehicle-funk">Funkrufname</Label>
+              <Input
+                id="new-vehicle-funk"
+                value={newVehicleFunk}
+                onChange={(e) => setNewVehicleFunk(e.target.value)}
+                placeholder="z.B. Florian Schwedt 24/43-01"
+                required
+                data-testid="input-new-vehicle-funk"
+              />
+            </div>
+            <div>
+              <Label htmlFor="new-vehicle-besatzung">Besatzungsgröße</Label>
+              <Input
+                id="new-vehicle-besatzung"
+                type="number"
+                min="1"
+                max="20"
+                value={newVehicleBesatzung}
+                onChange={(e) => setNewVehicleBesatzung(e.target.value)}
+                required
+                data-testid="input-new-vehicle-besatzung"
+              />
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Die Besatzungskonfiguration wird automatisch basierend auf dem Fahrzeugtyp erstellt.
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setCreateDialogOpen(false)}
+                data-testid="button-cancel-create"
+              >
+                Abbrechen
+              </Button>
+              <Button
+                type="submit"
+                disabled={createMutation.isPending}
+                data-testid="button-save-create"
+              >
+                {createMutation.isPending ? "Erstellt..." : "Erstellen"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -661,7 +482,15 @@ function VehicleConfigEditDialog({
   );
 }
 
-function VehicleConfigCard({ config, onEdit }: { config: VehicleConfig; onEdit: (config: VehicleConfig) => void }) {
+function VehicleConfigCard({ 
+  config, 
+  onEdit, 
+  onDelete 
+}: { 
+  config: VehicleConfig; 
+  onEdit: (config: VehicleConfig) => void;
+  onDelete: (config: VehicleConfig) => void;
+}) {
   const slots = config.slots as any[];
   const constraints = config.constraints as any;
 
@@ -673,14 +502,24 @@ function VehicleConfigCard({ config, onEdit }: { config: VehicleConfig; onEdit: 
             <span>{config.vehicle}</span>
             <Badge variant="outline">{config.type}</Badge>
           </CardTitle>
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={() => onEdit(config)}
-            data-testid={`button-edit-config-${config.id}`}
-          >
-            <Pencil className="h-4 w-4" />
-          </Button>
+          <div className="flex gap-1">
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={() => onEdit(config)}
+              data-testid={`button-edit-config-${config.id}`}
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={() => onDelete(config)}
+              data-testid={`button-delete-config-${config.id}`}
+            >
+              <Trash2 className="h-4 w-4 text-destructive" />
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
