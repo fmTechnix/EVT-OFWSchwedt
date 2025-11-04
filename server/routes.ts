@@ -70,7 +70,9 @@ function determineVehicleType(vehicleName: string): string {
   if (/\bDLK\b/.test(name) || name.includes("DREHLEITER")) return "DL";
   if (/\bDL[\s-]/.test(name)) return "DL";
   if (/\bRW\b/.test(name) || name.includes("RÜSTWAGEN") || name.includes("RUESTWAGEN")) return "RW";
-  if (/\bMTW\b/.test(name) || /\bMTF\b/.test(name) || name.includes("MANNSCHAFTS")) return "MTW";
+  // Check MTF before MTW (more specific)
+  if (/\bMTF\b/.test(name)) return "MTF";
+  if (/\bMTW\b/.test(name) || name.includes("MANNSCHAFTS")) return "MTW";
   if (/\bELW\b/.test(name) || name.includes("EINSATZLEIT")) return "ELW";
   if (/\bGW\b/.test(name) || name.includes("GERÄTEWAGEN") || name.includes("GERAETEWAGEN")) return "GW";
   if (/\bAB\b/.test(name) || name.includes("ABROLLBEHÄLTER") || name.includes("ABROLLBEHAELTER")) return "AB";
@@ -126,6 +128,19 @@ function createDefaultVehicleConfig(vehicleName: string): InsertVehicleConfig | 
         { position: "TF", requires: [] },
         { position: "MA", requires: ["MASCH"] },
         { position: "TM", requires: [] },
+      ];
+      constraints = {};
+      break;
+      
+    case "MTF":
+      // Mannschaftstransportfahrzeug (6 Personen)
+      defaultSlots = [
+        { position: "Fahrer", requires: [] },
+        { position: "Beifahrer", requires: [] },
+        { position: "Platz 3", requires: [] },
+        { position: "Platz 4", requires: [] },
+        { position: "Platz 5", requires: [] },
+        { position: "Platz 6", requires: [] },
       ];
       constraints = {};
       break;
