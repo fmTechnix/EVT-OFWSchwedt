@@ -14,7 +14,9 @@ import type { Vehicle, InsertVehicle, VehicleConfig } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Truck, Settings, Users } from "lucide-react";
+import { Truck, Settings, Users, Pencil, Plus, Trash2, X } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import type { Qualifikation } from "@shared/schema";
 
 export default function Fahrzeuge() {
   return (
@@ -411,9 +413,17 @@ function FahrzeuglisteTab() {
 }
 
 function KonfigurationenTab() {
+  const [editingConfig, setEditingConfig] = useState<VehicleConfig | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  
   const { data: configs, isLoading } = useQuery<VehicleConfig[]>({
     queryKey: ["/api/vehicle-configs"],
   });
+
+  const handleEdit = (config: VehicleConfig) => {
+    setEditingConfig(config);
+    setEditDialogOpen(true);
+  };
 
   if (isLoading) {
     return (
@@ -438,7 +448,7 @@ function KonfigurationenTab() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {configs?.map((config) => (
-          <VehicleConfigCard key={config.id} config={config} />
+          <VehicleConfigCard key={config.id} config={config} onEdit={handleEdit} />
         ))}
         
         {configs?.length === 0 && (
@@ -449,21 +459,229 @@ function KonfigurationenTab() {
           </Card>
         )}
       </div>
+
+      {editingConfig && (
+        <VehicleConfigEditDialog
+          config={editingConfig}
+          open={editDialogOpen}
+          onOpenChange={(open) => {
+            setEditDialogOpen(open);
+            if (!open) setEditingConfig(null);
+          }}
+        />
+      )}
     </div>
   );
 }
 
-function VehicleConfigCard({ config }: { config: VehicleConfig }) {
+function VehicleConfigEditDialog({ 
+  config, 
+  open, 
+  onOpenChange 
+}: { 
+  config: VehicleConfig; 
+  open: boolean; 
+  onOpenChange: (open: boolean) => void;
+}) {
+  const [slots, setSlots] = useState<any[]>(JSON.parse(JSON.stringify(config.slots)) || []);
+  const { toast } = useToast();
+  
+  const { data: qualifikationen } = useQuery<Qualifikation[]>({
+    queryKey: ["/api/qualifikationen"],
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return await apiRequest("PATCH", `/api/vehicle-configs/${config.id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/vehicle-configs"] });
+      onOpenChange(false);
+      toast({
+        title: "Konfiguration gespeichert",
+        description: "Die Fahrzeug-Konfiguration wurde aktualisiert",
+      });
+    },
+    onError: () => {
+      toast({
+        variant: "destructive",
+        title: "Fehler",
+        description: "Konfiguration konnte nicht gespeichert werden",
+      });
+    },
+  });
+
+  const handleSave = () => {
+    updateMutation.mutate({
+      vehicle: config.vehicle,
+      type: config.type,
+      slots,
+      constraints: config.constraints || {},
+    });
+  };
+
+  const addSlot = () => {
+    setSlots([...slots, { position: `Platz ${slots.length + 1}`, requires: [], prefer: [] }]);
+  };
+
+  const removeSlot = (index: number) => {
+    setSlots(slots.filter((_, i) => i !== index));
+  };
+
+  const updateSlot = (index: number, field: string, value: any) => {
+    const newSlots = [...slots];
+    newSlots[index] = { ...newSlots[index], [field]: value };
+    setSlots(newSlots);
+  };
+
+  const toggleQualification = (slotIndex: number, field: 'requires' | 'prefer', qual: string) => {
+    const slot = slots[slotIndex];
+    const qualList = slot[field] || [];
+    const newQualList = qualList.includes(qual)
+      ? qualList.filter((q: string) => q !== qual)
+      : [...qualList, qual];
+    updateSlot(slotIndex, field, newQualList);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Fahrzeug-Konfiguration bearbeiten: {config.vehicle}</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4 py-4">
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold">Positionen ({slots.length})</h3>
+            <Button 
+              size="sm" 
+              variant="outline" 
+              onClick={addSlot}
+              data-testid="button-add-slot"
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Position hinzufügen
+            </Button>
+          </div>
+
+          <div className="space-y-4">
+            {slots.map((slot, index) => (
+              <Card key={index} data-testid={`slot-editor-${index}`}>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <Input
+                      value={slot.position}
+                      onChange={(e) => updateSlot(index, 'position', e.target.value)}
+                      placeholder="Position"
+                      className="max-w-xs"
+                      data-testid={`input-position-${index}`}
+                    />
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => removeSlot(index)}
+                      data-testid={`button-remove-slot-${index}`}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div>
+                    <Label className="text-sm font-medium mb-2 block">
+                      Benötigte Qualifikationen
+                    </Label>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                      {qualifikationen?.map((qual) => (
+                        <div key={qual.id} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`requires-${index}-${qual.id}`}
+                            checked={(slot.requires || []).includes(qual.kuerzel)}
+                            onCheckedChange={() => toggleQualification(index, 'requires', qual.kuerzel)}
+                            data-testid={`checkbox-requires-${index}-${qual.kuerzel}`}
+                          />
+                          <label
+                            htmlFor={`requires-${index}-${qual.id}`}
+                            className="text-sm cursor-pointer"
+                          >
+                            {qual.kuerzel}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label className="text-sm font-medium mb-2 block">
+                      Bevorzugte Qualifikationen
+                    </Label>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                      {qualifikationen?.map((qual) => (
+                        <div key={qual.id} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`prefer-${index}-${qual.id}`}
+                            checked={(slot.prefer || []).includes(qual.kuerzel)}
+                            onCheckedChange={() => toggleQualification(index, 'prefer', qual.kuerzel)}
+                            data-testid={`checkbox-prefer-${index}-${qual.kuerzel}`}
+                          />
+                          <label
+                            htmlFor={`prefer-${index}-${qual.id}`}
+                            className="text-sm cursor-pointer"
+                          >
+                            {qual.kuerzel}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-2">
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            data-testid="button-cancel-edit-config"
+          >
+            Abbrechen
+          </Button>
+          <Button
+            onClick={handleSave}
+            disabled={updateMutation.isPending}
+            data-testid="button-save-config"
+          >
+            {updateMutation.isPending ? "Speichert..." : "Speichern"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function VehicleConfigCard({ config, onEdit }: { config: VehicleConfig; onEdit: (config: VehicleConfig) => void }) {
   const slots = config.slots as any[];
   const constraints = config.constraints as any;
 
   return (
     <Card className="shadow-lg" data-testid={`card-config-${config.id}`}>
       <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <span>{config.vehicle}</span>
-          <Badge variant="outline">{config.type}</Badge>
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <span>{config.vehicle}</span>
+            <Badge variant="outline">{config.type}</Badge>
+          </CardTitle>
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={() => onEdit(config)}
+            data-testid={`button-edit-config-${config.id}`}
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <div>
