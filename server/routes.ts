@@ -7,6 +7,7 @@ import type { User, InsertUser } from "@shared/schema";
 import { verifyPassword } from "./password-utils";
 import { assignCrewToVehicles } from "./crew-assignment";
 import { PushNotificationService, getVapidPublicKey } from "./push-service";
+import { ReminderScheduler } from "./reminder-scheduler";
 import { z } from "zod";
 
 // Extend Express session to include user
@@ -1504,8 +1505,114 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Availability Template Endpoints
+  
+  // Get user's templates
+  app.get("/api/availability/templates", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const templates = await storage.getUserTemplates(req.session.userId!);
+      res.json(templates);
+    } catch (error) {
+      console.error("Error fetching templates:", error);
+      res.status(500).json({ error: "Fehler beim Laden der Vorlagen" });
+    }
+  });
+
+  // Create new template
+  app.post("/api/availability/templates", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const template = await storage.createTemplate({
+        ...req.body,
+        user_id: req.session.userId!,
+      });
+      res.status(201).json(template);
+    } catch (error) {
+      console.error("Error creating template:", error);
+      res.status(400).json({ error: "Fehler beim Erstellen der Vorlage" });
+    }
+  });
+
+  // Update template
+  app.patch("/api/availability/templates/:id", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const template = await storage.updateTemplate(id, req.body);
+      res.json(template);
+    } catch (error) {
+      console.error("Error updating template:", error);
+      res.status(400).json({ error: "Fehler beim Aktualisieren der Vorlage" });
+    }
+  });
+
+  // Delete template
+  app.delete("/api/availability/templates/:id", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deleteTemplate(id);
+      res.json({ message: "Vorlage erfolgreich gelöscht" });
+    } catch (error) {
+      console.error("Error deleting template:", error);
+      res.status(500).json({ error: "Fehler beim Löschen der Vorlage" });
+    }
+  });
+
+  // Apply template to a week
+  app.post("/api/availability/templates/:id/apply", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const templateId = parseInt(req.params.id);
+      const { weekStartDate } = req.body;
+      
+      if (!weekStartDate) {
+        return res.status(400).json({ error: "weekStartDate erforderlich" });
+      }
+
+      const availabilities = await storage.applyTemplateToWeek(
+        req.session.userId!,
+        templateId,
+        weekStartDate
+      );
+      res.json(availabilities);
+    } catch (error) {
+      console.error("Error applying template:", error);
+      res.status(400).json({ error: "Fehler beim Anwenden der Vorlage" });
+    }
+  });
+
+  // User Reminder Settings Endpoints
+  
+  // Get reminder settings
+  app.get("/api/availability/reminder-settings", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const settings = await storage.getReminderSettings(req.session.userId!);
+      res.json(settings || {
+        user_id: req.session.userId!,
+        reminder_enabled: false,
+        reminder_time: "18:00",
+        reminder_weekdays: ["sunday"],
+      });
+    } catch (error) {
+      console.error("Error fetching reminder settings:", error);
+      res.status(500).json({ error: "Fehler beim Laden der Erinnerungseinstellungen" });
+    }
+  });
+
+  // Update reminder settings
+  app.patch("/api/availability/reminder-settings", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const settings = await storage.updateReminderSettings(req.session.userId!, req.body);
+      res.json(settings);
+    } catch (error) {
+      console.error("Error updating reminder settings:", error);
+      res.status(400).json({ error: "Fehler beim Aktualisieren der Erinnerungseinstellungen" });
+    }
+  });
+
   // Push Notification Endpoints
   const pushService = new PushNotificationService(storage);
+
+  // Start Availability Reminder Scheduler
+  const reminderScheduler = new ReminderScheduler(pushService);
+  reminderScheduler.start();
 
   // Get VAPID public key for frontend
   app.get("/api/push/vapid-public-key", requireAuth, (req: Request, res: Response) => {
