@@ -2,8 +2,8 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import session from "express-session";
 import { storage } from "./storage";
-import { insertVehicleSchema, insertEinsatzSchema, insertSettingsSchema, insertQualifikationSchema, insertTerminSchema, insertTerminZusageSchema, insertPushSubscriptionSchema, insertMaengelMeldungSchema } from "@shared/schema";
-import type { User, InsertUser, VehicleSlot, InsertVehicleConfig } from "@shared/schema";
+import { insertVehicleSchema, insertEinsatzSchema, insertSettingsSchema, insertQualifikationSchema, insertTerminSchema, insertTerminZusageSchema, insertPushSubscriptionSchema, insertMaengelMeldungSchema, insertAlarmEventSchema } from "@shared/schema";
+import type { User, InsertUser, VehicleSlot, InsertVehicleConfig, AlarmEvent } from "@shared/schema";
 import { verifyPassword } from "./password-utils";
 import { assignCrewToVehicles } from "./crew-assignment";
 import { PushNotificationService, getVapidPublicKey } from "./push-service";
@@ -1862,6 +1862,116 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting push subscription:", error);
       res.status(500).json({ error: "Fehler beim Löschen der Subscription" });
+    }
+  });
+
+  // =====================================================
+  // DE-Alarm Integration Endpoints
+  // =====================================================
+
+  // Get all alarm events (admin/moderator only)
+  app.get("/api/alarm/events", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || (user.role !== "admin" && user.role !== "moderator")) {
+        return res.status(403).json({ error: "Keine Berechtigung" });
+      }
+
+      const events = await storage.getAllAlarmEvents();
+      res.json(events);
+    } catch (error) {
+      console.error("Error fetching alarm events:", error);
+      res.status(500).json({ error: "Fehler beim Laden der Alarme" });
+    }
+  });
+
+  // Get unprocessed alarm events (admin/moderator only)
+  app.get("/api/alarm/events/unprocessed", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || (user.role !== "admin" && user.role !== "moderator")) {
+        return res.status(403).json({ error: "Keine Berechtigung" });
+      }
+
+      const events = await storage.getUnprocessedAlarmEvents();
+      res.json(events);
+    } catch (error) {
+      console.error("Error fetching unprocessed alarm events:", error);
+      res.status(500).json({ error: "Fehler beim Laden der unverarbeiteten Alarme" });
+    }
+  });
+
+  // Webhook endpoint for incoming alarms (from DE-Alarm or simulation)
+  app.post("/api/alarm/incoming", async (req: Request, res: Response) => {
+    try {
+      console.log("📢 Incoming alarm webhook received:", JSON.stringify(req.body, null, 2));
+
+      // Validate incoming data
+      const validatedData = insertAlarmEventSchema.parse(req.body);
+
+      // Save alarm event to database
+      const savedEvent = await storage.createAlarmEvent(validatedData);
+      console.log("✅ Alarm event saved to database:", savedEvent.id);
+
+      // TODO: Trigger automatic crew reassignment (Task 3)
+      // TODO: Send push notifications (Task 4)
+
+      res.status(201).json({
+        message: "Alarm empfangen und gespeichert",
+        alarm_id: savedEvent.id,
+        einsatznummer: savedEvent.einsatznummer,
+        stichwort: savedEvent.stichwort,
+      });
+    } catch (error) {
+      console.error("❌ Error processing incoming alarm:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          error: "Ungültige Alarmdaten",
+          details: error.errors,
+        });
+      }
+      res.status(500).json({ error: "Fehler beim Verarbeiten des Alarms" });
+    }
+  });
+
+  // Test endpoint to simulate an alarm (admin only)
+  app.post("/api/alarm/simulate", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      // Create a test alarm with current timestamp
+      const testAlarm = {
+        alarm_id: `TEST-${Date.now()}`,
+        einsatznummer: `EVT${Date.now()}`,
+        alarmierungszeit: new Date(),
+        ort: req.body.ort || "Schwedt/Oder",
+        ortsteil: req.body.ortsteil || "Zentrum",
+        ortslage: req.body.ortslage,
+        strasse: req.body.strasse,
+        hausnummer: req.body.hausnummer,
+        objekt: req.body.objekt,
+        zusaetzliche_ortsangaben: req.body.zusaetzliche_ortsangaben,
+        einsatzkoordinaten_lat: req.body.einsatzkoordinaten_lat,
+        einsatzkoordinaten_lon: req.body.einsatzkoordinaten_lon,
+        einsatzart: req.body.einsatzart || "Brandeinsatz",
+        stichwort: req.body.stichwort || "B:Klein",
+        sondersignal: req.body.sondersignal !== undefined ? req.body.sondersignal : true,
+        besonderheiten: req.body.besonderheiten,
+        alarmierte_einsatzmittel: req.body.alarmierte_einsatzmittel || [],
+        alarmierte_wachen: req.body.alarmierte_wachen || ["Feuerwehr Schwedt/Oder"],
+        verarbeitet: false,
+        crew_neu_zugeteilt: false,
+        raw_data: req.body,
+      };
+
+      const savedEvent = await storage.createAlarmEvent(testAlarm);
+      console.log("🧪 Test alarm created:", savedEvent.id);
+
+      res.status(201).json({
+        message: "Test-Alarm erstellt",
+        alarm: savedEvent,
+      });
+    } catch (error) {
+      console.error("Error creating test alarm:", error);
+      res.status(500).json({ error: "Fehler beim Erstellen des Test-Alarms" });
     }
   });
 
