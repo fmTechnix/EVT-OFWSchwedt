@@ -1,0 +1,61 @@
+# Systemd Service für EVT (Alternative zu PM2)
+# Datei: /etc/systemd/system/evt.service
+#
+# Installation:
+# sudo cp evt.service /etc/systemd/system/
+# sudo systemctl daemon-reload
+# sudo systemctl enable evt
+# sudo systemctl start evt
+#
+# Verwendung:
+# sudo systemctl status evt
+# sudo systemctl restart evt
+# sudo journalctl -u evt -f
+
+[Unit]
+Description=EVT - Feuerwehr Einsatzverwaltungstool
+Documentation=https://github.com/your-repo/evt
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/home/pi/evt
+
+# Environment-Datei laden
+EnvironmentFile=/home/pi/evt/.env
+
+# Node.js Pfad (passe an falls anders)
+ExecStart=/usr/bin/node /home/pi/evt/dist/index.js
+
+# Restart-Strategie
+Restart=always
+RestartSec=10s
+StartLimitInterval=60s
+StartLimitBurst=5
+
+# Ressourcen-Limits (wichtig für Raspberry Pi)
+MemoryLimit=500M
+CPUQuota=80%
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=evt
+
+# Security Hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/pi/evt/logs
+
+# Graceful Shutdown
+TimeoutStopSec=30
+KillMode=mixed
+KillSignal=SIGTERM
+
+[Install]
+WantedBy=multi-user.target
