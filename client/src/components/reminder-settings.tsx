@@ -8,6 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Bell } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/lib/auth-context";
 
 type ReminderSettings = {
   user_id: string;
@@ -31,8 +32,10 @@ const WEEKDAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "satur
 
 export function ReminderSettings() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const { data: settings, isLoading } = useQuery<ReminderSettings>({
     queryKey: ["/api/availability/reminder-settings"],
+    enabled: !!user,
   });
 
   const [localSettings, setLocalSettings] = useState<Partial<ReminderSettings>>({

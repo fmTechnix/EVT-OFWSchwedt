@@ -9,6 +9,7 @@ import { Clock, Trash2, Plus, Check } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useAuth } from "@/lib/auth-context";
 
 type AvailabilityTemplate = {
   id: number;
@@ -35,6 +36,7 @@ const WEEKDAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "satur
 
 export function AvailabilityTemplates({ weekStartDate }: { weekStartDate: string }) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [isCreating, setIsCreating] = useState(false);
   const [newTemplate, setNewTemplate] = useState({
     name: "",
@@ -46,6 +48,7 @@ export function AvailabilityTemplates({ weekStartDate }: { weekStartDate: string
 
   const { data: templates, isLoading } = useQuery<AvailabilityTemplate[]>({
     queryKey: ["/api/availability/templates"],
+    enabled: !!user,
   });
 
   const createMutation = useMutation({

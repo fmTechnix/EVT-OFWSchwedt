@@ -1510,7 +1510,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get user's templates
   app.get("/api/availability/templates", requireAuth, async (req: Request, res: Response) => {
     try {
-      const templates = await storage.getUserTemplates(req.session.userId!);
+      const userId = req.session.userId!;
+      console.log("[Templates] Fetching templates for userId:", userId);
+      const templates = await storage.getUserTemplates(userId);
+      console.log("[Templates] Found templates:", templates);
       res.json(templates);
     } catch (error) {
       console.error("Error fetching templates:", error);
@@ -1521,10 +1524,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create new template
   app.post("/api/availability/templates", requireAuth, async (req: Request, res: Response) => {
     try {
+      const userId = req.session.userId!;
+      console.log("[Templates] Creating template for userId:", userId, "Data:", req.body);
       const template = await storage.createTemplate({
         ...req.body,
-        user_id: req.session.userId!,
+        user_id: userId,
       });
+      console.log("[Templates] Created template:", template);
       res.status(201).json(template);
     } catch (error) {
       console.error("Error creating template:", error);
