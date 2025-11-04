@@ -155,19 +155,52 @@ export type VehicleAssignment = {
   constraintIssues: string[];
 };
 
-// User Availability (Verfügbarkeit)
+// User Availability (Verfügbarkeit) - Extended with time slots
 export const availabilities = pgTable("availabilities", {
   id: serial("id").primaryKey(),
   user_id: text("user_id").notNull(),
   date: text("date").notNull(), // ISO date string (YYYY-MM-DD)
   status: text("status").notNull(), // "available", "unavailable"
   reason: text("reason"), // Optional reason (e.g., "Urlaub", "Krankheit")
+  start_time: text("start_time"), // HH:MM format (e.g., "08:00"), null = all day
+  end_time: text("end_time"), // HH:MM format (e.g., "16:00"), null = all day
   created_at: timestamp("created_at").notNull().default(sql`now()`),
 });
 
 export const insertAvailabilitySchema = createInsertSchema(availabilities).omit({ id: true, created_at: true });
 export type InsertAvailability = z.infer<typeof insertAvailabilitySchema>;
 export type Availability = typeof availabilities.$inferSelect;
+
+// Availability Templates (Wöchentliche Vorlagen für Schichtarbeiter)
+export const availabilityTemplates = pgTable("availability_templates", {
+  id: serial("id").primaryKey(),
+  user_id: text("user_id").notNull(),
+  name: text("name").notNull(), // e.g., "Frühschicht Mo-Fr"
+  weekdays: text("weekdays").array().notNull(), // ["monday", "tuesday", "wednesday", "thursday", "friday"]
+  start_time: text("start_time").notNull(), // HH:MM format (e.g., "08:00")
+  end_time: text("end_time").notNull(), // HH:MM format (e.g., "16:00")
+  status: text("status").notNull().default("available"), // "available", "unavailable"
+  active: boolean("active").notNull().default(true), // Whether this template is currently active
+  created_at: timestamp("created_at").notNull().default(sql`now()`),
+});
+
+export const insertAvailabilityTemplateSchema = createInsertSchema(availabilityTemplates).omit({ id: true, created_at: true });
+export type InsertAvailabilityTemplate = z.infer<typeof insertAvailabilityTemplateSchema>;
+export type AvailabilityTemplate = typeof availabilityTemplates.$inferSelect;
+
+// User Reminder Settings (Push-Erinnerungen für Verfügbarkeit)
+export const userReminderSettings = pgTable("user_reminder_settings", {
+  user_id: text("user_id").primaryKey(),
+  reminder_enabled: boolean("reminder_enabled").notNull().default(false),
+  reminder_time: text("reminder_time").notNull().default("18:00"), // HH:MM format
+  reminder_weekdays: text("reminder_weekdays").array().notNull().default(sql`ARRAY['sunday']::text[]`), // Which days to send reminders
+  last_reminder_sent: timestamp("last_reminder_sent"), // Track when last reminder was sent
+  updated_at: timestamp("updated_at").notNull().default(sql`now()`),
+});
+
+export const insertUserReminderSettingsSchema = createInsertSchema(userReminderSettings).omit({ updated_at: true });
+export type InsertUserReminderSettings = z.infer<typeof insertUserReminderSettingsSchema>;
+export type UserReminderSettings = typeof userReminderSettings.$inferSelect;
 
 // Current Assignments (Aktuelle Zuteilung)
 export const currentAssignments = pgTable("current_assignments", {
