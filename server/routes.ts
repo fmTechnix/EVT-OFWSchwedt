@@ -1913,14 +1913,119 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const savedEvent = await storage.createAlarmEvent(validatedData);
       console.log("✅ Alarm event saved to database:", savedEvent.id);
 
-      // TODO: Trigger automatic crew reassignment (Task 3)
-      // TODO: Send push notifications (Task 4)
+      // Check if automatic crew reassignment is enabled (we'll always enable it for now)
+      const shouldReassignCrew = true;
+
+      if (shouldReassignCrew) {
+        console.log("🔄 Starting automatic crew reassignment for alarm:", savedEvent.einsatznummer);
+
+        try {
+          // Get current date for availability check
+          const today = new Date().toISOString().split('T')[0];
+
+          // Get all users who are available today
+          const allUsers = await storage.getAllUsers();
+          const availableUsers = await storage.getAvailableUsers(today);
+
+          console.log(`👥 Found ${availableUsers.length} available users out of ${allUsers.length} total`);
+
+          if (availableUsers.length === 0) {
+            console.warn("⚠️ No available users found for crew reassignment");
+          } else {
+            // Get all vehicle configurations
+            const vehicleConfigs = await storage.getAllVehicleConfigs();
+            console.log(`🚒 Assigning crew to ${vehicleConfigs.length} vehicles`);
+
+            // Perform automatic crew assignment
+            const assignmentResult = await assignCrewToVehicles(
+              availableUsers,
+              vehicleConfigs,
+              storage,
+              today
+            );
+
+            // Convert VehicleAssignment to CurrentAssignment format
+            const currentAssignments: Array<{
+              user_id: string;
+              vehicle_config_id: number;
+              position: string;
+              trupp_partner_id: string | null;
+              effective_from: string;
+              effective_to: string | null;
+              assignment_history_id: number | null;
+            }> = [];
+
+            for (const vehicleAssignment of assignmentResult.assignments) {
+              const vehicleConfig = vehicleConfigs.find(vc => vc.vehicle === vehicleAssignment.vehicle);
+              if (!vehicleConfig) continue;
+
+              for (const slot of vehicleAssignment.slots) {
+                if (slot.assignedUser) {
+                  currentAssignments.push({
+                    user_id: slot.assignedUser.id,
+                    vehicle_config_id: vehicleConfig.id,
+                    position: slot.position,
+                    trupp_partner_id: null,
+                    effective_from: today,
+                    effective_to: null,
+                    assignment_history_id: null,
+                  });
+                }
+              }
+            }
+
+            // Save new assignments to database
+            await storage.setCurrentAssignments(currentAssignments);
+            console.log(`✅ Saved ${currentAssignments.length} crew assignments`);
+
+            // Mark alarm as processed with crew reassignment
+            await storage.markAlarmAsProcessed(savedEvent.id, true);
+
+            // Send push notifications to all assigned users
+            const assignedUserIds = currentAssignments.map(a => a.user_id);
+            for (const userId of assignedUserIds) {
+              const user = availableUsers.find(u => u.id === userId);
+              if (!user) continue;
+
+              const userAssignment = currentAssignments.find(a => a.user_id === userId);
+              if (!userAssignment) continue;
+
+              const vehicleConfig = vehicleConfigs.find(vc => vc.id === userAssignment.vehicle_config_id);
+              
+              try {
+                await pushService.sendToUser(userId, {
+                  title: "🚨 Neue Alarmzuteilung",
+                  body: `Einsatz: ${savedEvent.stichwort} - Du wurdest ${vehicleConfig?.vehicle} (${userAssignment.position}) zugeteilt`,
+                  icon: "/icon-192.png",
+                  badge: "/badge-72.png",
+                  data: {
+                    alarmId: savedEvent.id,
+                    einsatznummer: savedEvent.einsatznummer,
+                    stichwort: savedEvent.stichwort,
+                    vehicle: vehicleConfig?.vehicle,
+                    position: userAssignment.position,
+                  },
+                });
+              } catch (pushError) {
+                console.error(`Failed to send push notification to user ${userId}:`, pushError);
+              }
+            }
+
+            console.log(`📲 Sent ${assignedUserIds.length} push notifications`);
+          }
+        } catch (assignmentError) {
+          console.error("❌ Error during crew reassignment:", assignmentError);
+          // Don't fail the whole request - alarm is still saved
+          await storage.markAlarmAsProcessed(savedEvent.id, false);
+        }
+      }
 
       res.status(201).json({
         message: "Alarm empfangen und gespeichert",
         alarm_id: savedEvent.id,
         einsatznummer: savedEvent.einsatznummer,
         stichwort: savedEvent.stichwort,
+        crew_reassigned: shouldReassignCrew,
       });
     } catch (error) {
       console.error("❌ Error processing incoming alarm:", error);
