@@ -2087,37 +2087,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Test endpoint to simulate an alarm (admin only)
   app.post("/api/alarm/simulate", requireAdmin, async (req: Request, res: Response) => {
     try {
+      const { alarmData, notifyUserIds } = req.body;
+      
       // Create a test alarm with current timestamp
       const testAlarm = {
         alarm_id: `TEST-${Date.now()}`,
-        einsatznummer: `EVT${Date.now()}`,
-        alarmierungszeit: new Date(),
-        ort: req.body.ort || "Schwedt/Oder",
-        ortsteil: req.body.ortsteil || "Zentrum",
-        ortslage: req.body.ortslage,
-        strasse: req.body.strasse,
-        hausnummer: req.body.hausnummer,
-        objekt: req.body.objekt,
-        zusaetzliche_ortsangaben: req.body.zusaetzliche_ortsangaben,
-        einsatzkoordinaten_lat: req.body.einsatzkoordinaten_lat,
-        einsatzkoordinaten_lon: req.body.einsatzkoordinaten_lon,
-        einsatzart: req.body.einsatzart || "Brandeinsatz",
-        stichwort: req.body.stichwort || "B:Klein",
-        sondersignal: req.body.sondersignal !== undefined ? req.body.sondersignal : true,
-        besonderheiten: req.body.besonderheiten,
-        alarmierte_einsatzmittel: req.body.alarmierte_einsatzmittel || [],
-        alarmierte_wachen: req.body.alarmierte_wachen || ["Feuerwehr Schwedt/Oder"],
+        einsatznummer: alarmData?.einsatznummer || `EVT${Date.now()}`,
+        alarmierungszeit: alarmData?.alarmierungszeit ? new Date(alarmData.alarmierungszeit) : new Date(),
+        ort: alarmData?.ort || "Schwedt/Oder",
+        ortsteil: alarmData?.ortsteil || "Zentrum",
+        ortslage: alarmData?.ortslage,
+        strasse: alarmData?.strasse,
+        hausnummer: alarmData?.hausnummer,
+        objekt: alarmData?.objekt,
+        zusaetzliche_ortsangaben: alarmData?.zusaetzliche_ortsangaben,
+        einsatzkoordinaten_lat: alarmData?.einsatzkoordinaten_lat,
+        einsatzkoordinaten_lon: alarmData?.einsatzkoordinaten_lon,
+        einsatzart: alarmData?.einsatzart || "Brandeinsatz",
+        stichwort: alarmData?.stichwort || "B:Klein",
+        sondersignal: alarmData?.sondersignal !== undefined ? alarmData.sondersignal : true,
+        besonderheiten: alarmData?.besonderheiten,
+        alarmierte_einsatzmittel: alarmData?.alarmierte_einsatzmittel || [],
+        alarmierte_wachen: alarmData?.alarmierte_wachen || ["Feuerwehr Schwedt/Oder"],
         verarbeitet: false,
         crew_neu_zugeteilt: false,
-        raw_data: req.body,
+        raw_data: alarmData || {},
       };
 
       const savedEvent = await storage.createAlarmEvent(testAlarm);
       console.log("🧪 Test alarm created:", savedEvent.id);
 
+      // Send push notifications to selected users
+      if (notifyUserIds && Array.isArray(notifyUserIds) && notifyUserIds.length > 0) {
+        console.log(`📢 Sending test alarm notifications to ${notifyUserIds.length} selected users`);
+        
+        for (const userId of notifyUserIds) {
+          try {
+            const notificationPayload = {
+              title: `🚨 TEST-ALARM: ${testAlarm.stichwort}`,
+              body: `Einsatz: ${testAlarm.einsatznummer}\nOrt: ${testAlarm.ort}${testAlarm.strasse ? ', ' + testAlarm.strasse : ''}`,
+              icon: "/icon-192.png",
+              tag: `test-alarm-${savedEvent.id}`,
+              data: {
+                type: 'test_alarm',
+                alarm_id: savedEvent.id,
+                einsatznummer: testAlarm.einsatznummer,
+                stichwort: testAlarm.stichwort,
+                url: '/alarm-historie',
+              },
+            };
+
+            await pushService.sendToUser(userId, notificationPayload);
+            console.log(`✅ Test notification sent to user ${userId}`);
+          } catch (error) {
+            console.error(`❌ Failed to send test notification to user ${userId}:`, error);
+          }
+        }
+      } else {
+        console.log("ℹ️ No users selected for test notifications");
+      }
+
       res.status(201).json({
         message: "Test-Alarm erstellt",
         alarm: savedEvent,
+        notifications_sent: notifyUserIds?.length || 0,
       });
     } catch (error) {
       console.error("Error creating test alarm:", error);
