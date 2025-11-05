@@ -6,13 +6,15 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth-context";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { AlertCircle, Radio, TestTube2, MapPin, Clock, Car } from "lucide-react";
+import { AlertCircle, Radio, TestTube2, MapPin, Clock, Car, Bell } from "lucide-react";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
-import type { AlarmEvent } from "@shared/schema";
+import type { AlarmEvent, User } from "@shared/schema";
 import {
   Dialog,
   DialogContent,
@@ -26,6 +28,7 @@ export default function AlarmHistorie() {
   const { toast } = useToast();
   const { user } = useAuth();
   const [isSimulatorOpen, setIsSimulatorOpen] = useState(false);
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [simulatorData, setSimulatorData] = useState(`{
   "einsatznummer": "2024-TEST-001",
   "alarmierungszeit": "${new Date().toISOString()}",
@@ -44,13 +47,18 @@ export default function AlarmHistorie() {
     queryKey: ["/api/alarm/events"],
   });
 
+  const { data: allUsers } = useQuery<Omit<User, "password">[]>({
+    queryKey: ["/api/users"],
+  });
+
   const simulateMutation = useMutation({
-    mutationFn: async (parsedData: any) => {
-      return apiRequest("POST", "/api/alarm/simulate", parsedData);
+    mutationFn: async (data: { alarmData: any; notifyUserIds: string[] }) => {
+      return apiRequest("POST", "/api/alarm/simulate", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/alarm/events"] });
       setIsSimulatorOpen(false);
+      setSelectedUserIds([]);
       toast({
         title: "Alarm simuliert",
         description: "Der Test-Alarm wurde erfolgreich verarbeitet",
@@ -68,7 +76,10 @@ export default function AlarmHistorie() {
   const handleSimulate = () => {
     try {
       const parsedData = JSON.parse(simulatorData);
-      simulateMutation.mutate(parsedData);
+      simulateMutation.mutate({
+        alarmData: parsedData,
+        notifyUserIds: selectedUserIds,
+      });
     } catch (error) {
       toast({
         title: "Ungültiges JSON-Format",
@@ -76,6 +87,24 @@ export default function AlarmHistorie() {
         variant: "destructive",
       });
     }
+  };
+
+  const toggleUserSelection = (userId: string) => {
+    setSelectedUserIds(prev =>
+      prev.includes(userId)
+        ? prev.filter(id => id !== userId)
+        : [...prev, userId]
+    );
+  };
+
+  const selectAllUsers = () => {
+    if (allUsers) {
+      setSelectedUserIds(allUsers.map(u => u.id));
+    }
+  };
+
+  const deselectAllUsers = () => {
+    setSelectedUserIds([]);
   };
 
   const getKategorieColor = (stichwort: string) => {
@@ -115,10 +144,72 @@ export default function AlarmHistorie() {
                       data-testid="input-simulator-data"
                       value={simulatorData}
                       onChange={(e) => setSimulatorData(e.target.value)}
-                      rows={15}
+                      rows={10}
                       className="font-mono text-sm"
                     />
                   </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="flex items-center gap-2">
+                        <Bell className="h-4 w-4" />
+                        Push-Benachrichtigungen senden an
+                      </Label>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={selectAllUsers}
+                          data-testid="button-select-all-users"
+                        >
+                          Alle
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={deselectAllUsers}
+                          data-testid="button-deselect-all-users"
+                        >
+                          Keine
+                        </Button>
+                      </div>
+                    </div>
+                    <ScrollArea className="h-48 border rounded-md p-4">
+                      <div className="space-y-3">
+                        {allUsers && allUsers.length > 0 ? (
+                          allUsers.map((u) => (
+                            <div key={u.id} className="flex items-center gap-3">
+                              <Checkbox
+                                id={`user-${u.id}`}
+                                checked={selectedUserIds.includes(u.id)}
+                                onCheckedChange={() => toggleUserSelection(u.id)}
+                                data-testid={`checkbox-user-${u.id}`}
+                              />
+                              <Label
+                                htmlFor={`user-${u.id}`}
+                                className="text-sm font-normal cursor-pointer flex-1"
+                              >
+                                {u.vorname} {u.nachname}
+                                <span className="text-xs text-muted-foreground ml-2">
+                                  ({u.username})
+                                </span>
+                              </Label>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-sm text-muted-foreground text-center py-4">
+                            Keine Benutzer gefunden
+                          </p>
+                        )}
+                      </div>
+                    </ScrollArea>
+                    <p className="text-xs text-muted-foreground">
+                      {selectedUserIds.length} von {allUsers?.length || 0} Kameraden ausgewählt
+                    </p>
+                  </div>
+
                   <div className="flex gap-2 justify-end">
                     <Button
                       type="button"
