@@ -45,6 +45,7 @@ export default function Einstellungen() {
   const [minAgt, setMinAgt] = useState("");
   const [minMaschinist, setMinMaschinist] = useState("");
   const [minGf, setMinGf] = useState("");
+  const [assignmentMode, setAssignmentMode] = useState<"manual" | "auto_aao">("manual");
   const [stichwort, setStichwort] = useState("");
   const [mannschaftsbedarf, setMannschaftsbedarf] = useState("");
   const [bemerkung, setBemerkung] = useState("");
@@ -59,6 +60,7 @@ export default function Einstellungen() {
       setMinAgt(settings.min_agt.toString());
       setMinMaschinist(settings.min_maschinist.toString());
       setMinGf(settings.min_gf.toString());
+      setAssignmentMode(settings.assignment_mode as "manual" | "auto_aao");
     }
   }, [settings]);
 
@@ -76,6 +78,7 @@ export default function Einstellungen() {
         min_agt: parseInt(minAgt),
         min_maschinist: parseInt(minMaschinist),
         min_gf: parseInt(minGf),
+        assignment_mode: assignmentMode,
       });
       await apiRequest("PUT", "/api/einsatz", {
         stichwort,
@@ -225,6 +228,31 @@ export default function Einstellungen() {
                       data-testid="input-min-gf"
                       className="h-11"
                     />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="assignment-mode">Fahrzeugzuweisung</Label>
+                    <Select 
+                      value={assignmentMode} 
+                      onValueChange={(value: "manual" | "auto_aao") => setAssignmentMode(value)}
+                    >
+                      <SelectTrigger id="assignment-mode" data-testid="select-assignment-mode">
+                        <SelectValue placeholder="Modus auswählen" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="manual" data-testid="option-manual">
+                          Manuell / Plantechnisch
+                        </SelectItem>
+                        <SelectItem value="auto_aao" data-testid="option-auto-aao">
+                          Automatisch (DE-Alarm + AAO)
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-sm text-muted-foreground">
+                      {assignmentMode === "manual" 
+                        ? "Fahrzeugbesatzung wird manuell geplant" 
+                        : "Bei Alarm werden Fahrzeuge automatisch nach AAO-Stichworten zugeteilt"}
+                    </p>
                   </div>
 
                   <div className="space-y-2">

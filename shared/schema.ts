@@ -51,6 +51,7 @@ export const settings = pgTable("settings", {
   min_gf: integer("min_gf").notNull(),
   rotation_window: integer("rotation_window").notNull().default(4), // Number of weeks to consider for rotation
   rotation_weights: jsonb("rotation_weights"), // Position-specific rotation weights
+  assignment_mode: text("assignment_mode").notNull().default("manual"), // "manual" or "auto_aao"
 });
 
 export const insertSettingsSchema = createInsertSchema(settings).omit({ id: true });
