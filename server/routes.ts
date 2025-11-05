@@ -1918,6 +1918,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (shouldReassignCrew) {
         console.log("🔄 Starting automatic crew reassignment for alarm:", savedEvent.einsatznummer);
+        console.log("📋 Alarm keyword (Stichwort):", savedEvent.stichwort);
 
         try {
           // Get current date for availability check
@@ -1933,7 +1934,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.warn("⚠️ No available users found for crew reassignment");
           } else {
             // Get all vehicle configurations
-            const vehicleConfigs = await storage.getAllVehicleConfigs();
+            let vehicleConfigs = await storage.getAllVehicleConfigs();
+            
+            // Try to find AAO entry for this keyword
+            if (savedEvent.stichwort) {
+              const aaoEntry = await storage.getAaoStichwortByName(savedEvent.stichwort);
+              
+              if (aaoEntry && aaoEntry.aktiv && aaoEntry.fahrzeuge.length > 0) {
+                console.log(`🔍 Found AAO entry for "${savedEvent.stichwort}":`, aaoEntry.fahrzeuge.join(", "));
+                
+                // Filter vehicle configs to only include vehicles from AAO
+                // AAO stores vehicle call signs (funk names), so we filter by vehicle name
+                vehicleConfigs = vehicleConfigs.filter(vc => 
+                  aaoEntry.fahrzeuge.includes(vc.vehicle)
+                );
+                
+                console.log(`✅ Filtered to ${vehicleConfigs.length} vehicles based on AAO: ${aaoEntry.fahrzeuge.join(", ")}`);
+              } else {
+                console.log(`⚠️ No active AAO entry found for "${savedEvent.stichwort}", using all vehicles`);
+              }
+            } else {
+              console.log("ℹ️ No stichwort in alarm data, using all vehicles");
+            }
+            
             console.log(`🚒 Assigning crew to ${vehicleConfigs.length} vehicles`);
 
             // Perform automatic crew assignment
