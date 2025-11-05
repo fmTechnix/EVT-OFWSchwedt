@@ -54,7 +54,9 @@ export const settings = pgTable("settings", {
   assignment_mode: text("assignment_mode").notNull().default("manual"), // "manual" or "auto_aao"
 });
 
-export const insertSettingsSchema = createInsertSchema(settings).omit({ id: true });
+export const insertSettingsSchema = createInsertSchema(settings).omit({ id: true }).extend({
+  assignment_mode: z.enum(["manual", "auto_aao"]).default("manual"),
+});
 export type InsertSettings = z.infer<typeof insertSettingsSchema>;
 export type Settings = typeof settings.$inferSelect;
 

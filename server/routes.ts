@@ -1914,9 +1914,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("✅ Alarm event saved to database:", savedEvent.id);
 
       // Check if automatic crew reassignment is enabled via settings
-      const settings = await storage.getSettings();
-      const shouldReassignCrew = settings.assignment_mode === 'auto_aao';
-      console.log(`⚙️ Assignment mode: ${settings.assignment_mode} (auto reassignment: ${shouldReassignCrew})`);
+      let shouldReassignCrew = false; // Default to manual mode
+      try {
+        const settings = await storage.getSettings();
+        if (settings) {
+          shouldReassignCrew = settings.assignment_mode === 'auto_aao';
+          console.log(`⚙️ Assignment mode: ${settings.assignment_mode} (auto reassignment: ${shouldReassignCrew})`);
+        } else {
+          console.warn("⚠️ No settings found, defaulting to manual mode (no auto crew reassignment)");
+        }
+      } catch (error) {
+        console.error("❌ Error loading settings, defaulting to manual mode:", error);
+      }
 
       if (shouldReassignCrew) {
         console.log("🔄 Starting automatic crew reassignment for alarm:", savedEvent.einsatznummer);
