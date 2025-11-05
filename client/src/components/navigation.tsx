@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, Truck, Users, TruckIcon, Settings, LogOut, AlertCircle } from "lucide-react";
+import { LayoutDashboard, Truck, Users, TruckIcon, Settings, LogOut, AlertCircle, FileText } from "lucide-react";
 
 export function Navigation() {
   const [location] = useLocation();
@@ -16,6 +16,7 @@ export function Navigation() {
     { href: "/benutzer", label: "Benutzer", icon: Users, show: user.role === "admin" },
     { href: "/kalender", label: "Kalender", icon: Users, show: true },
     { href: "/fahrzeuge", label: "Fahrzeuge", icon: TruckIcon, show: user.role === "admin" },
+    { href: "/aao", label: "AAO", icon: FileText, show: user.role === "admin" },
     { href: "/einstellungen", label: "Einstellungen", icon: Settings, show: user.role === "admin" },
   ];
 

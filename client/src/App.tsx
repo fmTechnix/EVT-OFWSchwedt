@@ -12,6 +12,7 @@ import Kalender from "@/pages/kalender";
 import MeinEinsatz from "@/pages/mein-einsatz";
 import Einstellungen from "@/pages/einstellungen";
 import Maengelmeldungen from "@/pages/maengelmeldungen";
+import AaoVerwaltung from "@/pages/aao-verwaltung";
 import NotFound from "@/pages/not-found";
 
 function ProtectedRoute({ children, adminOnly = false }: { children: React.ReactNode; adminOnly?: boolean }) {
@@ -106,6 +107,12 @@ function Router() {
       <Route path="/einstellungen">
         <ProtectedRoute adminOnly>
           <Einstellungen />
+        </ProtectedRoute>
+      </Route>
+      
+      <Route path="/aao">
+        <ProtectedRoute adminOnly>
+          <AaoVerwaltung />
         </ProtectedRoute>
       </Route>
       
