@@ -281,18 +281,22 @@ export default function AaoVerwaltung() {
                               <p className="text-sm text-muted-foreground">Keine Fahrzeuge verfügbar</p>
                             ) : (
                               <div className="flex flex-wrap gap-2">
-                                {vehicles.map((vehicle) => (
-                                  <Button
-                                    key={vehicle.id}
-                                    type="button"
-                                    variant={field.value.includes(vehicle.funk) ? "default" : "outline"}
-                                    size="sm"
-                                    onClick={() => toggleVehicle(vehicle.funk, field.value, field.onChange)}
-                                    data-testid={`button-vehicle-${vehicle.funk}`}
-                                  >
-                                    {vehicle.funk}
-                                  </Button>
-                                ))}
+                                {vehicles.map((vehicle) => {
+                                  const isSelected = field.value.includes(vehicle.funk);
+                                  console.log(`Vehicle ${vehicle.funk}: selected=${isSelected}, field.value=`, field.value);
+                                  return (
+                                    <Button
+                                      key={vehicle.id}
+                                      type="button"
+                                      variant={isSelected ? "default" : "outline"}
+                                      size="sm"
+                                      onClick={() => toggleVehicle(vehicle.funk, field.value, field.onChange)}
+                                      data-testid={`button-vehicle-${vehicle.funk}`}
+                                    >
+                                      {vehicle.funk}
+                                    </Button>
+                                  );
+                                })}
                               </div>
                             )}
                           </div>
