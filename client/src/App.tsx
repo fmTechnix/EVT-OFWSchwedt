@@ -14,6 +14,7 @@ import Einstellungen from "@/pages/einstellungen";
 import Maengelmeldungen from "@/pages/maengelmeldungen";
 import AaoVerwaltung from "@/pages/aao-verwaltung";
 import AlarmHistorie from "@/pages/alarm-historie";
+import DownloadPage from "@/pages/download";
 import NotFound from "@/pages/not-found";
 
 function ProtectedRoute({ children, adminOnly = false }: { children: React.ReactNode; adminOnly?: boolean }) {
@@ -120,6 +121,12 @@ function Router() {
       <Route path="/alarm-historie">
         <ProtectedRoute>
           <AlarmHistorie />
+        </ProtectedRoute>
+      </Route>
+      
+      <Route path="/download">
+        <ProtectedRoute adminOnly>
+          <DownloadPage />
         </ProtectedRoute>
       </Route>
       

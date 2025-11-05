@@ -2236,6 +2236,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Download EVT project as ZIP
+  app.get("/download/evt-projekt.zip", (req: Request, res: Response) => {
+    const filePath = "/home/runner/workspace/public/evt-projekt.zip";
+    res.download(filePath, "evt-projekt.zip", (err) => {
+      if (err) {
+        console.error("Error downloading file:", err);
+        res.status(500).json({ error: "Fehler beim Herunterladen der Datei" });
+      }
+    });
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
