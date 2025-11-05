@@ -1943,13 +1943,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
               if (aaoEntry && aaoEntry.aktiv && aaoEntry.fahrzeuge.length > 0) {
                 console.log(`🔍 Found AAO entry for "${savedEvent.stichwort}":`, aaoEntry.fahrzeuge.join(", "));
                 
+                // Normalize AAO vehicle names for matching (trim + lowercase)
+                const normalizedAaoVehicles = aaoEntry.fahrzeuge.map(v => v.trim().toLowerCase());
+                
                 // Filter vehicle configs to only include vehicles from AAO
-                // AAO stores vehicle call signs (funk names), so we filter by vehicle name
-                vehicleConfigs = vehicleConfigs.filter(vc => 
-                  aaoEntry.fahrzeuge.includes(vc.vehicle)
+                // AAO stores vehicle call signs (funk names), using case-insensitive matching
+                const filteredConfigs = vehicleConfigs.filter(vc => 
+                  normalizedAaoVehicles.includes(vc.vehicle.trim().toLowerCase())
                 );
                 
-                console.log(`✅ Filtered to ${vehicleConfigs.length} vehicles based on AAO: ${aaoEntry.fahrzeuge.join(", ")}`);
+                // Defensive fallback: if filtering yields zero vehicles, use all vehicles
+                if (filteredConfigs.length > 0) {
+                  vehicleConfigs = filteredConfigs;
+                  console.log(`✅ Filtered to ${vehicleConfigs.length} vehicles based on AAO: ${aaoEntry.fahrzeuge.join(", ")}`);
+                } else {
+                  console.warn(`⚠️ AAO filtering resulted in zero vehicles! Falling back to all vehicles.`);
+                  console.warn(`   AAO vehicles: ${aaoEntry.fahrzeuge.join(", ")}`);
+                  console.warn(`   Available configs: ${vehicleConfigs.map(vc => vc.vehicle).join(", ")}`);
+                }
               } else {
                 console.log(`⚠️ No active AAO entry found for "${savedEvent.stichwort}", using all vehicles`);
               }
