@@ -135,10 +135,17 @@ export default function AaoVerwaltung() {
   };
 
   const toggleVehicle = (vehicleName: string, currentVehicles: string[], onChange: (value: string[]) => void) => {
+    console.log("Toggle called for:", vehicleName);
+    console.log("Current vehicles before:", currentVehicles);
+    
     if (currentVehicles.includes(vehicleName)) {
-      onChange(currentVehicles.filter(v => v !== vehicleName));
+      const newVehicles = currentVehicles.filter(v => v !== vehicleName);
+      console.log("Removing vehicle, new array:", newVehicles);
+      onChange(newVehicles);
     } else {
-      onChange([...currentVehicles, vehicleName]);
+      const newVehicles = [...currentVehicles, vehicleName];
+      console.log("Adding vehicle, new array:", newVehicles);
+      onChange(newVehicles);
     }
   };
 
