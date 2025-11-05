@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { insertAaoStichwortSchema, type AaoStichwort } from "@shared/schema";
+import { insertAaoStichwortSchema, type AaoStichwort, type Vehicle } from "@shared/schema";
 import { Plus, Edit, Trash2, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -30,7 +30,7 @@ const formSchema = insertAaoStichwortSchema.extend({
   stichwort: z.string().min(1, "Stichwort erforderlich"),
   kategorie: z.enum(["brand", "hilfeleistung", "sonstige"]),
   beschreibung: z.string().min(1, "Beschreibung erforderlich"),
-  fahrzeuge: z.string().min(1, "Mindestens ein Fahrzeug erforderlich"),
+  fahrzeuge: z.array(z.string()).min(1, "Mindestens ein Fahrzeug erforderlich"),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -45,21 +45,24 @@ export default function AaoVerwaltung() {
     queryKey: ["/api/aao"],
   });
 
+  const { data: vehicles, isLoading: vehiclesLoading } = useQuery<Vehicle[]>({
+    queryKey: ["/api/vehicles"],
+  });
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       stichwort: "",
       kategorie: "brand",
       beschreibung: "",
-      fahrzeuge: "",
+      fahrzeuge: [],
       bemerkung: "",
     },
   });
 
   const createMutation = useMutation({
     mutationFn: async (values: FormValues) => {
-      const fahrzeuge = values.fahrzeuge.split(",").map(f => f.trim()).filter(Boolean);
-      return apiRequest("/api/aao", "POST", { ...values, fahrzeuge });
+      return apiRequest("/api/aao", "POST", values);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/aao"] });
@@ -81,8 +84,7 @@ export default function AaoVerwaltung() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, values }: { id: number; values: FormValues }) => {
-      const fahrzeuge = values.fahrzeuge.split(",").map(f => f.trim()).filter(Boolean);
-      return apiRequest(`/api/aao/${id}`, "PATCH", { ...values, fahrzeuge });
+      return apiRequest(`/api/aao/${id}`, "PATCH", values);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/aao"] });
@@ -127,9 +129,18 @@ export default function AaoVerwaltung() {
       stichwort: stichwort.stichwort,
       kategorie: stichwort.kategorie as "brand" | "hilfeleistung" | "sonstige",
       beschreibung: stichwort.beschreibung,
-      fahrzeuge: stichwort.fahrzeuge.join(", "),
+      fahrzeuge: stichwort.fahrzeuge,
       bemerkung: stichwort.bemerkung || "",
     });
+  };
+
+  const toggleVehicle = (vehicleName: string) => {
+    const currentVehicles = form.getValues("fahrzeuge");
+    if (currentVehicles.includes(vehicleName)) {
+      form.setValue("fahrzeuge", currentVehicles.filter(v => v !== vehicleName));
+    } else {
+      form.setValue("fahrzeuge", [...currentVehicles, vehicleName]);
+    }
   };
 
   const handleSubmit = (values: FormValues) => {
@@ -243,15 +254,34 @@ export default function AaoVerwaltung() {
                     name="fahrzeuge"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Fahrzeuge</FormLabel>
+                        <FormLabel>Fahrzeuge auswählen</FormLabel>
                         <FormControl>
-                          <Input
-                            data-testid="input-fahrzeuge"
-                            placeholder="Fahrzeuge kommagetrennt (z.B. LF 10, DLK 23)"
-                            {...field}
-                          />
+                          <div className="space-y-2">
+                            {vehiclesLoading ? (
+                              <p className="text-sm text-muted-foreground">Lädt Fahrzeuge...</p>
+                            ) : !vehicles || vehicles.length === 0 ? (
+                              <p className="text-sm text-muted-foreground">Keine Fahrzeuge verfügbar</p>
+                            ) : (
+                              <div className="flex flex-wrap gap-2">
+                                {vehicles.map((vehicle) => (
+                                  <Button
+                                    key={vehicle.id}
+                                    type="button"
+                                    variant={field.value.includes(vehicle.funk) ? "default" : "outline"}
+                                    size="sm"
+                                    onClick={() => toggleVehicle(vehicle.funk)}
+                                    data-testid={`button-vehicle-${vehicle.funk}`}
+                                  >
+                                    {vehicle.funk}
+                                  </Button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
                         </FormControl>
-                        <FormDescription>Kommagetrennte Liste der Fahrzeuge</FormDescription>
+                        <FormDescription>
+                          Wählen Sie die Fahrzeuge aus, die bei diesem Stichwort alarmiert werden sollen
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
