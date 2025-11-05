@@ -49,15 +49,17 @@ export default function AaoVerwaltung() {
     queryKey: ["/api/vehicles"],
   });
 
+  const defaultFormValues: FormValues = {
+    stichwort: "",
+    kategorie: "brand",
+    beschreibung: "",
+    fahrzeuge: [],
+    bemerkung: "",
+  };
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      stichwort: "",
-      kategorie: "brand",
-      beschreibung: "",
-      fahrzeuge: [],
-      bemerkung: "",
-    },
+    defaultValues: defaultFormValues,
   });
 
   const createMutation = useMutation({
@@ -67,7 +69,7 @@ export default function AaoVerwaltung() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/aao"] });
       setIsCreateDialogOpen(false);
-      form.reset();
+      form.reset(defaultFormValues);
       toast({
         title: "Erfolgreich",
         description: "AAO-Stichwort wurde erstellt",
@@ -89,7 +91,7 @@ export default function AaoVerwaltung() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/aao"] });
       setEditingStichwort(null);
-      form.reset();
+      form.reset(defaultFormValues);
       toast({
         title: "Erfolgreich",
         description: "AAO-Stichwort wurde aktualisiert",
@@ -179,7 +181,7 @@ export default function AaoVerwaltung() {
             if (!open) {
               setIsCreateDialogOpen(false);
               setEditingStichwort(null);
-              form.reset();
+              form.reset(defaultFormValues);
             }
           }}>
             <DialogTrigger asChild>
@@ -187,13 +189,7 @@ export default function AaoVerwaltung() {
                 data-testid="button-create-aao" 
                 onClick={() => {
                   setIsCreateDialogOpen(true);
-                  form.reset({
-                    stichwort: "",
-                    kategorie: "brand",
-                    beschreibung: "",
-                    fahrzeuge: [],
-                    bemerkung: "",
-                  });
+                  form.reset(defaultFormValues);
                 }}
               >
                 <Plus className="mr-2 h-4 w-4" />
@@ -333,7 +329,7 @@ export default function AaoVerwaltung() {
                       onClick={() => {
                         setIsCreateDialogOpen(false);
                         setEditingStichwort(null);
-                        form.reset();
+                        form.reset(defaultFormValues);
                       }}
                       data-testid="button-cancel"
                     >
