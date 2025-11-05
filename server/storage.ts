@@ -17,7 +17,8 @@ import type {
   AssignmentFairness, InsertAssignmentFairness,
   AvailabilityTemplate, InsertAvailabilityTemplate,
   UserReminderSettings, InsertUserReminderSettings,
-  AlarmEvent, InsertAlarmEvent
+  AlarmEvent, InsertAlarmEvent,
+  AaoStichwort, InsertAaoStichwort
 } from "@shared/schema";
 import { PostgresStorage } from "./pg-storage";
 import { initializeDatabase } from "./init-db";
@@ -132,6 +133,14 @@ export interface IStorage {
   getUnprocessedAlarmEvents(): Promise<AlarmEvent[]>;
   createAlarmEvent(event: InsertAlarmEvent): Promise<AlarmEvent>;
   markAlarmAsProcessed(id: number, crewReassigned: boolean): Promise<AlarmEvent>;
+  
+  // AAO Stichworte (Alarm- und Ausrückeordnung)
+  getAllAaoStichworte(): Promise<AaoStichwort[]>;
+  getAaoStichwort(id: number): Promise<AaoStichwort | undefined>;
+  getAaoStichwortByName(stichwort: string): Promise<AaoStichwort | undefined>;
+  createAaoStichwort(stichwort: InsertAaoStichwort): Promise<AaoStichwort>;
+  updateAaoStichwort(id: number, updates: Partial<InsertAaoStichwort>): Promise<AaoStichwort>;
+  deleteAaoStichwort(id: number): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -699,6 +708,31 @@ export class MemStorage implements IStorage {
   }
 
   async markAlarmAsProcessed(_id: number, _crewReassigned: boolean): Promise<AlarmEvent> {
+    throw new Error("Not implemented in MemStorage - use PostgresStorage");
+  }
+
+  // AAO Stichworte (Alarm- und Ausrückeordnung)
+  async getAllAaoStichworte(): Promise<AaoStichwort[]> {
+    throw new Error("Not implemented in MemStorage - use PostgresStorage");
+  }
+
+  async getAaoStichwort(_id: number): Promise<AaoStichwort | undefined> {
+    throw new Error("Not implemented in MemStorage - use PostgresStorage");
+  }
+
+  async getAaoStichwortByName(_stichwort: string): Promise<AaoStichwort | undefined> {
+    throw new Error("Not implemented in MemStorage - use PostgresStorage");
+  }
+
+  async createAaoStichwort(_stichwort: InsertAaoStichwort): Promise<AaoStichwort> {
+    throw new Error("Not implemented in MemStorage - use PostgresStorage");
+  }
+
+  async updateAaoStichwort(_id: number, _updates: Partial<InsertAaoStichwort>): Promise<AaoStichwort> {
+    throw new Error("Not implemented in MemStorage - use PostgresStorage");
+  }
+
+  async deleteAaoStichwort(_id: number): Promise<void> {
     throw new Error("Not implemented in MemStorage - use PostgresStorage");
   }
 

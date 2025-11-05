@@ -314,6 +314,23 @@ export const insertAlarmEventSchema = createInsertSchema(alarmEvents).omit({ id:
 export type InsertAlarmEvent = z.infer<typeof insertAlarmEventSchema>;
 export type AlarmEvent = typeof alarmEvents.$inferSelect;
 
+// AAO Stichworte (Alarm- und Ausrückeordnung)
+export const aaoStichworte = pgTable("aao_stichworte", {
+  id: serial("id").primaryKey(),
+  stichwort: text("stichwort").notNull().unique(), // e.g., "B:Klein", "H:VU mit P"
+  kategorie: text("kategorie").notNull(), // "Brand" or "Hilfeleistung"
+  beschreibung: text("beschreibung").notNull(), // Description/examples
+  fahrzeuge: text("fahrzeuge").array().notNull().default(sql`'{}'`), // Array of vehicle names that should respond
+  taktische_einheit: text("taktische_einheit"), // e.g., "Staffel", "Gruppe", "Zug"
+  bemerkung: text("bemerkung"), // Additional notes
+  aktiv: boolean("aktiv").notNull().default(true), // Whether this keyword is active
+  erstellt_am: timestamp("erstellt_am").notNull().default(sql`now()`),
+});
+
+export const insertAaoStichwortSchema = createInsertSchema(aaoStichworte).omit({ id: true, erstellt_am: true });
+export type InsertAaoStichwort = z.infer<typeof insertAaoStichwortSchema>;
+export type AaoStichwort = typeof aaoStichworte.$inferSelect;
+
 // Besetzungscheck result type
 export type BesetzungscheckResult = {
   vorhanden: {

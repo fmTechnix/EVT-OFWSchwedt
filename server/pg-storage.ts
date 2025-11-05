@@ -18,6 +18,7 @@ import {
   availabilityTemplates,
   userReminderSettings,
   alarmEvents,
+  aaoStichworte,
   type User,
   type InsertUser,
   type Vehicle,
@@ -52,6 +53,8 @@ import {
   type InsertUserReminderSettings,
   type AlarmEvent,
   type InsertAlarmEvent,
+  type AaoStichwort,
+  type InsertAaoStichwort,
 } from "@shared/schema";
 import type { IStorage } from "./storage";
 import { hashPassword } from "./password-utils";
@@ -698,5 +701,39 @@ export class PostgresStorage implements IStorage {
     
     if (!result[0]) throw new Error("Alarm event not found");
     return result[0];
+  }
+
+  // AAO Stichworte (Alarm- und Ausrückeordnung)
+  async getAllAaoStichworte(): Promise<AaoStichwort[]> {
+    return await db.select().from(aaoStichworte).orderBy(asc(aaoStichworte.stichwort));
+  }
+
+  async getAaoStichwort(id: number): Promise<AaoStichwort | undefined> {
+    const result = await db.select().from(aaoStichworte).where(eq(aaoStichworte.id, id));
+    return result[0];
+  }
+
+  async getAaoStichwortByName(stichwort: string): Promise<AaoStichwort | undefined> {
+    const result = await db.select().from(aaoStichworte).where(eq(aaoStichworte.stichwort, stichwort));
+    return result[0];
+  }
+
+  async createAaoStichwort(insertStichwort: InsertAaoStichwort): Promise<AaoStichwort> {
+    const result = await db.insert(aaoStichworte).values(insertStichwort).returning();
+    return result[0];
+  }
+
+  async updateAaoStichwort(id: number, updates: Partial<InsertAaoStichwort>): Promise<AaoStichwort> {
+    const result = await db.update(aaoStichworte)
+      .set(updates)
+      .where(eq(aaoStichworte.id, id))
+      .returning();
+    
+    if (!result[0]) throw new Error("AAO Stichwort not found");
+    return result[0];
+  }
+
+  async deleteAaoStichwort(id: number): Promise<void> {
+    await db.delete(aaoStichworte).where(eq(aaoStichworte.id, id));
   }
 }

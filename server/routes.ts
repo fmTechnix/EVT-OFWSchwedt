@@ -2,7 +2,7 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import session from "express-session";
 import { storage } from "./storage";
-import { insertVehicleSchema, insertEinsatzSchema, insertSettingsSchema, insertQualifikationSchema, insertTerminSchema, insertTerminZusageSchema, insertPushSubscriptionSchema, insertMaengelMeldungSchema, insertAlarmEventSchema } from "@shared/schema";
+import { insertVehicleSchema, insertEinsatzSchema, insertSettingsSchema, insertQualifikationSchema, insertTerminSchema, insertTerminZusageSchema, insertPushSubscriptionSchema, insertMaengelMeldungSchema, insertAlarmEventSchema, insertAaoStichwortSchema } from "@shared/schema";
 import type { User, InsertUser, VehicleSlot, InsertVehicleConfig, AlarmEvent } from "@shared/schema";
 import { verifyPassword } from "./password-utils";
 import { assignCrewToVehicles } from "./crew-assignment";
@@ -2077,6 +2077,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating test alarm:", error);
       res.status(500).json({ error: "Fehler beim Erstellen des Test-Alarms" });
+    }
+  });
+
+  // ===================================
+  // AAO Stichworte (Alarm- und Ausrückeordnung) Routes
+  // ===================================
+
+  // Get all AAO keywords (admin/moderator only)
+  app.get("/api/aao", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || (user.role !== "admin" && user.role !== "moderator")) {
+        return res.status(403).json({ error: "Keine Berechtigung" });
+      }
+
+      const stichworte = await storage.getAllAaoStichworte();
+      res.json(stichworte);
+    } catch (error) {
+      console.error("Error fetching AAO keywords:", error);
+      res.status(500).json({ error: "Fehler beim Laden der AAO-Stichworte" });
+    }
+  });
+
+  // Get single AAO keyword by ID (admin/moderator only)
+  app.get("/api/aao/:id", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || (user.role !== "admin" && user.role !== "moderator")) {
+        return res.status(403).json({ error: "Keine Berechtigung" });
+      }
+
+      const stichwort = await storage.getAaoStichwort(parseInt(req.params.id));
+      if (!stichwort) {
+        return res.status(404).json({ error: "Stichwort nicht gefunden" });
+      }
+
+      res.json(stichwort);
+    } catch (error) {
+      console.error("Error fetching AAO keyword:", error);
+      res.status(500).json({ error: "Fehler beim Laden des Stichworts" });
+    }
+  });
+
+  // Create new AAO keyword (admin only)
+  app.post("/api/aao", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const validatedData = insertAaoStichwortSchema.parse(req.body);
+      const stichwort = await storage.createAaoStichwort(validatedData);
+      res.status(201).json(stichwort);
+    } catch (error: any) {
+      console.error("Error creating AAO keyword:", error);
+      if (error.code === "23505") { // Unique constraint violation
+        return res.status(400).json({ error: "Stichwort existiert bereits" });
+      }
+      res.status(500).json({ error: "Fehler beim Erstellen des Stichworts" });
+    }
+  });
+
+  // Update AAO keyword (admin only)
+  app.patch("/api/aao/:id", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const updates = req.body;
+      const stichwort = await storage.updateAaoStichwort(parseInt(req.params.id), updates);
+      res.json(stichwort);
+    } catch (error) {
+      console.error("Error updating AAO keyword:", error);
+      res.status(500).json({ error: "Fehler beim Aktualisieren des Stichworts" });
+    }
+  });
+
+  // Delete AAO keyword (admin only)
+  app.delete("/api/aao/:id", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      await storage.deleteAaoStichwort(parseInt(req.params.id));
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting AAO keyword:", error);
+      res.status(500).json({ error: "Fehler beim Löschen des Stichworts" });
     }
   });
 
