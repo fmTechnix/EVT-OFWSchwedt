@@ -134,12 +134,11 @@ export default function AaoVerwaltung() {
     });
   };
 
-  const toggleVehicle = (vehicleName: string) => {
-    const currentVehicles = form.getValues("fahrzeuge");
+  const toggleVehicle = (vehicleName: string, currentVehicles: string[], onChange: (value: string[]) => void) => {
     if (currentVehicles.includes(vehicleName)) {
-      form.setValue("fahrzeuge", currentVehicles.filter(v => v !== vehicleName));
+      onChange(currentVehicles.filter(v => v !== vehicleName));
     } else {
-      form.setValue("fahrzeuge", [...currentVehicles, vehicleName]);
+      onChange([...currentVehicles, vehicleName]);
     }
   };
 
@@ -269,7 +268,7 @@ export default function AaoVerwaltung() {
                                     type="button"
                                     variant={field.value.includes(vehicle.funk) ? "default" : "outline"}
                                     size="sm"
-                                    onClick={() => toggleVehicle(vehicle.funk)}
+                                    onClick={() => toggleVehicle(vehicle.funk, field.value, field.onChange)}
                                     data-testid={`button-vehicle-${vehicle.funk}`}
                                   >
                                     {vehicle.funk}
