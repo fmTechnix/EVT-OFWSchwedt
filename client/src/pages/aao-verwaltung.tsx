@@ -183,7 +183,19 @@ export default function AaoVerwaltung() {
             }
           }}>
             <DialogTrigger asChild>
-              <Button data-testid="button-create-aao" onClick={() => setIsCreateDialogOpen(true)}>
+              <Button 
+                data-testid="button-create-aao" 
+                onClick={() => {
+                  setIsCreateDialogOpen(true);
+                  form.reset({
+                    stichwort: "",
+                    kategorie: "brand",
+                    beschreibung: "",
+                    fahrzeuge: [],
+                    bemerkung: "",
+                  });
+                }}
+              >
                 <Plus className="mr-2 h-4 w-4" />
                 Stichwort hinzufügen
               </Button>
