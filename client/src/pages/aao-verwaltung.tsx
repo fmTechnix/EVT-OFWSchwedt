@@ -137,17 +137,10 @@ export default function AaoVerwaltung() {
   };
 
   const toggleVehicle = (vehicleName: string, currentVehicles: string[], onChange: (value: string[]) => void) => {
-    console.log("Toggle called for:", vehicleName);
-    console.log("Current vehicles before:", currentVehicles);
-    
     if (currentVehicles.includes(vehicleName)) {
-      const newVehicles = currentVehicles.filter(v => v !== vehicleName);
-      console.log("Removing vehicle, new array:", newVehicles);
-      onChange(newVehicles);
+      onChange(currentVehicles.filter(v => v !== vehicleName));
     } else {
-      const newVehicles = [...currentVehicles, vehicleName];
-      console.log("Adding vehicle, new array:", newVehicles);
-      onChange(newVehicles);
+      onChange([...currentVehicles, vehicleName]);
     }
   };
 
@@ -279,7 +272,6 @@ export default function AaoVerwaltung() {
                               <div className="flex flex-wrap gap-2">
                                 {vehicles.map((vehicle) => {
                                   const isSelected = field.value.includes(vehicle.funk);
-                                  console.log(`Vehicle ${vehicle.funk}: selected=${isSelected}, field.value=`, field.value);
                                   return (
                                     <Button
                                       key={vehicle.id}
