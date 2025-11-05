@@ -62,7 +62,7 @@ export default function AaoVerwaltung() {
 
   const createMutation = useMutation({
     mutationFn: async (values: FormValues) => {
-      return apiRequest("/api/aao", "POST", values);
+      return apiRequest("POST", "/api/aao", values);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/aao"] });
@@ -84,7 +84,7 @@ export default function AaoVerwaltung() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, values }: { id: number; values: FormValues }) => {
-      return apiRequest(`/api/aao/${id}`, "PATCH", values);
+      return apiRequest("PATCH", `/api/aao/${id}`, values);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/aao"] });
@@ -105,7 +105,7 @@ export default function AaoVerwaltung() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: number) => apiRequest(`/api/aao/${id}`, "DELETE"),
+    mutationFn: (id: number) => apiRequest("DELETE", `/api/aao/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/aao"] });
       setDeletingStichwort(null);
