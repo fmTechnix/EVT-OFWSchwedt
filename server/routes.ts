@@ -180,6 +180,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const PgSession = connectPgSimple(session);
   
   // Session configuration with PostgreSQL storage
+  // WICHTIG: sameSite: "none" + secure: true für Replit Preview (Cross-Origin)
   app.use(
     session({
       store: new PgSession({
@@ -192,8 +193,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       saveUninitialized: false,
       cookie: {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days (länger, da jetzt persistent!)
+        secure: true, // MUSS true sein für sameSite: "none"
+        sameSite: 'none', // Erlaubt Cross-Origin Cookies (Replit Preview)
+        maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
       },
     })
   );
