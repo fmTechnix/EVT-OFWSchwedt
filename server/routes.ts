@@ -177,17 +177,17 @@ function createDefaultVehicleConfig(vehicleName: string): InsertVehicleConfig | 
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // CORS middleware - MUSS vor Session kommen!
+  // CORS MUSS vor Session kommen - Replit Preview ist Third-Party iframe!
   app.use(cors({
-    origin: true, // Allow all origins in development
-    credentials: true, // WICHTIG: Erlaubt Cookies
+    origin: true, // Allow all origins
+    credentials: true, // KRITISCH: Erlaubt Cookies
   }));
   
   // PostgreSQL Session Store
   const PgSession = connectPgSimple(session);
   
-  // Session configuration with PostgreSQL storage
-  // WICHTIG: sameSite: "none" + secure: true für Replit Preview (Cross-Origin)
+  // Session configuration für Replit iframe Preview
+  // Alle 3 müssen zusammen sein: proxy:true + secure:true + sameSite:"none"
   app.use(
     session({
       store: new PgSession({
@@ -198,10 +198,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       secret: process.env.SESSION_SECRET || "dev-secret-change-me",
       resave: false,
       saveUninitialized: false,
+      proxy: true, // WICHTIG: Trust proxy (Replit HTTPS proxy)
       cookie: {
         httpOnly: true,
-        secure: true, // MUSS true sein für sameSite: "none"
-        sameSite: 'none', // Erlaubt Cross-Origin Cookies (Replit Preview)
+        secure: true, // WICHTIG: true für HTTPS
+        sameSite: 'none', // WICHTIG: none für Third-Party iframe
         maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
       },
     })
