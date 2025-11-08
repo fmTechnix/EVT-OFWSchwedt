@@ -103,11 +103,12 @@ export class ReminderScheduler {
 
       console.log(`⏰ Sending availability reminder to ${user.vorname} ${user.nachname}`);
 
-      await this.pushService.sendNotificationToUser(
-        userId,
-        "Verfügbarkeit aktualisieren",
-        "Bitte aktualisiere deinen Verfügbarkeitsstatus für die kommende Woche."
-      );
+      await this.pushService.sendToUser(userId, {
+        title: "Verfügbarkeit aktualisieren",
+        body: "Bitte aktualisiere deinen Verfügbarkeitsstatus für die kommende Woche.",
+        icon: "/icon-192.png",
+        badge: "/badge-72.png"
+      });
     } catch (error) {
       console.error(`Failed to send reminder to user ${userId}:`, error);
     }

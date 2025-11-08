@@ -2,6 +2,14 @@ import webpush from "web-push";
 import type { IStorage } from "./storage";
 import type { PushSubscription } from "@shared/schema";
 
+// Custom error for invalid push subscriptions
+export class InvalidPushSubscriptionError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'InvalidPushSubscriptionError';
+  }
+}
+
 // VAPID keys for Web Push
 // SECURITY WARNING: These default keys are for development only!
 // For production deployment:
@@ -50,15 +58,40 @@ export class PushNotificationService {
   async sendToUser(userId: string, payload: PushNotificationPayload): Promise<void> {
     const subscriptions = await this.storage.getUserPushSubscriptions(userId);
     
+    if (subscriptions.length === 0) {
+      // No subscriptions for this user - skip silently
+      return;
+    }
+    
     const promises = subscriptions.map(async (sub) => {
       try {
-        await this.sendNotification(sub, payload);
-      } catch (error) {
-        console.error(`Failed to send push notification to user ${userId}:`, error);
+        // Validate endpoint BEFORE attempting to send
+        if (!sub.endpoint || sub.endpoint.trim() === '' || sub.endpoint === '.') {
+          throw new InvalidPushSubscriptionError(`Invalid endpoint: "${sub.endpoint}"`);
+        }
         
-        // If subscription is invalid, remove it
-        if ((error as { statusCode?: number }).statusCode === 410) {
+        await this.sendNotification(sub, payload);
+      } catch (error: any) {
+        const errorMsg = error?.message || String(error);
+        console.error(`Failed to send push notification to user ${userId}:`, errorMsg);
+        
+        // Permanent failures - remove subscription immediately
+        const isPermanentFailure = 
+          error instanceof InvalidPushSubscriptionError || // Our validation
+          error?.statusCode === 410 || // Gone (browser unsubscribed)
+          error?.statusCode === 404;   // Not found
+        
+        if (isPermanentFailure) {
+          console.log(`🗑️  Removing invalid subscription for user ${userId}: ${errorMsg}`);
           await this.storage.deletePushSubscription(sub.endpoint);
+        }
+        // Temporary network errors - log but keep subscription for retry
+        else if (error?.code === 'ENOTFOUND' || error?.code === 'ECONNREFUSED' || error?.code === 'ETIMEDOUT') {
+          console.warn(`⚠️  Network error sending push to user ${userId}: ${error.code} - will retry later`);
+        }
+        // Unknown error - log for investigation
+        else {
+          console.warn(`⚠️  Unknown error sending push to user ${userId}:`, error);
         }
       }
     });
@@ -72,6 +105,7 @@ export class PushNotificationService {
   }
 
   private async sendNotification(subscription: PushSubscription, payload: PushNotificationPayload): Promise<void> {
+    // Validation is done in sendToUser before calling this method
     const pushSubscription = {
       endpoint: subscription.endpoint,
       keys: {
