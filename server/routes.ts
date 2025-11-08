@@ -1,6 +1,8 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import session from "express-session";
+import connectPgSimple from "connect-pg-simple";
+import { pool } from "./db";
 import { storage } from "./storage";
 import { insertVehicleSchema, insertEinsatzSchema, insertSettingsSchema, insertQualifikationSchema, insertTerminSchema, insertTerminZusageSchema, insertPushSubscriptionSchema, insertMaengelMeldungSchema, insertAlarmEventSchema, insertAaoStichwortSchema } from "@shared/schema";
 import type { User, InsertUser, VehicleSlot, InsertVehicleConfig, AlarmEvent } from "@shared/schema";
@@ -174,16 +176,24 @@ function createDefaultVehicleConfig(vehicleName: string): InsertVehicleConfig | 
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Session configuration
+  // PostgreSQL Session Store
+  const PgSession = connectPgSimple(session);
+  
+  // Session configuration with PostgreSQL storage
   app.use(
     session({
+      store: new PgSession({
+        pool: pool,
+        tableName: 'session',
+        createTableIfMissing: true,
+      }),
       secret: process.env.SESSION_SECRET || "dev-secret-change-me",
       resave: false,
       saveUninitialized: false,
       cookie: {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        maxAge: 1000 * 60 * 60 * 24, // 24 hours
+        maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days (länger, da jetzt persistent!)
       },
     })
   );
