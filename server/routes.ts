@@ -2,6 +2,7 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
+import cors from "cors";
 import { pool } from "./db";
 import { storage } from "./storage";
 import { insertVehicleSchema, insertEinsatzSchema, insertSettingsSchema, insertQualifikationSchema, insertTerminSchema, insertTerminZusageSchema, insertPushSubscriptionSchema, insertMaengelMeldungSchema, insertAlarmEventSchema, insertAaoStichwortSchema } from "@shared/schema";
@@ -176,6 +177,12 @@ function createDefaultVehicleConfig(vehicleName: string): InsertVehicleConfig | 
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // CORS middleware - MUSS vor Session kommen!
+  app.use(cors({
+    origin: true, // Allow all origins in development
+    credentials: true, // WICHTIG: Erlaubt Cookies
+  }));
+  
   // PostgreSQL Session Store
   const PgSession = connectPgSimple(session);
   
