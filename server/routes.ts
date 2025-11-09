@@ -186,8 +186,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // PostgreSQL Session Store
   const PgSession = connectPgSimple(session);
   
-  // Session configuration für Replit iframe Preview
-  // Alle 3 müssen zusammen sein: proxy:true + secure:true + sameSite:"none"
+  // Session configuration
+  // Start mit unsicheren Cookies (werden dynamisch angepasst)
   app.use(
     session({
       store: new PgSession({
@@ -198,15 +198,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       secret: process.env.SESSION_SECRET || "dev-secret-change-me",
       resave: false,
       saveUninitialized: false,
-      proxy: true, // WICHTIG: Trust proxy (Replit HTTPS proxy)
+      proxy: true, // WICHTIG: Trust proxy für Cloudflare/Replit
       cookie: {
         httpOnly: true,
-        secure: true, // WICHTIG: true für HTTPS
-        sameSite: 'none', // WICHTIG: none für Third-Party iframe
+        secure: false, // Wird dynamisch gesetzt
+        sameSite: 'lax', // Wird dynamisch gesetzt
         maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
       },
     })
   );
+
+  // Dynamische Cookie-Konfiguration basierend auf Protokoll
+  // HTTPS (evt-ofwschwedt.de / Replit) → secure:true, sameSite:'none'
+  // HTTP (LAN-IP 192.168.178.167) → secure:false, sameSite:'lax'
+  app.use((req, res, next) => {
+    const isHttps = req.secure || req.headers['x-forwarded-proto'] === 'https';
+    if (req.session) {
+      req.session.cookie.secure = isHttps;
+      req.session.cookie.sameSite = isHttps ? 'none' : 'lax';
+    }
+    next();
+  });
 
   // Auth endpoints
   app.post("/api/auth/login", async (req: Request, res: Response) => {
