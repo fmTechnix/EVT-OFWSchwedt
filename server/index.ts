@@ -91,7 +91,9 @@ function printStartupBanner(port: number) {
   const networkInterfaces = os.networkInterfaces();
   let localIP = 'localhost';
   for (const name of Object.keys(networkInterfaces)) {
-    for (const net of networkInterfaces[name]) {
+    const nets = networkInterfaces[name];
+    if (!nets) continue;
+    for (const net of nets) {
       // Skip internal and non-IPv4 addresses
       if (net.family === 'IPv4' && !net.internal) {
         localIP = net.address;
