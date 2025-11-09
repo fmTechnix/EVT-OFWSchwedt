@@ -58,6 +58,16 @@ async function exportDatabase() {
         continue;
       }
 
+      // Hole Spalten-Datentypen
+      const columnTypes = await pool.query(
+        `SELECT column_name, udt_name 
+         FROM information_schema.columns 
+         WHERE table_schema = 'public' 
+         AND table_name = $1`,
+        [table]
+      );
+      const typeMap = new Map(columnTypes.rows.map(r => [r.column_name, r.udt_name]));
+
       // Hole alle Daten
       const result = await pool.query(`SELECT * FROM ${table}`);
       
@@ -75,20 +85,33 @@ async function exportDatabase() {
 
       for (const row of result.rows) {
         const columns = Object.keys(row);
-        const values = Object.values(row).map(val => {
+        const values = columns.map(col => {
+          const val = row[col];
+          const colType = typeMap.get(col);
+          
           if (val === null) return "NULL";
           if (typeof val === "boolean") return val ? "TRUE" : "FALSE";
           if (typeof val === "number") return val;
           if (val instanceof Date) {
             return `'${val.toISOString()}'::timestamp`;
           }
+          
+          // Handle JSONB columns specifically
+          if (colType === 'jsonb') {
+            return `'${JSON.stringify(val).replace(/'/g, "''")}'::jsonb`;
+          }
+          
+          // Handle text arrays
           if (Array.isArray(val)) {
             if (val.length === 0) return "'{}'";
             return `ARRAY[${val.map(v => `'${String(v).replace(/'/g, "''")}'`).join(",")}]::text[]`;
           }
+          
+          // Handle other objects as JSONB
           if (typeof val === "object") {
             return `'${JSON.stringify(val).replace(/'/g, "''")}'::jsonb`;
           }
+          
           // String escaping
           return `'${String(val).replace(/'/g, "''")}'`;
         });
