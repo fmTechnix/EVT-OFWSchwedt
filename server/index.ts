@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import os from "os";
 
 const app = express();
 
@@ -79,6 +80,54 @@ app.use((req, res, next) => {
     host: "0.0.0.0",
     reusePort: true,
   }, () => {
-    log(`serving on port ${port}`);
+    printStartupBanner(port);
   });
 })();
+
+function printStartupBanner(port: number) {
+  const isDev = process.env.NODE_ENV === "development";
+  
+  // Get local network IP
+  const networkInterfaces = os.networkInterfaces();
+  let localIP = 'localhost';
+  for (const name of Object.keys(networkInterfaces)) {
+    for (const net of networkInterfaces[name]) {
+      // Skip internal and non-IPv4 addresses
+      if (net.family === 'IPv4' && !net.internal) {
+        localIP = net.address;
+        break;
+      }
+    }
+  }
+
+  console.log('\n');
+  console.log('╔══════════════════════════════════════════════════════════════╗');
+  console.log('║                                                              ║');
+  console.log('║   🔥  EVT - Einsatzverwaltungstool                          ║');
+  console.log('║       Feuerwehr Schwedt/Oder                                 ║');
+  console.log('║                                                              ║');
+  console.log('╚══════════════════════════════════════════════════════════════╝');
+  console.log('');
+  console.log(`   Modus:       ${isDev ? '🔧 Development' : '🚀 Production'}`);
+  console.log(`   Status:      ✅ Online`);
+  console.log('');
+  console.log('   Erreichbar unter:');
+  console.log(`   ├─ 🏠  http://localhost:${port}`);
+  console.log(`   ├─ 🌐  http://${localIP}:${port}`);
+  if (!isDev) {
+    console.log(`   └─ 🌍  https://evt-ofwschwedt.de`);
+  }
+  console.log('');
+  console.log('   Funktionen:');
+  console.log('   ├─ ✅  Verfügbarkeitsverwaltung');
+  console.log('   ├─ ✅  Automatische Besetzung');
+  console.log('   ├─ ✅  Push-Benachrichtigungen');
+  console.log('   ├─ ✅  DE-Alarm Integration');
+  console.log('   └─ ✅  AAO-System');
+  console.log('');
+  console.log('   📝  Logs: pm2 logs evt');
+  console.log('   🛑  Stop: pm2 stop evt');
+  console.log('');
+  console.log('════════════════════════════════════════════════════════════════');
+  console.log('');
+}
