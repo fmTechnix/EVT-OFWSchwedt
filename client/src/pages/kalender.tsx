@@ -140,7 +140,7 @@ export default function Kalender() {
                     Neuer Termin
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-2xl">
+                <DialogContent className="sm:max-w-2xl w-[95vw]">
                   <DialogHeader>
                     <DialogTitle>Neuen Termin erstellen</DialogTitle>
                     <DialogDescription>

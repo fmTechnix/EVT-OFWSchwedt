@@ -228,7 +228,7 @@ function FahrzeugeTab() {
       )}
 
       <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[425px] w-[95vw]">
           <DialogHeader>
             <DialogTitle>Neues Fahrzeug anlegen</DialogTitle>
           </DialogHeader>
@@ -366,7 +366,7 @@ function VehicleConfigEditDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Fahrzeug-Konfiguration bearbeiten: {config.vehicle}</DialogTitle>
         </DialogHeader>

@@ -206,7 +206,7 @@ export default function Maengelmeldungen() {
                 Neuer Mangel
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="sm:max-w-2xl w-[95vw] max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Mängelmeldung erstellen</DialogTitle>
                 <DialogDescription>

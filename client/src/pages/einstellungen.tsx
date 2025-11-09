@@ -19,6 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -320,44 +321,48 @@ export default function Einstellungen() {
             ) : (
               <>
                 <div className="mb-6">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Kürzel</TableHead>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Beschreibung</TableHead>
-                        <TableHead className="w-20">Aktionen</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {qualifikationen && qualifikationen.length > 0 ? (
-                        qualifikationen.map((qual) => (
-                          <TableRow key={qual.id}>
-                            <TableCell className="font-medium">{qual.kuerzel}</TableCell>
-                            <TableCell>{qual.name}</TableCell>
-                            <TableCell>{qual.beschreibung}</TableCell>
-                            <TableCell>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => deleteQualifikationMutation.mutate(qual.id)}
-                                disabled={deleteQualifikationMutation.isPending}
-                                data-testid={`button-delete-qual-${qual.id}`}
-                              >
-                                <Trash2 className="h-4 w-4 text-red-500" />
-                              </Button>
-                            </TableCell>
+                  <ScrollArea className="w-full overflow-x-auto">
+                    <div className="min-w-[640px]">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Kürzel</TableHead>
+                            <TableHead>Name</TableHead>
+                            <TableHead>Beschreibung</TableHead>
+                            <TableHead className="w-20">Aktionen</TableHead>
                           </TableRow>
-                        ))
-                      ) : (
-                        <TableRow>
-                          <TableCell colSpan={4} className="text-center text-muted-foreground">
-                            Keine Qualifikationen vorhanden
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
+                        </TableHeader>
+                        <TableBody>
+                          {qualifikationen && qualifikationen.length > 0 ? (
+                            qualifikationen.map((qual) => (
+                              <TableRow key={qual.id}>
+                                <TableCell className="font-medium">{qual.kuerzel}</TableCell>
+                                <TableCell>{qual.name}</TableCell>
+                                <TableCell>{qual.beschreibung}</TableCell>
+                                <TableCell>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => deleteQualifikationMutation.mutate(qual.id)}
+                                    disabled={deleteQualifikationMutation.isPending}
+                                    data-testid={`button-delete-qual-${qual.id}`}
+                                  >
+                                    <Trash2 className="h-4 w-4 text-red-500" />
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          ) : (
+                            <TableRow>
+                              <TableCell colSpan={4} className="text-center text-muted-foreground">
+                                Keine Qualifikationen vorhanden
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </ScrollArea>
                 </div>
 
                 <form onSubmit={handleAddQualifikation} className="space-y-4 border-t pt-6">

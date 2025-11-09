@@ -18,6 +18,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { User, Qualifikation } from "@shared/schema";
@@ -318,7 +319,7 @@ export default function Kameraden() {
                       Benutzer hinzufügen
                     </Button>
                   </DialogTrigger>
-                  <DialogContent>
+                  <DialogContent className="sm:max-w-[425px] w-[95vw]">
                     <DialogHeader>
                       <DialogTitle>Neuen Benutzer registrieren</DialogTitle>
                       <DialogDescription>
@@ -435,97 +436,99 @@ export default function Kameraden() {
                   ))}
                 </div>
               ) : (
-                <div className="border rounded-md">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Vorname</TableHead>
-                        <TableHead>Nachname</TableHead>
-                        <TableHead>Username</TableHead>
-                        <TableHead>Rolle</TableHead>
-                        <TableHead>Qualifikationen</TableHead>
-                        <TableHead className="text-right">Aktionen</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {users && users.length === 0 ? (
+                <ScrollArea className="w-full overflow-x-auto">
+                  <div className="min-w-[640px] border rounded-md">
+                    <Table>
+                      <TableHeader>
                         <TableRow>
-                          <TableCell colSpan={6} className="text-center text-muted-foreground">
-                            Keine Benutzer gefunden
-                          </TableCell>
+                          <TableHead>Vorname</TableHead>
+                          <TableHead>Nachname</TableHead>
+                          <TableHead>Username</TableHead>
+                          <TableHead>Rolle</TableHead>
+                          <TableHead>Qualifikationen</TableHead>
+                          <TableHead className="text-right">Aktionen</TableHead>
                         </TableRow>
-                      ) : (
-                        users?.map((u) => (
-                          <TableRow key={u.id} data-testid={`row-user-${u.id}`}>
-                            <TableCell data-testid={`text-vorname-${u.id}`}>{u.vorname}</TableCell>
-                            <TableCell data-testid={`text-nachname-${u.id}`}>{u.nachname}</TableCell>
-                            <TableCell data-testid={`text-username-${u.id}`}>{u.username}</TableCell>
-                            <TableCell>
-                              <Select
-                                value={u.role}
-                                onValueChange={(role) => updateRoleMutation.mutate({ id: u.id, role })}
-                                data-testid={`select-role-${u.id}`}
-                              >
-                                <SelectTrigger className="w-[140px]">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="admin">Admin</SelectItem>
-                                  <SelectItem value="moderator">Moderator</SelectItem>
-                                  <SelectItem value="member">Member</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex flex-wrap gap-1">
-                                {u.qualifikationen.length === 0 ? (
-                                  <span className="text-sm text-muted-foreground">Keine</span>
-                                ) : (
-                                  u.qualifikationen.map((q) => (
-                                    <Badge key={q} variant="secondary" data-testid={`badge-qual-${q}-${u.id}`}>
-                                      {q}
-                                    </Badge>
-                                  ))
-                                )}
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleOpenEditQuals(u)}
-                                  data-testid={`button-edit-quals-${u.id}`}
-                                  className="h-6 px-2 text-xs"
-                                >
-                                  Bearbeiten
-                                </Button>
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex justify-end gap-1">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => resetPasswordMutation.mutate(u.id)}
-                                  data-testid={`button-reset-password-${u.id}`}
-                                  title="Passwort zurücksetzen"
-                                >
-                                  <Key className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => deleteUserMutation.mutate(u.id)}
-                                  data-testid={`button-delete-user-${u.id}`}
-                                  title="Benutzer löschen"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
+                      </TableHeader>
+                      <TableBody>
+                        {users && users.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={6} className="text-center text-muted-foreground">
+                              Keine Benutzer gefunden
                             </TableCell>
                           </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
+                        ) : (
+                          users?.map((u) => (
+                            <TableRow key={u.id} data-testid={`row-user-${u.id}`}>
+                              <TableCell data-testid={`text-vorname-${u.id}`}>{u.vorname}</TableCell>
+                              <TableCell data-testid={`text-nachname-${u.id}`}>{u.nachname}</TableCell>
+                              <TableCell data-testid={`text-username-${u.id}`}>{u.username}</TableCell>
+                              <TableCell>
+                                <Select
+                                  value={u.role}
+                                  onValueChange={(role) => updateRoleMutation.mutate({ id: u.id, role })}
+                                  data-testid={`select-role-${u.id}`}
+                                >
+                                  <SelectTrigger className="w-[140px]">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="admin">Admin</SelectItem>
+                                    <SelectItem value="moderator">Moderator</SelectItem>
+                                    <SelectItem value="member">Member</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex flex-wrap gap-1">
+                                  {u.qualifikationen.length === 0 ? (
+                                    <span className="text-sm text-muted-foreground">Keine</span>
+                                  ) : (
+                                    u.qualifikationen.map((q) => (
+                                      <Badge key={q} variant="secondary" data-testid={`badge-qual-${q}-${u.id}`}>
+                                        {q}
+                                      </Badge>
+                                    ))
+                                  )}
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleOpenEditQuals(u)}
+                                    data-testid={`button-edit-quals-${u.id}`}
+                                    className="h-6 px-2 text-xs"
+                                  >
+                                    Bearbeiten
+                                  </Button>
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex justify-end gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => resetPasswordMutation.mutate(u.id)}
+                                    data-testid={`button-reset-password-${u.id}`}
+                                    title="Passwort zurücksetzen"
+                                  >
+                                    <Key className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => deleteUserMutation.mutate(u.id)}
+                                    data-testid={`button-delete-user-${u.id}`}
+                                    title="Benutzer löschen"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </ScrollArea>
               )}
 
               {users && users.length > 0 && (
@@ -540,7 +543,7 @@ export default function Kameraden() {
 
       {/* Qualifications Edit Dialog */}
       <Dialog open={!!editingUser} onOpenChange={(open) => !open && setEditingUser(null)}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[425px] w-[95vw]">
           <DialogHeader>
             <DialogTitle>Qualifikationen bearbeiten</DialogTitle>
             <DialogDescription>

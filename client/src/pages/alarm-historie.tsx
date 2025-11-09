@@ -130,7 +130,7 @@ export default function AlarmHistorie() {
                   Alarm simulieren
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl">
+              <DialogContent className="sm:max-w-2xl w-[95vw]">
                 <DialogHeader>
                   <DialogTitle>Alarm-Simulator</DialogTitle>
                   <DialogDescription>

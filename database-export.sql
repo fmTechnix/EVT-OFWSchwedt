@@ -1,5 +1,5 @@
 -- EVT Datenbank Export
--- Exportiert am: 2025-11-08T09:22:38.500Z
+-- Exportiert am: 2025-11-09T18:08:45.761Z
 
 BEGIN;
 
@@ -104,7 +104,7 @@ INSERT INTO users ("id", "username", "password", "role", "vorname", "nachname", 
 INSERT INTO users ("id", "username", "password", "role", "vorname", "nachname", "qualifikationen", "muss_passwort_aendern") VALUES ('bff4a4b7-f0cd-40ac-baf1-47780262c350', 'felix.schneider76', '$2b$10$wfrHTfHHPxxdljIm7rRKx.17BEHwxS65lekowbhzGZUxbS74wSxf2', 'member', 'Felix', 'Schneider', ARRAY['TM','GF','ZF','MASCH','AGT','FAHRER_B']::text[], FALSE);
 INSERT INTO users ("id", "username", "password", "role", "vorname", "nachname", "qualifikationen", "muss_passwort_aendern") VALUES ('aadc3e52-c227-4595-9ed8-9e4b5030dc0e', 'lea.schneider77', '$2b$10$Esa8d9hK.gXCUfU0L8Gh7O.fc4uEtXRuA6AU0FsZevRGEOSeUpS/y', 'member', 'Lea', 'Schneider', ARRAY['TM','ABC1','TH']::text[], FALSE);
 INSERT INTO users ("id", "username", "password", "role", "vorname", "nachname", "qualifikationen", "muss_passwort_aendern") VALUES ('4ac67b09-403c-4761-b6cf-09bd448b3e71', 'testadmin', '$2b$10$TESTPASSWORD_FEUER123_HASH', 'admin', 'Test', 'Admin', '{}', FALSE);
-INSERT INTO users ("id", "username", "password", "role", "vorname", "nachname", "qualifikationen", "muss_passwort_aendern") VALUES ('ba0406a0-fb40-43da-99cb-cf448b9469e5', 'admin', '$2b$10$lTparUQXBg5DK6R.JkydWOPgOKSoDDGFqIu4/ueNzFH16D3cu4DdK', 'admin', 'Admin', 'User', ARRAY['TM','AGT','MASCH','GF','ZF']::text[], FALSE);
+INSERT INTO users ("id", "username", "password", "role", "vorname", "nachname", "qualifikationen", "muss_passwort_aendern") VALUES ('ba0406a0-fb40-43da-99cb-cf448b9469e5', 'admin', '$2b$10$fx0mY8XWz/7DYiM/XEqjL.uAifYmWi5gVxJ85iExXBQr1zDWPSxVS', 'admin', 'Admin', 'User', ARRAY['TM','AGT','MASCH','GF','ZF']::text[], FALSE);
 
 -- Tabelle: vehicles (10 Zeilen)
 TRUNCATE TABLE vehicles CASCADE;
@@ -552,6 +552,25 @@ INSERT INTO aao_stichworte ("id", "stichwort", "kategorie", "beschreibung", "fah
 -- Tabelle: maengel_meldungen (1 Zeilen)
 TRUNCATE TABLE maengel_meldungen CASCADE;
 INSERT INTO maengel_meldungen ("id", "vehicle_id", "beschreibung", "status", "melder_id", "fotos", "erstellt_am", "behoben_am", "bemerkung") VALUES (1, 4, 'Testmangel - Reifen beschädigt', 'in_bearbeitung', 'ba0406a0-fb40-43da-99cb-cf448b9469e5', '{}', '"2025-11-03T16:38:22.422Z"'::jsonb, NULL, NULL);
+
+-- Reset sequences to prevent ID collisions
+SELECT setval('qualifikationen_id_seq', (SELECT COALESCE(MAX(id), 1) FROM qualifikationen), true);
+SELECT setval('vehicles_id_seq', (SELECT COALESCE(MAX(id), 1) FROM vehicles), true);
+SELECT setval('vehicle_configs_id_seq', (SELECT COALESCE(MAX(id), 1) FROM vehicle_configs), true);
+SELECT setval('einsatz_id_seq', (SELECT COALESCE(MAX(id), 1) FROM einsatz), true);
+SELECT setval('settings_id_seq', (SELECT COALESCE(MAX(id), 1) FROM settings), true);
+SELECT setval('termine_id_seq', (SELECT COALESCE(MAX(id), 1) FROM termine), true);
+SELECT setval('termin_zusagen_id_seq', (SELECT COALESCE(MAX(id), 1) FROM termin_zusagen), true);
+SELECT setval('push_subscriptions_id_seq', (SELECT COALESCE(MAX(id), 1) FROM push_subscriptions), true);
+SELECT setval('availabilities_id_seq', (SELECT COALESCE(MAX(id), 1) FROM availabilities), true);
+SELECT setval('availability_templates_id_seq', (SELECT COALESCE(MAX(id), 1) FROM availability_templates), true);
+SELECT setval('user_reminder_settings_id_seq', (SELECT COALESCE(MAX(id), 1) FROM user_reminder_settings), true);
+SELECT setval('current_assignments_id_seq', (SELECT COALESCE(MAX(id), 1) FROM current_assignments), true);
+SELECT setval('assignment_history_id_seq', (SELECT COALESCE(MAX(id), 1) FROM assignment_history), true);
+SELECT setval('assignment_fairness_id_seq', (SELECT COALESCE(MAX(id), 1) FROM assignment_fairness), true);
+SELECT setval('alarm_events_id_seq', (SELECT COALESCE(MAX(id), 1) FROM alarm_events), true);
+SELECT setval('aao_stichworte_id_seq', (SELECT COALESCE(MAX(id), 1) FROM aao_stichworte), true);
+SELECT setval('maengel_meldungen_id_seq', (SELECT COALESCE(MAX(id), 1) FROM maengel_meldungen), true);
 
 COMMIT;
 

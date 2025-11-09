@@ -189,7 +189,7 @@ export default function AaoVerwaltung() {
                 Stichwort hinzufügen
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="sm:max-w-2xl w-[95vw]">
               <DialogHeader>
                 <DialogTitle>
                   {editingStichwort ? "Stichwort bearbeiten" : "Neues Stichwort"}
