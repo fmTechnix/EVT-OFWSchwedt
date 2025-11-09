@@ -79,6 +79,9 @@ async function exportDatabase() {
           if (val === null) return "NULL";
           if (typeof val === "boolean") return val ? "TRUE" : "FALSE";
           if (typeof val === "number") return val;
+          if (val instanceof Date) {
+            return `'${val.toISOString()}'::timestamp`;
+          }
           if (Array.isArray(val)) {
             if (val.length === 0) return "'{}'";
             return `ARRAY[${val.map(v => `'${String(v).replace(/'/g, "''")}'`).join(",")}]::text[]`;
