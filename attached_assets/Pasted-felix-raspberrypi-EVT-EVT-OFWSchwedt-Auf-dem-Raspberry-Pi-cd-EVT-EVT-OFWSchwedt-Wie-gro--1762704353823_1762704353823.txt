@@ -1,0 +1,117 @@
+felix@raspberrypi:~/EVT/EVT-OFWSchwedt $ # Auf dem Raspberry Pi:
+cd ~/EVT/EVT-OFWSchwedt
+
+# Wie groß ist storage.ts?
+wc -l server/storage.ts
+
+# Zeige mir den Anfang - dort sollte PostgresStorage sein:
+head -200 server/storage.ts | grep -A50 "class PostgresStorage"
+
+# Oder direkter - zeige mir wo PostgresStorage definiert ist:
+grep -n "class PostgresStorage" server/storage.ts
+
+# Dann zeige mir ab dieser Zeile:
+sed -n '150,250p' server/storage.ts
+778 server/storage.ts
+  private termine: Map<number, Termin>;
+  private terminZusagen: Map<number, TerminZusage>;
+  private maengelMeldungen: Map<number, MaengelMeldung>;
+  private einsatz: Einsatz;
+  private settings: Settings;
+  private nextVehicleId: number;
+  private nextQualifikationId: number;
+  private nextTerminId: number;
+  private nextZusageId: number;
+  private nextMaengelMeldungId: number;
+
+  constructor() {
+    this.users = new Map();
+    this.vehicles = new Map();
+    this.qualifikationen = new Map();
+    this.termine = new Map();
+    this.terminZusagen = new Map();
+    this.maengelMeldungen = new Map();
+    this.nextVehicleId = 1;
+    this.nextQualifikationId = 1;
+    this.nextTerminId = 1;
+    this.nextZusageId = 1;
+    this.nextMaengelMeldungId = 1;
+
+    // Initialize default qualifikationen (must be before users)
+    this.initializeQualifikationen();
+    
+    // Initialize default users with qualifikationen
+    this.initializeUsers();
+    
+    // Initialize default vehicles
+    this.initializeVehicles();
+    
+    // Initialize default einsatz
+    this.einsatz = {
+      id: 1,
+      stichwort: "B: Kleinbrand",
+      bemerkung: "",
+      mannschaftsbedarf: 9,
+    };
+    
+    // Initialize default settings
+    this.settings = {
+      id: 1,
+      min_agt: 2,
+      min_maschinist: 1,
+      min_gf: 1,
+      rotation_window: 4,
+      rotation_weights: null,
+    };
+  }
+
+  private initializeQualifikationen() {
+    const qualifikationen: Omit<Qualifikation, "id">[] = [
+      { kuerzel: "TM", name: "Truppmann", beschreibung: "Grundausbildung für Feuerwehrleute" },
+      { kuerzel: "AGT", name: "Atemschutzgeräteträger", beschreibung: "Berechtigung zum Tragen von Atemschutzgeräten" },
+      { kuerzel: "Maschinist", name: "Maschinist", beschreibung: "Befähigung zur Bedienung von Feuerwehrfahrzeugen" },
+      { kuerzel: "GF", name: "Gruppenführer", beschreibung: "Führungsausbildung für Gruppen" },
+      { kuerzel: "Sprechfunker", name: "Sprechfunker", beschreibung: "Berechtigung zur Funkkommunikation" },
+      { kuerzel: "San", name: "Sanitäter", beschreibung: "Sanitätsausbildung" },
+    ];
+
+    for (const qual of qualifikationen) {
+      const qualifikation: Qualifikation = {
+        id: this.nextQualifikationId++,
+        ...qual,
+      };
+      this.qualifikationen.set(qualifikation.id, qualifikation);
+    }
+  }
+
+  private initializeUsers() {
+    const admin: User = {
+      id: randomUUID(),
+      username: "admin",
+      password: "admin",
+      role: "admin",
+      vorname: "Admin",
+      nachname: "User",
+      qualifikationen: ["TM", "AGT", "Maschinist", "GF"],
+      muss_passwort_aendern: false,
+    };
+    
+    const moderator: User = {
+      id: randomUUID(),
+      username: "moderator",
+      password: "moderator123",
+      role: "moderator",
+      vorname: "Moderator",
+      nachname: "User",
+      qualifikationen: ["TM", "Sprechfunker"],
+      muss_passwort_aendern: false,
+    };
+    
+    const member: User = {
+      id: randomUUID(),
+      username: "member",
+      password: "member123",
+      role: "member",
+      vorname: "Member",
+      nachname: "User",
+felix@raspberrypi:~/EVT/EVT-OFWSchwedt $ 
