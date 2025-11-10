@@ -220,6 +220,7 @@ export class MemStorage implements IStorage {
       min_gf: 1,
       rotation_window: 4,
       rotation_weights: null,
+      assignment_mode: "manual",
     };
   }
 
@@ -597,21 +598,21 @@ export class MemStorage implements IStorage {
     throw new Error("Not implemented in MemStorage");
   }
 
-  // Current Assignments
+  // Current Assignments (in-memory stubs for development)
   async getCurrentAssignments(): Promise<CurrentAssignment[]> {
-    throw new Error("Not implemented in MemStorage");
+    return [];
   }
 
   async getUserAssignment(_userId: string): Promise<CurrentAssignment | undefined> {
-    throw new Error("Not implemented in MemStorage");
+    return undefined;
   }
 
   async setCurrentAssignments(_assignments: InsertCurrentAssignment[]): Promise<CurrentAssignment[]> {
-    throw new Error("Not implemented in MemStorage");
+    return [];
   }
 
   async clearCurrentAssignments(): Promise<void> {
-    throw new Error("Not implemented in MemStorage");
+    return;
   }
 
   // Push Subscriptions (in-memory storage)
