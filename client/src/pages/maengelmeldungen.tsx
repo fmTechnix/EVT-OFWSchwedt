@@ -95,7 +95,7 @@ export default function Maengelmeldungen() {
     if (!files) return;
 
     const MAX_PHOTOS = 5;
-    const MAX_SIZE = 1.5 * 1024 * 1024; // 1.5MB original (becomes ~2MB base64)
+    const MAX_SIZE = 10 * 1024 * 1024; // 10MB
 
     if (fotos.length + files.length > MAX_PHOTOS) {
       toast({
@@ -112,7 +112,7 @@ export default function Maengelmeldungen() {
         toast({
           variant: "destructive",
           title: "Foto zu groß",
-          description: `${file.name} ist zu groß (max 1.5MB)`,
+          description: `${file.name} ist zu groß (max 10MB)`,
         });
         return;
       }
@@ -243,13 +243,12 @@ export default function Maengelmeldungen() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="fotos">Fotos (optional - max 5, je 1.5MB)</Label>
+                  <Label htmlFor="fotos">Fotos (optional - max 5, je 10MB)</Label>
                   <div className="flex items-center gap-2">
                     <Input
                       id="fotos"
                       type="file"
                       accept="image/*"
-                      capture="environment"
                       multiple
                       onChange={handlePhotoCapture}
                       className="hidden"
