@@ -269,6 +269,25 @@ export const insertPushSubscriptionSchema = createInsertSchema(pushSubscriptions
 export type InsertPushSubscription = z.infer<typeof insertPushSubscriptionSchema>;
 export type PushSubscription = typeof pushSubscriptions.$inferSelect;
 
+// Push Logs (Logging aller Push-Benachrichtigungen)
+export const pushLogs = pgTable("push_logs", {
+  id: serial("id").primaryKey(),
+  user_id: text("user_id").notNull(),
+  message_type: text("message_type").notNull(), // "assignment_change", "test", "reminder", "alarm"
+  title: text("title").notNull(),
+  body: text("body").notNull(),
+  status: text("status").notNull(), // "success", "error", "no_subscription"
+  error_message: text("error_message"), // Error details if status = "error"
+  subscription_endpoint: text("subscription_endpoint"), // For troubleshooting
+  status_code: integer("status_code"), // HTTP status code if applicable
+  sent_at: timestamp("sent_at").notNull().default(sql`now()`),
+  sent_by: text("sent_by").notNull().default("system"), // "system" or admin user_id for test pushes
+});
+
+export const insertPushLogSchema = createInsertSchema(pushLogs).omit({ id: true, sent_at: true });
+export type InsertPushLog = z.infer<typeof insertPushLogSchema>;
+export type PushLog = typeof pushLogs.$inferSelect;
+
 // Mängelmeldungen (Vehicle Defect Reports)
 export const maengelMeldungen = pgTable("maengel_meldungen", {
   id: serial("id").primaryKey(),

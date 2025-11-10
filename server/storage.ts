@@ -12,6 +12,7 @@ import type {
   Availability, InsertAvailability,
   CurrentAssignment, InsertCurrentAssignment,
   PushSubscription, InsertPushSubscription,
+  PushLog, InsertPushLog,
   MaengelMeldung, InsertMaengelMeldung,
   AssignmentHistory, InsertAssignmentHistory,
   AssignmentFairness, InsertAssignmentFairness,
@@ -107,6 +108,20 @@ export interface IStorage {
   savePushSubscription(subscription: InsertPushSubscription): Promise<PushSubscription>;
   getUserPushSubscriptions(userId: string): Promise<PushSubscription[]>;
   deletePushSubscription(endpoint: string): Promise<void>;
+  
+  // Push Logs
+  createPushLog(log: {
+    user_id: string;
+    message_type: string;
+    title: string;
+    body: string;
+    status: string;
+    error_message?: string;
+    subscription_endpoint?: string;
+    status_code?: number;
+    sent_by: string;
+  }): Promise<void>;
+  getAllPushLogs(filters?: { userId?: string; status?: string; messageType?: string; limit?: number }): Promise<PushLog[]>;
   
   // Mängelmeldungen
   getAllMaengelMeldungen(): Promise<MaengelMeldung[]>;
@@ -601,6 +616,27 @@ export class MemStorage implements IStorage {
 
   async deletePushSubscription(_endpoint: string): Promise<void> {
     throw new Error("Not implemented in MemStorage");
+  }
+
+  // Push Logs (stub)
+  async createPushLog(_log: {
+    user_id: string;
+    message_type: string;
+    title: string;
+    body: string;
+    status: string;
+    error_message?: string;
+    subscription_endpoint?: string;
+    status_code?: number;
+    sent_by: string;
+  }): Promise<void> {
+    // In MemStorage, we just log to console
+    console.log('📝 Push Log:', _log);
+  }
+
+  async getAllPushLogs(_filters?: { userId?: string; status?: string; messageType?: string; limit?: number }): Promise<PushLog[]> {
+    // In MemStorage, return empty array
+    return [];
   }
 
   // Mängelmeldungen

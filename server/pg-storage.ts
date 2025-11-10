@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { eq, sql, ilike, or, desc, asc, inArray } from "drizzle-orm";
+import { eq, sql, ilike, or, desc, asc, inArray, and } from "drizzle-orm";
 import {
   users,
   vehicles,
@@ -12,6 +12,7 @@ import {
   availabilities,
   currentAssignments,
   pushSubscriptions,
+  pushLogs,
   maengelMeldungen,
   assignmentHistory,
   assignmentFairness,
@@ -41,6 +42,7 @@ import {
   type InsertCurrentAssignment,
   type PushSubscription,
   type InsertPushSubscription,
+  type PushLog,
   type MaengelMeldung,
   type InsertMaengelMeldung,
   type AssignmentHistory,
@@ -538,6 +540,50 @@ export class PostgresStorage implements IStorage {
 
   async deletePushSubscription(endpoint: string): Promise<void> {
     await db.delete(pushSubscriptions).where(eq(pushSubscriptions.endpoint, endpoint));
+  }
+
+  // Push Logs
+  async createPushLog(log: {
+    user_id: string;
+    message_type: string;
+    title: string;
+    body: string;
+    status: string;
+    error_message?: string;
+    subscription_endpoint?: string;
+    status_code?: number;
+    sent_by: string;
+  }): Promise<void> {
+    await db.insert(pushLogs).values(log);
+  }
+
+  async getAllPushLogs(filters?: { userId?: string; status?: string; messageType?: string; limit?: number }): Promise<PushLog[]> {
+    // Build WHERE conditions
+    const conditions: any[] = [];
+    if (filters?.userId) {
+      conditions.push(eq(pushLogs.user_id, filters.userId));
+    }
+    if (filters?.status) {
+      conditions.push(eq(pushLogs.status, filters.status));
+    }
+    if (filters?.messageType) {
+      conditions.push(eq(pushLogs.message_type, filters.messageType));
+    }
+
+    // Build query with combined conditions
+    let query = db.select().from(pushLogs);
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions)) as any;
+    }
+    
+    query = query.orderBy(desc(pushLogs.sent_at)) as any;
+    
+    // Apply limit
+    const limit = filters?.limit || 100;
+    query = query.limit(limit) as any;
+
+    return await query;
   }
 
   // Mängelmeldungen

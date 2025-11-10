@@ -52,14 +52,27 @@ export interface PushNotificationPayload {
   data?: Record<string, unknown>;
 }
 
+export interface SendPushContext {
+  messageType: string;
+  sentBy?: string;
+}
+
 export class PushNotificationService {
   constructor(private storage: IStorage) {}
 
-  async sendToUser(userId: string, payload: PushNotificationPayload): Promise<void> {
+  async sendToUser(userId: string, payload: PushNotificationPayload, context: SendPushContext = { messageType: 'general' }): Promise<void> {
     const subscriptions = await this.storage.getUserPushSubscriptions(userId);
     
     if (subscriptions.length === 0) {
-      // No subscriptions for this user - skip silently
+      // No subscriptions for this user - log and skip
+      await this.logPush({
+        user_id: userId,
+        message_type: context.messageType,
+        title: payload.title,
+        body: payload.body,
+        status: 'no_subscription',
+        sent_by: context.sentBy || 'system',
+      });
       return;
     }
     
@@ -71,9 +84,33 @@ export class PushNotificationService {
         }
         
         await this.sendNotification(sub, payload);
+        
+        // Log successful send
+        await this.logPush({
+          user_id: userId,
+          message_type: context.messageType,
+          title: payload.title,
+          body: payload.body,
+          status: 'success',
+          subscription_endpoint: sub.endpoint,
+          sent_by: context.sentBy || 'system',
+        });
       } catch (error: any) {
         const errorMsg = error?.message || String(error);
         console.error(`Failed to send push notification to user ${userId}:`, errorMsg);
+        
+        // Log error
+        await this.logPush({
+          user_id: userId,
+          message_type: context.messageType,
+          title: payload.title,
+          body: payload.body,
+          status: 'error',
+          error_message: errorMsg,
+          subscription_endpoint: sub.endpoint,
+          status_code: error?.statusCode,
+          sent_by: context.sentBy || 'system',
+        });
         
         // Permanent failures - remove subscription immediately
         const isPermanentFailure = 
@@ -99,9 +136,41 @@ export class PushNotificationService {
     await Promise.all(promises);
   }
 
-  async sendToMultipleUsers(userIds: string[], payload: PushNotificationPayload): Promise<void> {
-    const promises = userIds.map(userId => this.sendToUser(userId, payload));
+  async sendToMultipleUsers(userIds: string[], payload: PushNotificationPayload, context: SendPushContext = { messageType: 'general' }): Promise<void> {
+    const promises = userIds.map(userId => this.sendToUser(userId, payload, context));
     await Promise.all(promises);
+  }
+
+  async sendTestNotification(userId: string, sentByAdminId: string): Promise<void> {
+    const payload: PushNotificationPayload = {
+      title: 'Test-Benachrichtigung',
+      body: `Dies ist eine Test-Benachrichtigung vom Admin-Bereich. Wenn Sie diese Nachricht sehen, funktionieren Push-Benachrichtigungen korrekt.`,
+      icon: '/feuerwehr-logo.png',
+    };
+
+    await this.sendToUser(userId, payload, {
+      messageType: 'test',
+      sentBy: sentByAdminId,
+    });
+  }
+
+  private async logPush(logData: {
+    user_id: string;
+    message_type: string;
+    title: string;
+    body: string;
+    status: string;
+    error_message?: string;
+    subscription_endpoint?: string;
+    status_code?: number;
+    sent_by: string;
+  }): Promise<void> {
+    try {
+      await this.storage.createPushLog(logData);
+    } catch (error) {
+      // Never let logging errors break the push flow
+      console.error('Failed to log push notification:', error);
+    }
   }
 
   private async sendNotification(subscription: PushSubscription, payload: PushNotificationPayload): Promise<void> {

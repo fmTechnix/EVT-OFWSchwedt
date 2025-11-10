@@ -1897,6 +1897,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all push logs (Admin only)
+  app.get("/api/push/logs", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { userId, status, messageType, limit } = req.query;
+      
+      const filters: any = {};
+      if (userId) filters.userId = userId as string;
+      if (status) filters.status = status as string;
+      if (messageType) filters.messageType = messageType as string;
+      if (limit) filters.limit = parseInt(limit as string, 10);
+      
+      const logs = await storage.getAllPushLogs(filters);
+      res.json(logs);
+    } catch (error) {
+      console.error("Error fetching push logs:", error);
+      res.status(500).json({ error: "Fehler beim Abrufen der Push-Logs" });
+    }
+  });
+
+  // Send test push notification (Admin only)
+  app.post("/api/push/test/:userId", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { userId } = req.params;
+      const adminId = req.session.userId!;
+      
+      // Check if user exists
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "Benutzer nicht gefunden" });
+      }
+      
+      await pushService.sendTestNotification(userId, adminId);
+      res.json({ message: `Test-Benachrichtigung wurde an ${user.vorname} ${user.nachname} gesendet` });
+    } catch (error) {
+      console.error("Error sending test push:", error);
+      res.status(500).json({ error: "Fehler beim Senden der Test-Benachrichtigung" });
+    }
+  });
+
   // =====================================================
   // DE-Alarm Integration Endpoints
   // =====================================================
