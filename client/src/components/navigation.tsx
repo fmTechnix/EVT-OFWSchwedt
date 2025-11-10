@@ -66,20 +66,21 @@ export function Navigation() {
         </nav>
 
         {/* Mobile Hamburger Menu */}
-        <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
-          <SheetTrigger asChild className="lg:hidden">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-white hover:bg-red-700"
-              data-testid="button-mobile-menu"
-              aria-label="Menü öffnen"
-              aria-expanded={isMobileMenuOpen}
-            >
-              <Menu className="h-6 w-6" />
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="right" className="w-[280px] bg-white dark:bg-black p-0">
+        <div className="lg:hidden">
+          <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+            <SheetTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-white hover:bg-red-700"
+                data-testid="button-mobile-menu"
+                aria-label="Menü öffnen"
+                aria-expanded={isMobileMenuOpen}
+              >
+                <Menu className="h-6 w-6" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-[280px] bg-white dark:bg-black p-0">
             <SheetHeader className="border-b border-border p-6 bg-red-600 text-white">
               <SheetTitle className="text-white flex items-center gap-3">
                 <img 
