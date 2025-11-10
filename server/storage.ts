@@ -932,13 +932,13 @@ export class MemStorage implements IStorage {
   }
 }
 
-// Use MemStorage for development, PostgresStorage for production
-// In production, run `npm run db:push --force` to create tables
-export const storage = process.env.NODE_ENV === 'production' 
+// Use PostgresStorage if DATABASE_URL is available, otherwise MemStorage
+// This allows using the real database even in development mode
+export const storage = process.env.DATABASE_URL
   ? new PostgresStorage()
   : new MemStorage();
 
-// Initialize database on startup only in production
-if (process.env.NODE_ENV === 'production') {
+// Initialize database on startup if using PostgresStorage
+if (process.env.DATABASE_URL) {
   initializeDatabase().catch(console.error);
 }
