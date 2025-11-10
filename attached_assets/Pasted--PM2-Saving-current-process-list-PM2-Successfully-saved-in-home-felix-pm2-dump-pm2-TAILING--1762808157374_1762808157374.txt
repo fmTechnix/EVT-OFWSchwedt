@@ -1,0 +1,98 @@
+[PM2] Saving current process list...
+[PM2] Successfully saved in /home/felix/.pm2/dump.pm2
+[TAILING] Tailing last 30 lines for [evt] process (change the value with --lines option)
+/home/felix/.pm2/logs/evt-error.log last 30 lines:
+0|evt      |     at <anonymous> (/home/felix/EVT/EVT-OFWSchwedt/server/db.ts:6:9)
+0|evt      |     at ModuleJob.run (node:internal/modules/esm/module_job:325:25)
+0|evt      |     at async ModuleLoader.import (node:internal/modules/esm/loader:606:24)
+0|evt      |     at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+0|evt      | 
+0|evt      | Node.js v20.19.5
+0|evt      | /home/felix/EVT/EVT-OFWSchwedt/server/db.ts:6
+0|evt      |   throw new Error("DATABASE_URL must be set");
+0|evt      |         ^
+0|evt      | 
+0|evt      | 
+0|evt      | Error: DATABASE_URL must be set
+0|evt      |     at <anonymous> (/home/felix/EVT/EVT-OFWSchwedt/server/db.ts:6:9)
+0|evt      |     at ModuleJob.run (node:internal/modules/esm/module_job:325:25)
+0|evt      |     at async ModuleLoader.import (node:internal/modules/esm/loader:606:24)
+0|evt      |     at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+0|evt      | 
+0|evt      | Node.js v20.19.5
+0|evt      | /home/felix/EVT/EVT-OFWSchwedt/server/db.ts:6
+0|evt      |   throw new Error("DATABASE_URL must be set");
+0|evt      |         ^
+0|evt      | 
+0|evt      | 
+0|evt      | Error: DATABASE_URL must be set
+0|evt      |     at <anonymous> (/home/felix/EVT/EVT-OFWSchwedt/server/db.ts:6:9)
+0|evt      |     at ModuleJob.run (node:internal/modules/esm/module_job:325:25)
+0|evt      |     at async ModuleLoader.import (node:internal/modules/esm/loader:606:24)
+0|evt      |     at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+0|evt      | 
+0|evt      | Node.js v20.19.5
+
+/home/felix/.pm2/logs/evt-out.log last 30 lines:
+0|evt      | > NODE_ENV=development tsx server/index.ts
+0|evt      | 
+0|evt      | 
+0|evt      | > rest-express@1.0.0 dev
+0|evt      | > NODE_ENV=development tsx server/index.ts
+0|evt      | 
+0|evt      | 
+0|evt      | > rest-express@1.0.0 dev
+0|evt      | > NODE_ENV=development tsx server/index.ts
+0|evt      | 
+0|evt      | 
+0|evt      | > rest-express@1.0.0 dev
+0|evt      | > NODE_ENV=development tsx server/index.ts
+0|evt      | 
+0|evt      | 
+0|evt      | > rest-express@1.0.0 dev
+0|evt      | > NODE_ENV=development tsx server/index.ts
+0|evt      | 
+0|evt      | 
+0|evt      | > rest-express@1.0.0 dev
+0|evt      | > NODE_ENV=development tsx server/index.ts
+0|evt      | 
+0|evt      | 
+0|evt      | > rest-express@1.0.0 dev
+0|evt      | > NODE_ENV=development tsx server/index.ts
+0|evt      | 
+0|evt      | 2025-11-10 21:55:33: 
+0|evt      | 2025-11-10 21:55:33: > rest-express@1.0.0 dev
+0|evt      | 2025-11-10 21:55:33: > NODE_ENV=development tsx server/index.ts
+0|evt      | 2025-11-10 21:55:33: 
+
+0|evt  | 2025-11-10 21:55:39: ⏰ Starting availability reminder scheduler
+0|evt  | 2025-11-10 21:55:39: 
+0|evt  | 2025-11-10 21:55:39: 
+0|evt  | 2025-11-10 21:55:39: ╔══════════════════════════════════════════════════════════════╗
+0|evt  | 2025-11-10 21:55:39: ║                                                              ║
+0|evt  | 2025-11-10 21:55:39: ║   🔥  EVT - Einsatzverwaltungstool                          ║
+0|evt  | 2025-11-10 21:55:39: ║       Feuerwehr Schwedt/Oder                                 ║
+0|evt  | 2025-11-10 21:55:39: ║                                                              ║
+0|evt  | 2025-11-10 21:55:39: ╚══════════════════════════════════════════════════════════════╝
+0|evt  | 2025-11-10 21:55:39: 
+0|evt  | 2025-11-10 21:55:39:    Modus:       🔧 Development
+0|evt  | 2025-11-10 21:55:39:    Status:      ✅ Online
+0|evt  | 2025-11-10 21:55:39: 
+0|evt  | 2025-11-10 21:55:39:    Erreichbar unter:
+0|evt  | 2025-11-10 21:55:39:    ├─ 🏠  http://localhost:5173
+0|evt  | 2025-11-10 21:55:39:    ├─ 🌐  http://192.168.178.167:5173
+0|evt  | 2025-11-10 21:55:39: 
+0|evt  | 2025-11-10 21:55:39:    Funktionen:
+0|evt  | 2025-11-10 21:55:39:    ├─ ✅  Verfügbarkeitsverwaltung
+0|evt  | 2025-11-10 21:55:39:    ├─ ✅  Automatische Besetzung
+0|evt  | 2025-11-10 21:55:39:    ├─ ✅  Push-Benachrichtigungen
+0|evt  | 2025-11-10 21:55:39:    ├─ ✅  DE-Alarm Integration
+0|evt  | 2025-11-10 21:55:39:    └─ ✅  AAO-System
+0|evt  | 2025-11-10 21:55:39: 
+0|evt  | 2025-11-10 21:55:39:    📝  Logs: pm2 logs evt
+0|evt  | 2025-11-10 21:55:39:    🛑  Stop: pm2 stop evt
+0|evt  | 2025-11-10 21:55:39: 
+0|evt  | 2025-11-10 21:55:39: ════════════════════════════════════════════════════════════════
+0|evt  | 2025-11-10 21:55:39: 
+0|evt  | 2025-11-10 21:55:41: Database already initialized
+
