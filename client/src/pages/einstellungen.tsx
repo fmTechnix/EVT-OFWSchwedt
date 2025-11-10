@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Navigation } from "@/components/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -61,26 +61,28 @@ export default function Einstellungen() {
   const [qualBeschreibung, setQualBeschreibung] = useState("");
 
   // Push Logs state
-  const [filterUserId, setFilterUserId] = useState<string>("");
-  const [filterStatus, setFilterStatus] = useState<string>("");
-  const [filterMessageType, setFilterMessageType] = useState<string>("");
+  const [filterUserId, setFilterUserId] = useState<string>("all");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterMessageType, setFilterMessageType] = useState<string>("all");
   const [testPushUserId, setTestPushUserId] = useState<string>("");
 
   const { data: users, isLoading: usersLoading } = useQuery<User[]>({
-    queryKey: ["/api/kameraden"],
+    queryKey: ["/api/users"],
   });
 
-  const pushLogsQueryKey = [
-    "/api/push/logs",
-    {
-      userId: filterUserId || undefined,
-      status: filterStatus || undefined,
-      messageType: filterMessageType || undefined,
-    },
-  ];
+  // Build query URL with parameters for API
+  const pushLogsUrl = useMemo(() => {
+    const params = new URLSearchParams();
+    if (filterUserId !== "all") params.append("userId", filterUserId);
+    if (filterStatus !== "all") params.append("status", filterStatus);
+    if (filterMessageType !== "all") params.append("messageType", filterMessageType);
+    const queryString = params.toString();
+    return `/api/push/logs${queryString ? `?${queryString}` : ""}`;
+  }, [filterUserId, filterStatus, filterMessageType]);
 
-  const { data: pushLogs, isLoading: pushLogsLoading, refetch: refetchPushLogs } = useQuery<PushLog[]>({
-    queryKey: pushLogsQueryKey,
+  // Query key uses only the URL since it already contains all filter parameters
+  const { data: pushLogs, isLoading: pushLogsLoading, refetch: refetchPushLogs} = useQuery<PushLog[]>({
+    queryKey: [pushLogsUrl],
   });
 
   useEffect(() => {
@@ -186,11 +188,17 @@ export default function Einstellungen() {
   });
 
   const testPushMutation = useMutation({
-    mutationFn: async (userId: number) => {
+    mutationFn: async (userId: string) => {
       return await apiRequest("POST", `/api/push/test/${userId}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/push/logs"] });
+      // Invalidate all push log queries by matching the URL prefix
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const firstKey = query.queryKey[0];
+          return typeof firstKey === 'string' && firstKey.startsWith('/api/push/logs');
+        },
+      });
       setTestPushUserId("");
       toast({
         title: "Test-Push gesendet",
@@ -214,7 +222,7 @@ export default function Einstellungen() {
   const handleTestPush = (e: React.FormEvent) => {
     e.preventDefault();
     if (testPushUserId) {
-      testPushMutation.mutate(parseInt(testPushUserId));
+      testPushMutation.mutate(testPushUserId);
     }
   };
 
@@ -248,7 +256,7 @@ export default function Einstellungen() {
     }
   };
 
-  const getUserName = (userId: number) => {
+  const getUserName = (userId: string) => {
     const user = users?.find((u) => u.id === userId);
     return user ? `${user.vorname} ${user.nachname}` : `User #${userId}`;
   };
@@ -552,9 +560,9 @@ export default function Einstellungen() {
                           <SelectValue placeholder="Alle Benutzer" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="" data-testid="option-all-users">Alle Benutzer</SelectItem>
+                          <SelectItem value="all" data-testid="option-all-users">Alle Benutzer</SelectItem>
                           {users?.map((user) => (
-                            <SelectItem key={user.id} value={user.id.toString()} data-testid={`option-user-${user.id}`}>
+                            <SelectItem key={user.id} value={user.id} data-testid={`option-user-${user.id}`}>
                               {user.vorname} {user.nachname}
                             </SelectItem>
                           ))}
@@ -569,7 +577,7 @@ export default function Einstellungen() {
                           <SelectValue placeholder="Alle Status" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="" data-testid="option-all-status">Alle Status</SelectItem>
+                          <SelectItem value="all" data-testid="option-all-status">Alle Status</SelectItem>
                           <SelectItem value="success" data-testid="option-status-success">Erfolgreich</SelectItem>
                           <SelectItem value="error" data-testid="option-status-error">Fehler</SelectItem>
                           <SelectItem value="no_subscription" data-testid="option-status-no-sub">Kein Abo</SelectItem>
@@ -584,7 +592,7 @@ export default function Einstellungen() {
                           <SelectValue placeholder="Alle Typen" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="" data-testid="option-all-types">Alle Typen</SelectItem>
+                          <SelectItem value="all" data-testid="option-all-types">Alle Typen</SelectItem>
                           <SelectItem value="assignment_change" data-testid="option-type-assignment">Zuteilungsänderung</SelectItem>
                           <SelectItem value="availability_reminder" data-testid="option-type-reminder">Verfügbarkeitserinnerung</SelectItem>
                           <SelectItem value="alarm" data-testid="option-type-alarm">Alarm</SelectItem>
@@ -669,7 +677,7 @@ export default function Einstellungen() {
                             </SelectTrigger>
                             <SelectContent>
                               {users?.map((user) => (
-                                <SelectItem key={user.id} value={user.id.toString()} data-testid={`option-test-user-${user.id}`}>
+                                <SelectItem key={user.id} value={user.id} data-testid={`option-test-user-${user.id}`}>
                                   {user.vorname} {user.nachname}
                                 </SelectItem>
                               ))}

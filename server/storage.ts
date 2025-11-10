@@ -1,4 +1,5 @@
 import { randomUUID } from "crypto";
+import { hashPasswordSync } from "./password-utils";
 import type {
   User, InsertUser,
   Vehicle, InsertVehicle,
@@ -165,6 +166,9 @@ export class MemStorage implements IStorage {
   private termine: Map<number, Termin>;
   private terminZusagen: Map<number, TerminZusage>;
   private maengelMeldungen: Map<number, MaengelMeldung>;
+  private pushLogs: Map<number, PushLog>;
+  private pushSubscriptions: Map<string, PushSubscription>;
+  private nextPushSubscriptionId: number;
   private einsatz: Einsatz;
   private settings: Settings;
   private nextVehicleId: number;
@@ -172,6 +176,7 @@ export class MemStorage implements IStorage {
   private nextTerminId: number;
   private nextZusageId: number;
   private nextMaengelMeldungId: number;
+  private nextPushLogId: number;
 
   constructor() {
     this.users = new Map();
@@ -180,16 +185,20 @@ export class MemStorage implements IStorage {
     this.termine = new Map();
     this.terminZusagen = new Map();
     this.maengelMeldungen = new Map();
+    this.pushLogs = new Map();
+    this.pushSubscriptions = new Map();
     this.nextVehicleId = 1;
     this.nextQualifikationId = 1;
     this.nextTerminId = 1;
     this.nextZusageId = 1;
     this.nextMaengelMeldungId = 1;
+    this.nextPushLogId = 1;
+    this.nextPushSubscriptionId = 1;
 
     // Initialize default qualifikationen (must be before users)
     this.initializeQualifikationen();
     
-    // Initialize default users with qualifikationen
+    // Initialize default users (now synchronous with hashPasswordSync)
     this.initializeUsers();
     
     // Initialize default vehicles
@@ -237,7 +246,7 @@ export class MemStorage implements IStorage {
     const admin: User = {
       id: randomUUID(),
       username: "admin",
-      password: "admin",
+      password: hashPasswordSync("admin"),
       role: "admin",
       vorname: "Admin",
       nachname: "User",
@@ -248,7 +257,7 @@ export class MemStorage implements IStorage {
     const moderator: User = {
       id: randomUUID(),
       username: "moderator",
-      password: "moderator123",
+      password: hashPasswordSync("moderator123"),
       role: "moderator",
       vorname: "Moderator",
       nachname: "User",
@@ -259,7 +268,7 @@ export class MemStorage implements IStorage {
     const member: User = {
       id: randomUUID(),
       username: "member",
-      password: "member123",
+      password: hashPasswordSync("member123"),
       role: "member",
       vorname: "Member",
       nachname: "User",
@@ -605,21 +614,32 @@ export class MemStorage implements IStorage {
     throw new Error("Not implemented in MemStorage");
   }
 
-  // Push Subscriptions (stub)
-  async savePushSubscription(_subscription: InsertPushSubscription): Promise<PushSubscription> {
-    throw new Error("Not implemented in MemStorage");
+  // Push Subscriptions (in-memory storage)
+  async savePushSubscription(subscription: InsertPushSubscription): Promise<PushSubscription> {
+    const pushSubscription: PushSubscription = {
+      id: this.nextPushSubscriptionId++,
+      user_id: subscription.user_id,
+      endpoint: subscription.endpoint,
+      p256dh: subscription.p256dh,
+      auth: subscription.auth,
+      created_at: new Date(),
+    };
+    this.pushSubscriptions.set(subscription.endpoint, pushSubscription);
+    return pushSubscription;
   }
 
-  async getUserPushSubscriptions(_userId: string): Promise<PushSubscription[]> {
-    throw new Error("Not implemented in MemStorage");
+  async getUserPushSubscriptions(userId: string): Promise<PushSubscription[]> {
+    return Array.from(this.pushSubscriptions.values()).filter(
+      (sub) => sub.user_id === userId
+    );
   }
 
-  async deletePushSubscription(_endpoint: string): Promise<void> {
-    throw new Error("Not implemented in MemStorage");
+  async deletePushSubscription(endpoint: string): Promise<void> {
+    this.pushSubscriptions.delete(endpoint);
   }
 
-  // Push Logs (stub)
-  async createPushLog(_log: {
+  // Push Logs
+  async createPushLog(log: {
     user_id: string;
     message_type: string;
     title: string;
@@ -630,13 +650,43 @@ export class MemStorage implements IStorage {
     status_code?: number;
     sent_by: string;
   }): Promise<void> {
-    // In MemStorage, we just log to console
-    console.log('📝 Push Log:', _log);
+    const pushLog: PushLog = {
+      id: this.nextPushLogId++,
+      user_id: log.user_id,
+      message_type: log.message_type,
+      title: log.title,
+      body: log.body,
+      status: log.status,
+      error_message: log.error_message || null,
+      subscription_endpoint: log.subscription_endpoint || null,
+      status_code: log.status_code || null,
+      sent_at: new Date(),
+      sent_by: log.sent_by,
+    };
+    this.pushLogs.set(pushLog.id, pushLog);
+    console.log('📝 Push Log created:', pushLog);
   }
 
-  async getAllPushLogs(_filters?: { userId?: string; status?: string; messageType?: string; limit?: number }): Promise<PushLog[]> {
-    // In MemStorage, return empty array
-    return [];
+  async getAllPushLogs(filters?: { userId?: string; status?: string; messageType?: string; limit?: number }): Promise<PushLog[]> {
+    let logs = Array.from(this.pushLogs.values());
+
+    // Apply filters
+    if (filters?.userId) {
+      logs = logs.filter(log => log.user_id === filters.userId);
+    }
+    if (filters?.status) {
+      logs = logs.filter(log => log.status === filters.status);
+    }
+    if (filters?.messageType) {
+      logs = logs.filter(log => log.message_type === filters.messageType);
+    }
+
+    // Sort by sent_at descending (newest first)
+    logs.sort((a, b) => b.sent_at.getTime() - a.sent_at.getTime());
+
+    // Apply limit (default 100)
+    const limit = filters?.limit || 100;
+    return logs.slice(0, limit);
   }
 
   // Mängelmeldungen
@@ -803,12 +853,18 @@ export class MemStorage implements IStorage {
   }
 
   async getUsersWithRemindersEnabled(): Promise<UserReminderSettings[]> {
-    throw new Error("Not implemented in MemStorage");
+    // For development, return empty array (no reminder settings in MemStorage)
+    return [];
   }
 }
 
-// Use PostgresStorage for persistent data storage
-export const storage = new PostgresStorage();
+// Use MemStorage for development, PostgresStorage for production
+// In production, run `npm run db:push --force` to create tables
+export const storage = process.env.NODE_ENV === 'production' 
+  ? new PostgresStorage()
+  : new MemStorage();
 
-// Initialize database on startup
-initializeDatabase().catch(console.error);
+// Initialize database on startup only in production
+if (process.env.NODE_ENV === 'production') {
+  initializeDatabase().catch(console.error);
+}

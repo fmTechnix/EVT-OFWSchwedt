@@ -6,6 +6,11 @@ export async function hashPassword(password: string): Promise<string> {
   return await bcrypt.hash(password, SALT_ROUNDS);
 }
 
+// Synchronous version for MemStorage initialization
+export function hashPasswordSync(password: string): string {
+  return bcrypt.hashSync(password, SALT_ROUNDS);
+}
+
 export async function verifyPassword(password: string, hash: string): Promise<boolean> {
   return await bcrypt.compare(password, hash);
 }
