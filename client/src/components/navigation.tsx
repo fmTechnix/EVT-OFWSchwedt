@@ -125,6 +125,7 @@ export function Navigation() {
             </nav>
           </SheetContent>
         </Sheet>
+        </div>
       </div>
     </header>
   );
