@@ -566,36 +566,36 @@ export class MemStorage implements IStorage {
   }
 
   async createVehicleConfig(_config: InsertVehicleConfig): Promise<VehicleConfig> {
-    throw new Error("Not implemented in MemStorage");
+    throw new Error("Vehicle configs not available in development mode");
   }
 
   async updateVehicleConfig(_id: number, _updates: Partial<InsertVehicleConfig>): Promise<VehicleConfig> {
-    throw new Error("Not implemented in MemStorage");
+    throw new Error("Vehicle configs not available in development mode");
   }
 
   async deleteVehicleConfig(_id: number): Promise<void> {
-    throw new Error("Not implemented in MemStorage");
+    throw new Error("Vehicle configs not available in development mode");
   }
 
-  // Availabilities
+  // Availabilities - Development stubs
   async getUserAvailability(_userId: string, _date: string): Promise<Availability | undefined> {
-    throw new Error("Not implemented in MemStorage");
+    return undefined;
   }
 
   async getUserAvailabilities(_userId: string): Promise<Availability[]> {
-    throw new Error("Not implemented in MemStorage");
+    return [];
   }
 
   async setAvailability(_availability: InsertAvailability): Promise<Availability> {
-    throw new Error("Not implemented in MemStorage");
+    throw new Error("Availability management not available in development mode");
   }
 
   async deleteAvailability(_id: number): Promise<void> {
-    throw new Error("Not implemented in MemStorage");
+    throw new Error("Availability management not available in development mode");
   }
 
   async getAvailableUsers(_date: string): Promise<User[]> {
-    throw new Error("Not implemented in MemStorage");
+    return [];
   }
 
   // Current Assignments (in-memory stubs for development)
@@ -747,110 +747,110 @@ export class MemStorage implements IStorage {
     this.maengelMeldungen.delete(id);
   }
 
-  // Assignment History (Fairness-Tracking) - Stub implementations
+  // Assignment History (Fairness-Tracking) - Development stubs
   async createAssignmentHistory(_insertHistory: InsertAssignmentHistory): Promise<AssignmentHistory> {
-    throw new Error("Not implemented in MemStorage");
+    throw new Error("Assignment history not available in development mode");
   }
 
   async getAssignmentHistory(_userId: string, _weeks?: number): Promise<AssignmentHistory[]> {
-    throw new Error("Not implemented in MemStorage");
+    return [];
   }
 
   async getRecentAssignmentsByPosition(_userId: string, _position: string, _weeks?: number): Promise<AssignmentHistory[]> {
-    throw new Error("Not implemented in MemStorage");
+    return [];
   }
 
-  // Assignment Fairness - Stub implementations
+  // Assignment Fairness - Development stubs
   async getFairnessMetrics(_userId: string): Promise<AssignmentFairness | undefined> {
-    throw new Error("Not implemented in MemStorage");
+    return undefined;
   }
 
   async getAllFairnessMetrics(): Promise<AssignmentFairness[]> {
-    throw new Error("Not implemented in MemStorage");
+    return [];
   }
 
   async updateFairnessMetrics(_userId: string, _position: string): Promise<AssignmentFairness> {
-    throw new Error("Not implemented in MemStorage");
+    throw new Error("Fairness metrics not available in development mode");
   }
 
   async resetFairnessMetrics(_userId: string): Promise<void> {
-    throw new Error("Not implemented in MemStorage");
+    return;
   }
 
-  // Alarm Events (DE-Alarm Integration)
+  // Alarm Events (DE-Alarm Integration) - Development stubs
   async getAllAlarmEvents(): Promise<AlarmEvent[]> {
-    throw new Error("Not implemented in MemStorage - use PostgresStorage");
+    return [];
   }
 
   async getAlarmEvent(_id: number): Promise<AlarmEvent | undefined> {
-    throw new Error("Not implemented in MemStorage - use PostgresStorage");
+    return undefined;
   }
 
   async getUnprocessedAlarmEvents(): Promise<AlarmEvent[]> {
-    throw new Error("Not implemented in MemStorage - use PostgresStorage");
+    return [];
   }
 
   async createAlarmEvent(_event: InsertAlarmEvent): Promise<AlarmEvent> {
-    throw new Error("Not implemented in MemStorage - use PostgresStorage");
+    throw new Error("Alarm event creation not available in development mode");
   }
 
   async markAlarmAsProcessed(_id: number, _crewReassigned: boolean): Promise<AlarmEvent> {
-    throw new Error("Not implemented in MemStorage - use PostgresStorage");
+    throw new Error("Alarm event management not available in development mode");
   }
 
-  // AAO Stichworte (Alarm- und Ausrückeordnung)
+  // AAO Stichworte (Alarm- und Ausrückeordnung) - Development stubs
   async getAllAaoStichworte(): Promise<AaoStichwort[]> {
-    throw new Error("Not implemented in MemStorage - use PostgresStorage");
+    return [];
   }
 
   async getAaoStichwort(_id: number): Promise<AaoStichwort | undefined> {
-    throw new Error("Not implemented in MemStorage - use PostgresStorage");
+    return undefined;
   }
 
   async getAaoStichwortByName(_stichwort: string): Promise<AaoStichwort | undefined> {
-    throw new Error("Not implemented in MemStorage - use PostgresStorage");
+    return undefined;
   }
 
   async createAaoStichwort(_stichwort: InsertAaoStichwort): Promise<AaoStichwort> {
-    throw new Error("Not implemented in MemStorage - use PostgresStorage");
+    throw new Error("AAO management not available in development mode");
   }
 
   async updateAaoStichwort(_id: number, _updates: Partial<InsertAaoStichwort>): Promise<AaoStichwort> {
-    throw new Error("Not implemented in MemStorage - use PostgresStorage");
+    throw new Error("AAO management not available in development mode");
   }
 
   async deleteAaoStichwort(_id: number): Promise<void> {
-    throw new Error("Not implemented in MemStorage - use PostgresStorage");
+    throw new Error("AAO management not available in development mode");
   }
 
-  // Availability Templates
+  // Availability Templates - Development stubs
   async getUserTemplates(_userId: string): Promise<AvailabilityTemplate[]> {
-    throw new Error("Not implemented in MemStorage");
+    return [];
   }
 
   async createTemplate(_template: InsertAvailabilityTemplate): Promise<AvailabilityTemplate> {
-    throw new Error("Not implemented in MemStorage");
+    throw new Error("Templates not available in development mode");
   }
 
   async updateTemplate(_id: number, _updates: Partial<InsertAvailabilityTemplate>): Promise<AvailabilityTemplate> {
-    throw new Error("Not implemented in MemStorage");
+    throw new Error("Templates not available in development mode");
   }
 
   async deleteTemplate(_id: number): Promise<void> {
-    throw new Error("Not implemented in MemStorage");
+    throw new Error("Templates not available in development mode");
   }
 
   async applyTemplateToWeek(_userId: string, _templateId: number, _weekStartDate: string): Promise<Availability[]> {
-    throw new Error("Not implemented in MemStorage");
+    throw new Error("Templates not available in development mode");
   }
 
-  // User Reminder Settings
+  // User Reminder Settings - Development stubs
   async getReminderSettings(_userId: string): Promise<UserReminderSettings | undefined> {
-    throw new Error("Not implemented in MemStorage");
+    return undefined;
   }
 
   async updateReminderSettings(_userId: string, _settings: Partial<InsertUserReminderSettings>): Promise<UserReminderSettings> {
-    throw new Error("Not implemented in MemStorage");
+    throw new Error("Reminder settings not available in development mode");
   }
 
   async getUsersWithRemindersEnabled(): Promise<UserReminderSettings[]> {
