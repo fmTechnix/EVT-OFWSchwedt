@@ -65,7 +65,7 @@ export default function Dashboard() {
 
   const { data: availability, isLoading: availabilityLoading } = useQuery<Availability | null>({
     queryKey: ["/api/availability", today],
-    enabled: user?.role === "member",
+    enabled: !!user,
   });
 
   const { data: vehicleConfigs } = useQuery<any[]>({
@@ -140,9 +140,9 @@ export default function Dashboard() {
               </Card>
             ))}
           </div>
-        ) : user?.role === "member" ? (
+        ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Verfügbarkeit */}
+            {/* Verfügbarkeit - FÜR ALLE ROLLEN */}
             <Card className="shadow-lg hover-elevate transition-all" data-testid="card-availability">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -173,7 +173,7 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            {/* Push-Benachrichtigungen */}
+            {/* Push-Benachrichtigungen - FÜR ALLE ROLLEN */}
             {pushNotifications.isSupported && (
               <Card className="shadow-lg hover-elevate transition-all" data-testid="card-push-notifications">
                 <CardHeader>
@@ -346,7 +346,7 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            {/* Kalender & Termine für Members */}
+            {/* Kalender & Termine */}
             <Card className="shadow-lg hover-elevate transition-all" data-testid="card-kalender">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -366,167 +366,7 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            {/* Fahrzeuge für Members */}
-            <Card className="shadow-lg hover-elevate transition-all" data-testid="card-fahrzeuge">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <span className="text-2xl">🚛</span>
-                  Fahrzeuge
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <p className="text-2xl font-bold" data-testid="text-vehicle-count">
-                    {vehicles?.length || 0}
-                  </p>
-                  <p className="text-sm text-muted-foreground">Fahrzeuge hinterlegt</p>
-                </div>
-                <Link href="/fahrzeuge">
-                  <Button className="w-full" data-testid="button-view-vehicles">
-                    Anzeigen
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-
-            {/* Kameraden für Members */}
-            <Card className="shadow-lg hover-elevate transition-all" data-testid="card-kameraden">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <span className="text-2xl">👥</span>
-                  Kameraden
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <p className="text-2xl font-bold" data-testid="text-kamerad-count">
-                    {users?.length || 0}
-                  </p>
-                  <p className="text-sm text-muted-foreground">Kameraden hinterlegt</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Nächste Termine für Members */}
-            <Card className="shadow-lg hover-elevate transition-all md:col-span-2" data-testid="card-upcoming-termine">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <span className="text-2xl">📅</span>
-                  Nächste Termine
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {upcomingTermine.length === 0 ? (
-                  <p className="text-sm text-muted-foreground" data-testid="text-no-termine">
-                    Keine anstehenden Termine
-                  </p>
-                ) : (
-                  <div className="space-y-2">
-                    {upcomingTermine.map((termin) => {
-                      const terminDate = parseISO(`${termin.datum}T${termin.uhrzeit}`);
-                      return (
-                        <div
-                          key={termin.id}
-                          className="border rounded-md p-3 hover-elevate"
-                          data-testid={`termin-${termin.id}`}
-                        >
-                          <p className="font-semibold" data-testid={`text-titel-${termin.id}`}>
-                            {termin.titel}
-                          </p>
-                          <p className="text-sm text-muted-foreground" data-testid={`text-datum-${termin.id}`}>
-                            {format(terminDate, "dd.MM.yyyy 'um' HH:mm 'Uhr'", { locale: de })}
-                          </p>
-                          {termin.ort && (
-                            <p className="text-sm text-muted-foreground" data-testid={`text-ort-${termin.id}`}>
-                              📍 {termin.ort}
-                            </p>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-                <Link href="/kalender">
-                  <Button variant="outline" className="w-full" data-testid="button-all-termine">
-                    Alle Termine anzeigen
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Meine Zuteilung für Admin/Moderator */}
-            <Card className="shadow-lg hover-elevate transition-all lg:col-span-3" data-testid="card-my-assignment">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <span className="text-2xl">🚛</span>
-                  Meine Zuteilung
-                </CardTitle>
-                <CardDescription>
-                  Ihre aktuelle Fahrzeug- und Positionszuteilung
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {assignmentLoading ? (
-                  <Skeleton className="h-20 w-full" />
-                ) : myAssignment ? (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Fahrzeug</p>
-                        <p className="text-xl font-bold" data-testid="text-my-vehicle">
-                          {vehicleConfigs?.find(vc => vc.id === myAssignment.vehicle_config_id)?.vehicle || `ID: ${myAssignment.vehicle_config_id}`}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Position</p>
-                        <p className="text-xl font-bold" data-testid="text-my-position">
-                          {myAssignment.position}
-                        </p>
-                      </div>
-                      {myAssignment.trupp_partner_id && (
-                        <div>
-                          <p className="text-sm text-muted-foreground">Trupp-Partner</p>
-                          <p className="text-xl font-bold" data-testid="text-my-partner">
-                            {users?.find(u => u.id === myAssignment.trupp_partner_id)
-                              ? `${users.find(u => u.id === myAssignment.trupp_partner_id)?.vorname} ${users.find(u => u.id === myAssignment.trupp_partner_id)?.nachname}`
-                              : "Wird geladen..."}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                    {allAssignments && allAssignments.length > 0 && (
-                      <div className="mt-4">
-                        <p className="text-sm font-semibold mb-2">Gesamte Fahrzeugbesetzung:</p>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-                          {allAssignments
-                            .filter(a => a.vehicle_config_id === myAssignment.vehicle_config_id)
-                            .map((assignment, idx) => {
-                              const assignedUser = users?.find(u => u.id === assignment.user_id);
-                              return (
-                                <div key={idx} className="flex items-center justify-between text-sm p-2 rounded border">
-                                  <span className="text-muted-foreground font-medium">{assignment.position}</span>
-                                  <Badge variant={assignment.user_id === user?.id ? "default" : "outline"}>
-                                    {assignedUser ? `${assignedUser.vorname} ${assignedUser.nachname}` : "Unbekannt"}
-                                  </Badge>
-                                </div>
-                              );
-                            })}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground" data-testid="text-no-assignment">
-                    Sie sind derzeit keinem Fahrzeug zugeteilt. Führen Sie eine automatische Zuteilung durch.
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Fahrzeuge für Admin/Moderator */}
+            {/* Fahrzeuge */}
             <Card className="shadow-lg hover-elevate transition-all" data-testid="card-fahrzeuge">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
