@@ -211,6 +211,17 @@ export default function Dashboard() {
                     </Alert>
                   )}
 
+                  {/* HTTPS-Warnung */}
+                  {!window.location.protocol.startsWith('https') && window.location.hostname !== 'localhost' && (
+                    <Alert variant="destructive" data-testid="alert-https-required">
+                      <Info className="h-4 w-4" />
+                      <AlertTitle>HTTPS erforderlich</AlertTitle>
+                      <AlertDescription className="text-sm">
+                        Push-Benachrichtigungen funktionieren nur über HTTPS. Bitte konfigurieren Sie ein SSL-Zertifikat (z.B. mit Let's Encrypt).
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
                   {/* Push-Toggle nur anzeigen, wenn nicht iOS oder wenn installiert */}
                   {(!isIOS || isStandalone) && (
                     <>
