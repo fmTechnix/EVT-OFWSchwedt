@@ -244,61 +244,134 @@ export class MemStorage implements IStorage {
   }
 
   private initializeUsers() {
-    const admin: User = {
-      id: randomUUID(),
-      username: "admin",
-      password: hashPasswordSync("admin"),
-      role: "admin",
-      vorname: "Admin",
-      nachname: "User",
-      qualifikationen: ["TM", "AGT", "Maschinist", "GF"],
-      muss_passwort_aendern: false,
-    };
+    const usersData: Omit<User, "id">[] = [
+      {
+        username: "admin",
+        password: hashPasswordSync("admin"),
+        role: "admin",
+        vorname: "Admin",
+        nachname: "User",
+        qualifikationen: ["TM", "AGT", "Maschinist", "GF"],
+        muss_passwort_aendern: false,
+      },
+      {
+        username: "moderator",
+        password: hashPasswordSync("moderator123"),
+        role: "moderator",
+        vorname: "Moderator",
+        nachname: "User",
+        qualifikationen: ["TM", "Sprechfunker"],
+        muss_passwort_aendern: false,
+      },
+      {
+        username: "member",
+        password: hashPasswordSync("member123"),
+        role: "member",
+        vorname: "Member",
+        nachname: "User",
+        qualifikationen: ["TM"],
+        muss_passwort_aendern: false,
+      },
+      {
+        username: "mueller",
+        password: hashPasswordSync("demo123"),
+        role: "member",
+        vorname: "Thomas",
+        nachname: "Müller",
+        qualifikationen: ["TM", "AGT", "Maschinist"],
+        muss_passwort_aendern: false,
+      },
+      {
+        username: "schmidt",
+        password: hashPasswordSync("demo123"),
+        role: "member",
+        vorname: "Anna",
+        nachname: "Schmidt",
+        qualifikationen: ["TM", "AGT", "San"],
+        muss_passwort_aendern: false,
+      },
+      {
+        username: "weber",
+        password: hashPasswordSync("demo123"),
+        role: "member",
+        vorname: "Michael",
+        nachname: "Weber",
+        qualifikationen: ["TM", "Maschinist", "Sprechfunker"],
+        muss_passwort_aendern: false,
+      },
+      {
+        username: "fischer",
+        password: hashPasswordSync("demo123"),
+        role: "member",
+        vorname: "Sarah",
+        nachname: "Fischer",
+        qualifikationen: ["TM", "AGT"],
+        muss_passwort_aendern: false,
+      },
+      {
+        username: "becker",
+        password: hashPasswordSync("demo123"),
+        role: "member",
+        vorname: "Markus",
+        nachname: "Becker",
+        qualifikationen: ["TM", "GF", "AGT", "Maschinist"],
+        muss_passwort_aendern: false,
+      },
+      {
+        username: "hoffmann",
+        password: hashPasswordSync("demo123"),
+        role: "member",
+        vorname: "Lisa",
+        nachname: "Hoffmann",
+        qualifikationen: ["TM", "San"],
+        muss_passwort_aendern: false,
+      },
+      {
+        username: "koch",
+        password: hashPasswordSync("demo123"),
+        role: "member",
+        vorname: "Jan",
+        nachname: "Koch",
+        qualifikationen: ["TM", "AGT", "Sprechfunker"],
+        muss_passwort_aendern: false,
+      },
+      {
+        username: "schneider",
+        password: hashPasswordSync("demo123"),
+        role: "member",
+        vorname: "Julia",
+        nachname: "Schneider",
+        qualifikationen: ["TM", "Maschinist"],
+        muss_passwort_aendern: false,
+      },
+    ];
     
-    const moderator: User = {
-      id: randomUUID(),
-      username: "moderator",
-      password: hashPasswordSync("moderator123"),
-      role: "moderator",
-      vorname: "Moderator",
-      nachname: "User",
-      qualifikationen: ["TM", "Sprechfunker"],
-      muss_passwort_aendern: false,
-    };
-    
-    const member: User = {
-      id: randomUUID(),
-      username: "member",
-      password: hashPasswordSync("member123"),
-      role: "member",
-      vorname: "Member",
-      nachname: "User",
-      qualifikationen: ["TM"],
-      muss_passwort_aendern: false,
-    };
-    
-    this.users.set(admin.id, admin);
-    this.users.set(moderator.id, moderator);
-    this.users.set(member.id, member);
+    for (const userData of usersData) {
+      const user: User = {
+        id: randomUUID(),
+        ...userData,
+      };
+      this.users.set(user.id, user);
+    }
   }
 
   private initializeVehicles() {
-    const vehicle1: Vehicle = {
-      id: this.nextVehicleId++,
-      name: "HLF 20",
-      funk: "Florian Schwedt 1/46/1",
-      besatzung: 9,
-    };
+    const vehicles: Omit<Vehicle, "id">[] = [
+      { name: "HLF 20", funk: "Florian Schwedt 1/46/1", besatzung: 9 },
+      { name: "DLK 23/12", funk: "Florian Schwedt 1/33/1", besatzung: 3 },
+      { name: "LF 10", funk: "Florian Schwedt 1/44/1", besatzung: 9 },
+      { name: "RW 1", funk: "Florian Schwedt 1/52/1", besatzung: 3 },
+      { name: "MTW 1", funk: "Florian Schwedt 1/19/1", besatzung: 6 },
+      { name: "ELW 1", funk: "Florian Schwedt 1/11/1", besatzung: 3 },
+    ];
     
-    const vehicle2: Vehicle = {
-      id: this.nextVehicleId++,
-      name: "DLK 23/12",
-      funk: "Florian Schwedt 1/33/1",
-      besatzung: 3,
-    };
-    
-    this.vehicles.set(vehicle1.id, vehicle1);
-    this.vehicles.set(vehicle2.id, vehicle2);
+    for (const vehicleData of vehicles) {
+      const vehicle: Vehicle = {
+        id: this.nextVehicleId++,
+        ...vehicleData,
+      };
+      this.vehicles.set(vehicle.id, vehicle);
+    }
   }
 
   // User methods
