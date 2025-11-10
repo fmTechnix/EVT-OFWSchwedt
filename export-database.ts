@@ -123,29 +123,21 @@ async function exportDatabase() {
     }
 
     // Reset sequences for tables with SERIAL/IDENTITY columns
+    // Dynamically query which sequences actually exist to avoid errors
     sqlContent += "-- Reset sequences to prevent ID collisions\n";
-    const sequenceTables = [
-      { table: "qualifikationen", sequence: "qualifikationen_id_seq" },
-      { table: "vehicles", sequence: "vehicles_id_seq" },
-      { table: "vehicle_configs", sequence: "vehicle_configs_id_seq" },
-      { table: "einsatz", sequence: "einsatz_id_seq" },
-      { table: "settings", sequence: "settings_id_seq" },
-      { table: "termine", sequence: "termine_id_seq" },
-      { table: "termin_zusagen", sequence: "termin_zusagen_id_seq" },
-      { table: "push_subscriptions", sequence: "push_subscriptions_id_seq" },
-      { table: "availabilities", sequence: "availabilities_id_seq" },
-      { table: "availability_templates", sequence: "availability_templates_id_seq" },
-      { table: "user_reminder_settings", sequence: "user_reminder_settings_id_seq" },
-      { table: "current_assignments", sequence: "current_assignments_id_seq" },
-      { table: "assignment_history", sequence: "assignment_history_id_seq" },
-      { table: "assignment_fairness", sequence: "assignment_fairness_id_seq" },
-      { table: "alarm_events", sequence: "alarm_events_id_seq" },
-      { table: "aao_stichworte", sequence: "aao_stichworte_id_seq" },
-      { table: "maengel_meldungen", sequence: "maengel_meldungen_id_seq" },
-    ];
-
-    for (const { table, sequence } of sequenceTables) {
-      sqlContent += `SELECT setval('${sequence}', (SELECT COALESCE(MAX(id), 1) FROM ${table}), true);\n`;
+    const sequencesResult = await pool.query(
+      `SELECT sequence_name FROM information_schema.sequences 
+       WHERE sequence_schema = 'public' 
+       ORDER BY sequence_name`
+    );
+    
+    const sequences = sequencesResult.rows.map(r => r.sequence_name);
+    console.log(`\n🔢 Found ${sequences.length} sequences to reset`);
+    
+    for (const sequence of sequences) {
+      // Extract table name from sequence name (e.g., "vehicles_id_seq" -> "vehicles")
+      const tableName = sequence.replace(/_id_seq$/, '');
+      sqlContent += `SELECT setval('${sequence}', (SELECT COALESCE(MAX(id), 1) FROM ${tableName}), true);\n`;
     }
     sqlContent += "\n";
 

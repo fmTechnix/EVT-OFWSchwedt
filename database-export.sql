@@ -1,5 +1,5 @@
 -- EVT Datenbank Export
--- Exportiert am: 2025-11-09T20:12:32.240Z
+-- Exportiert am: 2025-11-10T03:32:07.575Z
 
 BEGIN;
 
@@ -554,23 +554,19 @@ TRUNCATE TABLE maengel_meldungen CASCADE;
 INSERT INTO maengel_meldungen ("id", "vehicle_id", "beschreibung", "status", "melder_id", "fotos", "erstellt_am", "behoben_am", "bemerkung") VALUES (1, 4, 'Testmangel - Reifen beschädigt', 'in_bearbeitung', 'ba0406a0-fb40-43da-99cb-cf448b9469e5', '{}', '2025-11-03T16:38:22.422Z'::timestamp, NULL, NULL);
 
 -- Reset sequences to prevent ID collisions
-SELECT setval('qualifikationen_id_seq', (SELECT COALESCE(MAX(id), 1) FROM qualifikationen), true);
-SELECT setval('vehicles_id_seq', (SELECT COALESCE(MAX(id), 1) FROM vehicles), true);
-SELECT setval('vehicle_configs_id_seq', (SELECT COALESCE(MAX(id), 1) FROM vehicle_configs), true);
-SELECT setval('einsatz_id_seq', (SELECT COALESCE(MAX(id), 1) FROM einsatz), true);
-SELECT setval('settings_id_seq', (SELECT COALESCE(MAX(id), 1) FROM settings), true);
-SELECT setval('termine_id_seq', (SELECT COALESCE(MAX(id), 1) FROM termine), true);
-SELECT setval('termin_zusagen_id_seq', (SELECT COALESCE(MAX(id), 1) FROM termin_zusagen), true);
-SELECT setval('push_subscriptions_id_seq', (SELECT COALESCE(MAX(id), 1) FROM push_subscriptions), true);
+SELECT setval('aao_stichworte_id_seq', (SELECT COALESCE(MAX(id), 1) FROM aao_stichworte), true);
+SELECT setval('alarm_events_id_seq', (SELECT COALESCE(MAX(id), 1) FROM alarm_events), true);
+SELECT setval('assignment_history_id_seq', (SELECT COALESCE(MAX(id), 1) FROM assignment_history), true);
 SELECT setval('availabilities_id_seq', (SELECT COALESCE(MAX(id), 1) FROM availabilities), true);
 SELECT setval('availability_templates_id_seq', (SELECT COALESCE(MAX(id), 1) FROM availability_templates), true);
-SELECT setval('user_reminder_settings_id_seq', (SELECT COALESCE(MAX(id), 1) FROM user_reminder_settings), true);
 SELECT setval('current_assignments_id_seq', (SELECT COALESCE(MAX(id), 1) FROM current_assignments), true);
-SELECT setval('assignment_history_id_seq', (SELECT COALESCE(MAX(id), 1) FROM assignment_history), true);
-SELECT setval('assignment_fairness_id_seq', (SELECT COALESCE(MAX(id), 1) FROM assignment_fairness), true);
-SELECT setval('alarm_events_id_seq', (SELECT COALESCE(MAX(id), 1) FROM alarm_events), true);
-SELECT setval('aao_stichworte_id_seq', (SELECT COALESCE(MAX(id), 1) FROM aao_stichworte), true);
 SELECT setval('maengel_meldungen_id_seq', (SELECT COALESCE(MAX(id), 1) FROM maengel_meldungen), true);
+SELECT setval('push_subscriptions_id_seq', (SELECT COALESCE(MAX(id), 1) FROM push_subscriptions), true);
+SELECT setval('qualifikationen_id_seq', (SELECT COALESCE(MAX(id), 1) FROM qualifikationen), true);
+SELECT setval('termin_zusagen_id_seq', (SELECT COALESCE(MAX(id), 1) FROM termin_zusagen), true);
+SELECT setval('termine_id_seq', (SELECT COALESCE(MAX(id), 1) FROM termine), true);
+SELECT setval('vehicle_configs_id_seq', (SELECT COALESCE(MAX(id), 1) FROM vehicle_configs), true);
+SELECT setval('vehicles_id_seq', (SELECT COALESCE(MAX(id), 1) FROM vehicles), true);
 
 COMMIT;
 
