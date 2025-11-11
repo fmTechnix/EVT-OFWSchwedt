@@ -44,8 +44,8 @@ export function usePushNotifications() {
         throw new Error('Notification permission denied');
       }
 
-      // Register service worker
-      const registration = await navigator.serviceWorker.register('/sw.js');
+      // Register service worker with version query param for cache busting
+      const registration = await navigator.serviceWorker.register('/sw.js?v=2.0');
       await navigator.serviceWorker.ready;
 
       // Get VAPID public key from server

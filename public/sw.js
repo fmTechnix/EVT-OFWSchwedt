@@ -1,4 +1,30 @@
 // Service Worker for Push Notifications
+// Version: 2.0 - Production Build mit Logo Fix
+const SW_VERSION = '2.0';
+const CACHE_NAME = `evt-cache-v${SW_VERSION}`;
+
+console.log(`[Service Worker] Version ${SW_VERSION} starting`);
+
+self.addEventListener('install', function(event) {
+  console.log(`[Service Worker] Installing version ${SW_VERSION}`);
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', function(event) {
+  console.log(`[Service Worker] Activating version ${SW_VERSION}`);
+  event.waitUntil(
+    caches.keys().then(function(cacheNames) {
+      return Promise.all(
+        cacheNames.map(function(cacheName) {
+          if (cacheName !== CACHE_NAME) {
+            console.log('[Service Worker] Deleting old cache:', cacheName);
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    }).then(() => self.clients.claim())
+  );
+});
 
 self.addEventListener('push', function(event) {
   console.log('[Service Worker] Push received:', event);
