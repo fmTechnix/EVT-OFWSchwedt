@@ -101,13 +101,25 @@ export class ReminderScheduler {
         return;
       }
 
+      // Check if user has set availability for TODAY (local timezone-safe)
+      const today = new Date().toLocaleDateString('sv-SE'); // YYYY-MM-DD in local timezone
+      const todayAvailability = await storage.getUserAvailability(userId, today);
+
+      let reminderBody = "Bitte aktualisiere deinen Verfügbarkeitsstatus für heute.";
+      
+      if (!todayAvailability) {
+        reminderBody = "Du hast noch keine Verfügbarkeit für heute eingetragen. Bist du heute verfügbar?";
+      }
+
       console.log(`⏰ Sending availability reminder to ${user.vorname} ${user.nachname}`);
 
       await this.pushService.sendToUser(userId, {
         title: "Verfügbarkeit aktualisieren",
-        body: "Bitte aktualisiere deinen Verfügbarkeitsstatus für die kommende Woche.",
-        icon: "/icon-192.png",
-        badge: "/badge-72.png"
+        body: reminderBody,
+        icon: "/feuerwehr-logo.png",
+        badge: "/feuerwehr-logo.png"
+      }, {
+        messageType: 'reminder'
       });
     } catch (error) {
       console.error(`Failed to send reminder to user ${userId}:`, error);

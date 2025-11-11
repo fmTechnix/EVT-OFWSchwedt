@@ -594,7 +594,7 @@ export default function Einstellungen() {
                         <SelectContent>
                           <SelectItem value="all" data-testid="option-all-types">Alle Typen</SelectItem>
                           <SelectItem value="assignment_change" data-testid="option-type-assignment">Zuteilungsänderung</SelectItem>
-                          <SelectItem value="availability_reminder" data-testid="option-type-reminder">Verfügbarkeitserinnerung</SelectItem>
+                          <SelectItem value="reminder" data-testid="option-type-reminder">Verfügbarkeitserinnerung</SelectItem>
                           <SelectItem value="alarm" data-testid="option-type-alarm">Alarm</SelectItem>
                           <SelectItem value="test" data-testid="option-type-test">Test</SelectItem>
                         </SelectContent>
