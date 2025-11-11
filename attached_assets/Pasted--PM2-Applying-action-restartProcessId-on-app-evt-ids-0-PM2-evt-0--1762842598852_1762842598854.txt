@@ -1,0 +1,61 @@
+[PM2] Applying action restartProcessId on app [evt](ids: [ 0 ])
+[PM2] [evt](0) ✓
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+├────┼────────────────────┼──────────┼──────┼───────────┼──────────┼──────────┤
+│ 0  │ evt                │ fork     │ 3    │ online    │ 0%       │ 17.5mb   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+felix@raspberrypi:~/EVT/EVT-OFWSchwedt $ npm run build   # Schritt 1: Production Bundle erstellen
+ run start   # Schritt 2: Production Server starten
+> rest-express@1.0.0 build
+> vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist
+
+vite v5.4.20 building for production...
+transforming (5) ../node_modules/@tanstack/react-query/build/modern/index.jsBrowserslist: browsers data (caniuse-lite) is 13 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+transforming (23) ../node_modules/@tanstack/query-core/build/modern/index.js
+A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
+✓ 2676 modules transformed.
+../dist/public/index.html                   2.52 kB │ gzip:   0.95 kB
+../dist/public/assets/index-QW6vJ06K.css   75.82 kB │ gzip:  12.70 kB
+../dist/public/assets/index-Dc19dlEC.js   636.76 kB │ gzip: 186.73 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 24.51s
+
+  dist/index.js  136.0kb
+
+⚡ Done in 103ms
+file:///home/felix/EVT/EVT-OFWSchwedt/dist/index.js:15
+  throw new Error("DATABASE_URL must be set");
+        ^press@1.0.0 start
+> NODE_ENV=production node dist/index.js
+Error: DATABASE_URL must be set
+    at file:///home/felix/EVT/EVT-OFWSchwedt/dist/index.js:15:9
+    at ModuleJob.run (node:internal/modules/esm/module_job:325:25)
+    at async ModuleLoader.import (node:internal/modules/esm/loader:606:24)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+
+Node.js v20.19.5
+felix@raspberrypi:~/EVT/EVT-OFWSchwedt $ # start-production.sh
+felix@raspberrypi:~/EVT/EVT-OFWSchwedt $ export NODE_ENV=production  # ← PRODUCTION!
+felix@raspberrypi:~/EVT/EVT-OFWSchwedt $
+felix@raspberrypi:~/EVT/EVT-OFWSchwedt $ # Production Server starten (nicht dev!)
+felix@raspberrypi:~/EVT/EVT-OFWSchwedt $ exec node dist/index.js  # ← Fertiges Bundle!
+file:///home/felix/EVT/EVT-OFWSchwedt/dist/index.js:15
+  throw new Error("DATABASE_URL must be set");
+        ^
+
+Error: DATABASE_URL must be set
+    at file:///home/felix/EVT/EVT-OFWSchwedt/dist/index.js:15:9
+    at ModuleJob.run (node:internal/modules/esm/module_job:325:25)
+    at async ModuleLoader.import (node:internal/modules/esm/loader:606:24)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+
+Node.js v20.19.5
+Connection to 192.168.178.167 closed.
+PS C:\Windows\system32>
