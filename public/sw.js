@@ -32,26 +32,45 @@ self.addEventListener('push', function(event) {
   let data = {
     title: 'Neue Benachrichtigung',
     body: 'Sie haben eine neue Benachrichtigung erhalten',
-    icon: '/logo.png',
-    badge: '/logo.png'
+    icon: '/icon-192.png',
+    badge: '/icon-192.png'
   };
   
   if (event.data) {
     try {
-      data = event.data.json();
+      const parsed = event.data.json();
+      console.log('[Service Worker] Parsed push data:', parsed);
+      data = parsed;
     } catch (e) {
       console.error('[Service Worker] Error parsing push data:', e);
+      // Fallback: Use data as text
+      data.body = event.data.text();
     }
   }
   
-  const promiseChain = self.registration.showNotification(data.title, {
+  console.log('[Service Worker] Showing notification:', data);
+  
+  const notificationOptions = {
     body: data.body,
-    icon: data.icon || '/logo.png',
-    badge: data.badge || '/logo.png',
+    icon: data.icon || '/icon-192.png',
+    badge: data.badge || '/icon-192.png',
     data: data.data,
-    requireInteraction: true, // Keep notification visible until user interacts
-    vibrate: [200, 100, 200], // Vibration pattern
-  });
+    tag: 'evt-notification', // Group notifications
+    renotify: true, // Re-alert user for same tag
+    requireInteraction: false, // iOS prefers false
+    silent: false,
+    vibrate: [200, 100, 200],
+  };
+  
+  console.log('[Service Worker] Notification options:', notificationOptions);
+  
+  const promiseChain = self.registration.showNotification(data.title, notificationOptions)
+    .then(() => {
+      console.log('[Service Worker] Notification shown successfully');
+    })
+    .catch((error) => {
+      console.error('[Service Worker] Error showing notification:', error);
+    });
   
   event.waitUntil(promiseChain);
 });
