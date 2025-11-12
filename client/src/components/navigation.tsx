@@ -2,7 +2,7 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { LayoutDashboard, Truck, Users, TruckIcon, Settings, LogOut, AlertCircle, FileText, Radio, Menu, Activity } from "lucide-react";
+import { LayoutDashboard, Truck, Users, TruckIcon, Settings, LogOut, AlertCircle, FileText, Radio, Menu, Activity, Calendar } from "lucide-react";
 import { useState } from "react";
 
 export function Navigation() {
@@ -16,9 +16,9 @@ export function Navigation() {
     { href: "/", label: "Dashboard", icon: LayoutDashboard, show: true },
     { href: "/mein-einsatz", label: "Mein Einsatz", icon: Truck, show: true },
     { href: "/maengelmeldungen", label: "Mängelmeldung", icon: AlertCircle, show: true },
-    { href: "/benutzer", label: "Benutzer", icon: Users, show: user.role === "admin" },
-    { href: "/kalender", label: "Kalender", icon: Users, show: true },
+    { href: "/benutzer", label: "Kameraden", icon: Users, show: user.role === "admin" },
     { href: "/fahrzeuge", label: "Fahrzeuge", icon: TruckIcon, show: user.role === "admin" },
+    { href: "/kalender", label: "Termine", icon: Calendar, show: true },
     { href: "/aao", label: "AAO", icon: FileText, show: user.role === "admin" },
     { href: "/alarm-historie", label: "Alarme", icon: Radio, show: true },
     { href: "/system-logs", label: "System-Logs", icon: Activity, show: user.role === "admin" },
