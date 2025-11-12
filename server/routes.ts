@@ -2109,19 +2109,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const vehicleConfig = vehicleConfigs.find(vc => vc.id === userAssignment.vehicle_config_id);
               
               try {
-                await pushService.sendToUser(userId, {
-                  title: "🚨 Neue Alarmzuteilung",
-                  body: `Einsatz: ${savedEvent.stichwort} - Du wurdest ${vehicleConfig?.vehicle} (${userAssignment.position}) zugeteilt`,
-                  icon: "/icon-192.png",
-                  badge: "/badge-72.png",
-                  data: {
-                    alarmId: savedEvent.id,
-                    einsatznummer: savedEvent.einsatznummer,
-                    stichwort: savedEvent.stichwort,
-                    vehicle: vehicleConfig?.vehicle,
-                    position: userAssignment.position,
-                  },
-                });
+                // Use CRITICAL alert for alarms - bypasses Do Not Disturb
+                await pushService.sendCriticalAlert(
+                  userId,
+                  "Neue Alarmzuteilung",
+                  `Einsatz: ${savedEvent.stichwort} - Du wurdest ${vehicleConfig?.vehicle} (${userAssignment.position}) zugeteilt`,
+                  {
+                    messageType: 'alarm_assignment',
+                    sentBy: 'system',
+                  }
+                );
               } catch (pushError) {
                 console.error(`Failed to send push notification to user ${userId}:`, pushError);
               }

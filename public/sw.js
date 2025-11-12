@@ -50,16 +50,19 @@ self.addEventListener('push', function(event) {
   
   console.log('[Service Worker] Showing notification:', data);
   
+  // Check if this is a critical alert
+  const isCritical = data.data && data.data.critical === true;
+  
   const notificationOptions = {
     body: data.body,
     icon: data.icon || '/icon-192.png',
     badge: data.badge || '/icon-192.png',
     data: data.data,
-    tag: 'evt-notification', // Group notifications
+    tag: isCritical ? 'evt-critical' : 'evt-notification', // Different tag for critical
     renotify: true, // Re-alert user for same tag
-    requireInteraction: false, // iOS prefers false
-    silent: false,
-    vibrate: [200, 100, 200],
+    requireInteraction: data.requireInteraction !== undefined ? data.requireInteraction : isCritical, // Critical = must dismiss
+    silent: data.silent !== undefined ? data.silent : false,
+    vibrate: isCritical ? [300, 100, 300, 100, 300] : [200, 100, 200], // Longer vibration for critical
   };
   
   console.log('[Service Worker] Notification options:', notificationOptions);

@@ -50,6 +50,9 @@ export interface PushNotificationPayload {
   icon?: string;
   badge?: string;
   data?: Record<string, unknown>;
+  urgency?: 'very-low' | 'low' | 'normal' | 'high'; // Push priority
+  requireInteraction?: boolean; // Keep notification visible
+  silent?: boolean; // Silent notification
 }
 
 export interface SendPushContext {
@@ -61,10 +64,14 @@ export class PushNotificationService {
   constructor(private storage: IStorage) {}
 
   async sendToUser(userId: string, payload: PushNotificationPayload, context: SendPushContext = { messageType: 'general' }): Promise<void> {
+    console.log(`📤 Push Service: Sending to user ${userId}`, { title: payload.title, messageType: context.messageType });
+    
     const subscriptions = await this.storage.getUserPushSubscriptions(userId);
+    console.log(`📱 Push Service: Found ${subscriptions.length} subscription(s) for user ${userId}`);
     
     if (subscriptions.length === 0) {
       // No subscriptions for this user - log and skip
+      console.log(`⚠️  Push Service: No subscriptions for user ${userId}`);
       await this.logPush({
         user_id: userId,
         message_type: context.messageType,
@@ -146,12 +153,37 @@ export class PushNotificationService {
       title: 'Test-Benachrichtigung',
       body: `Dies ist eine Test-Benachrichtigung vom Admin-Bereich. Wenn Sie diese Nachricht sehen, funktionieren Push-Benachrichtigungen korrekt.`,
       icon: '/feuerwehr-logo.png',
+      urgency: 'high', // High priority for test
+      requireInteraction: true, // Keep visible until dismissed
     };
 
+    console.log(`🧪 Sending test push to user ${userId} from admin ${sentByAdminId}`);
+    
     await this.sendToUser(userId, payload, {
       messageType: 'test',
       sentBy: sentByAdminId,
     });
+  }
+
+  // Send critical alert that bypasses Do Not Disturb (high urgency)
+  async sendCriticalAlert(userId: string, title: string, body: string, context: SendPushContext): Promise<void> {
+    const payload: PushNotificationPayload = {
+      title: `🚨 ${title}`,
+      body,
+      icon: '/feuerwehr-logo.png',
+      badge: '/feuerwehr-logo.png',
+      urgency: 'high', // Maximum priority
+      requireInteraction: true, // Must be dismissed manually
+      silent: false, // Always make sound
+      data: {
+        critical: true,
+        timestamp: new Date().toISOString(),
+      },
+    };
+
+    console.log(`🚨 Sending CRITICAL alert to user ${userId}:`, title);
+    
+    await this.sendToUser(userId, payload, context);
   }
 
   private async logPush(logData: {
@@ -183,10 +215,31 @@ export class PushNotificationService {
       },
     };
 
-    await webpush.sendNotification(
+    // Web Push options for urgency/priority
+    const options: any = {
+      TTL: 3600, // Time to live: 1 hour
+    };
+
+    // Set urgency (helps with delivery, especially on mobile)
+    if (payload.urgency) {
+      options.urgency = payload.urgency;
+    }
+
+    console.log(`🚀 Push Service: Sending to endpoint ${subscription.endpoint.substring(0, 50)}...`, {
+      urgency: payload.urgency || 'normal',
+      TTL: options.TTL
+    });
+
+    const result = await webpush.sendNotification(
       pushSubscription,
-      JSON.stringify(payload)
+      JSON.stringify(payload),
+      options
     );
+    
+    console.log(`✅ Push Service: Sent successfully`, { 
+      statusCode: result.statusCode,
+      endpoint: subscription.endpoint.substring(0, 50) + '...'
+    });
   }
 }
 
