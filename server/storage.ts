@@ -20,7 +20,8 @@ import type {
   AvailabilityTemplate, InsertAvailabilityTemplate,
   UserReminderSettings, InsertUserReminderSettings,
   AlarmEvent, InsertAlarmEvent,
-  AaoStichwort, InsertAaoStichwort
+  AaoStichwort, InsertAaoStichwort,
+  AuditLog, InsertAuditLog
 } from "@shared/schema";
 import { PostgresStorage } from "./pg-storage";
 import { initializeDatabase } from "./init-db";
@@ -157,6 +158,19 @@ export interface IStorage {
   createAaoStichwort(stichwort: InsertAaoStichwort): Promise<AaoStichwort>;
   updateAaoStichwort(id: number, updates: Partial<InsertAaoStichwort>): Promise<AaoStichwort>;
   deleteAaoStichwort(id: number): Promise<void>;
+  
+  // Audit Logs (System-weite Event-Logs)
+  createAuditLog(log: InsertAuditLog): Promise<AuditLog>;
+  getAuditLogs(filters?: { 
+    startDate?: string; 
+    endDate?: string; 
+    action?: string; 
+    actorId?: string; 
+    entityType?: string;
+    severity?: string;
+    limit?: number; 
+    offset?: number;
+  }): Promise<{ logs: AuditLog[]; total: number }>;
 }
 
 export class MemStorage implements IStorage {
@@ -168,6 +182,7 @@ export class MemStorage implements IStorage {
   private maengelMeldungen: Map<number, MaengelMeldung>;
   private pushLogs: Map<number, PushLog>;
   private pushSubscriptions: Map<string, PushSubscription>;
+  private auditLogs: AuditLog[];
   private nextPushSubscriptionId: number;
   private einsatz: Einsatz;
   private settings: Settings;
@@ -177,6 +192,7 @@ export class MemStorage implements IStorage {
   private nextZusageId: number;
   private nextMaengelMeldungId: number;
   private nextPushLogId: number;
+  private nextAuditLogId: number;
 
   constructor() {
     this.users = new Map();
@@ -187,6 +203,7 @@ export class MemStorage implements IStorage {
     this.maengelMeldungen = new Map();
     this.pushLogs = new Map();
     this.pushSubscriptions = new Map();
+    this.auditLogs = [];
     this.nextVehicleId = 1;
     this.nextQualifikationId = 1;
     this.nextTerminId = 1;
@@ -194,6 +211,7 @@ export class MemStorage implements IStorage {
     this.nextMaengelMeldungId = 1;
     this.nextPushLogId = 1;
     this.nextPushSubscriptionId = 1;
+    this.nextAuditLogId = 1;
 
     // Initialize default qualifikationen (must be before users)
     this.initializeQualifikationen();
@@ -929,6 +947,64 @@ export class MemStorage implements IStorage {
   async getUsersWithRemindersEnabled(): Promise<UserReminderSettings[]> {
     // For development, return empty array (no reminder settings in MemStorage)
     return [];
+  }
+
+  // Audit Logs
+  async createAuditLog(log: InsertAuditLog): Promise<AuditLog> {
+    const auditLog: AuditLog = {
+      id: this.nextAuditLogId++,
+      event_time: new Date(),
+      ...log,
+    };
+    this.auditLogs.push(auditLog);
+    return auditLog;
+  }
+
+  async getAuditLogs(filters?: {
+    startDate?: string;
+    endDate?: string;
+    action?: string;
+    actorId?: string;
+    entityType?: string;
+    severity?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<{ logs: AuditLog[]; total: number }> {
+    let filtered = [...this.auditLogs];
+
+    // Apply filters
+    if (filters?.startDate) {
+      const start = new Date(filters.startDate);
+      filtered = filtered.filter(log => log.event_time >= start);
+    }
+    if (filters?.endDate) {
+      const end = new Date(filters.endDate);
+      filtered = filtered.filter(log => log.event_time <= end);
+    }
+    if (filters?.action) {
+      filtered = filtered.filter(log => log.action === filters.action);
+    }
+    if (filters?.actorId) {
+      filtered = filtered.filter(log => log.actor_id === filters.actorId);
+    }
+    if (filters?.entityType) {
+      filtered = filtered.filter(log => log.entity_type === filters.entityType);
+    }
+    if (filters?.severity) {
+      filtered = filtered.filter(log => log.severity === filters.severity);
+    }
+
+    // Sort by event_time DESC (newest first)
+    filtered.sort((a, b) => b.event_time.getTime() - a.event_time.getTime());
+
+    const total = filtered.length;
+
+    // Apply pagination
+    const offset = filters?.offset || 0;
+    const limit = filters?.limit || 100;
+    const paginated = filtered.slice(offset, offset + limit);
+
+    return { logs: paginated, total };
   }
 }
 

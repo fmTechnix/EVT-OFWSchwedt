@@ -360,6 +360,27 @@ export const insertAaoStichwortSchema = createInsertSchema(aaoStichworte).omit({
 export type InsertAaoStichwort = z.infer<typeof insertAaoStichwortSchema>;
 export type AaoStichwort = typeof aaoStichworte.$inferSelect;
 
+// Audit Logs (System-weite Event-Logs für Admin-Überwachung)
+export const auditLogs = pgTable("audit_logs", {
+  id: serial("id").primaryKey(),
+  event_time: timestamp("event_time").notNull().default(sql`now()`),
+  actor_id: text("actor_id"), // User who performed action (nullable for system actions)
+  actor_role: text("actor_role"), // Role at time of action
+  actor_ip: text("actor_ip"), // IP address (partially masked if needed)
+  actor_agent: text("actor_agent"), // User agent string
+  action: text("action").notNull(), // e.g., "login", "logout", "availability_change", "settings_update"
+  entity_type: text("entity_type"), // e.g., "user", "vehicle", "termin", "settings"
+  entity_id: text("entity_id"), // ID of affected entity
+  severity: text("severity").notNull().default("info"), // "info", "warning", "error"
+  metadata: jsonb("metadata"), // Additional context (deltas, identifiers, NOT sensitive data)
+  request_id: text("request_id"), // For correlation across services
+  source: text("source").notNull().default("api"), // "api", "scheduler", "webhook"
+});
+
+export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({ id: true, event_time: true });
+export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
+export type AuditLog = typeof auditLogs.$inferSelect;
+
 // Besetzungscheck result type
 export type BesetzungscheckResult = {
   vorhanden: {
