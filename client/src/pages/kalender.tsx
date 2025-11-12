@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { Termin, TerminZusage, User } from "@shared/schema";
+import type { TerminMitStats, TerminZusage, User } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Calendar, Plus, Download, Check, X } from "lucide-react";
 import {
@@ -27,7 +27,7 @@ export default function Kalender() {
   const { user } = useAuth();
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  const { data: termine, isLoading: termineLoading } = useQuery<Termin[]>({
+  const { data: termine, isLoading: termineLoading } = useQuery<TerminMitStats[]>({
     queryKey: ["/api/termine"],
   });
 
@@ -271,7 +271,7 @@ export default function Kalender() {
 }
 
 function TerminCard({ termin, users, currentUserId }: {
-  termin: Termin;
+  termin: TerminMitStats;
   users: { id: string; vorname: string; nachname: string }[];
   currentUserId?: string;
 }) {
@@ -294,6 +294,7 @@ function TerminCard({ termin, users, currentUserId }: {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/termine", termin.id, "zusagen"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/termine"] }); // Update stats in dashboard
       toast({
         title: "Gespeichert",
         description: "Ihre Zusage wurde gespeichert",
