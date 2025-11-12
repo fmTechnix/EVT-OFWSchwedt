@@ -818,7 +818,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/termine", requireAuth, async (_req: Request, res: Response) => {
     try {
       const termine = await storage.getAllTermine();
-      res.json(termine);
+      
+      // Add zusage statistics to each termin
+      const termineWithStats = await Promise.all(
+        termine.map(async (termin) => {
+          const zusagen = await storage.getTerminZusagen(termin.id);
+          const zugesagt = zusagen.filter(z => z.status === "zugesagt").length;
+          const abgesagt = zusagen.filter(z => z.status === "abgesagt").length;
+          
+          return {
+            ...termin,
+            zusagen_count: zugesagt,
+            absagen_count: abgesagt,
+            total_responses: zugesagt + abgesagt,
+          };
+        })
+      );
+      
+      res.json(termineWithStats);
     } catch (error) {
       res.status(500).json({ error: "Fehler beim Laden der Termine" });
     }

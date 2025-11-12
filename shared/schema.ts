@@ -90,6 +90,13 @@ export const insertTerminSchema = createInsertSchema(termine).omit({ id: true, e
 export type InsertTermin = z.infer<typeof insertTerminSchema>;
 export type Termin = typeof termine.$inferSelect;
 
+// Extended Termin type with zusage statistics
+export type TerminMitStats = Termin & {
+  zusagen_count: number;
+  absagen_count: number;
+  total_responses: number;
+};
+
 // Termin Zusagen (Event responses)
 export const terminZusagen = pgTable("termin_zusagen", {
   id: serial("id").primaryKey(),
