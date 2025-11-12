@@ -371,12 +371,14 @@ export class PostgresStorage implements IStorage {
     
     const unavailableIds = unavailableUserIds.map(row => row.user_id);
     
+    // Filter admin users - they should never be considered "available" for crew assignments
     if (unavailableIds.length === 0) {
-      return await db.select().from(users);
+      return await db.select().from(users)
+        .where(sql`${users.role} != 'admin'`);
     }
     
     return await db.select().from(users)
-      .where(sql`${users.id} NOT IN (${sql.join(unavailableIds.map(id => sql`${id}`), sql`, `)})`);
+      .where(sql`${users.id} NOT IN (${sql.join(unavailableIds.map(id => sql`${id}`), sql`, `)}) AND ${users.role} != 'admin'`);
   }
 
   // Availability Templates

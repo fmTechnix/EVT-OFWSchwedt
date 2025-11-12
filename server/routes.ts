@@ -26,6 +26,12 @@ function sanitizeUser(user: User): Omit<User, "password"> {
   return sanitized;
 }
 
+// Helper: Filter out admin users from operational statistics and assignments
+// Admin accounts are for system administration only, not crew members
+function filterOperationalUsers(users: User[]): User[] {
+  return users.filter(u => u.role !== "admin");
+}
+
 // Middleware to check authentication
 function requireAuth(req: Request, res: Response, next: Function) {
   if (!req.session.userId) {
@@ -327,10 +333,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // User endpoints (unified Benutzer management)
   // Public user list (for calendar attendee names) - returns only id, vorname, nachname
+  // Note: Admin users are excluded as they are not operational crew members
   app.get("/api/users/public", requireAuth, async (_req: Request, res: Response) => {
     try {
-      const users = await storage.getAllUsers();
-      const publicUsers = users.map(u => ({
+      const allUsers = await storage.getAllUsers();
+      const operationalUsers = filterOperationalUsers(allUsers);
+      const publicUsers = operationalUsers.map(u => ({
         id: u.id,
         vorname: u.vorname,
         nachname: u.nachname,
@@ -2392,16 +2400,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin: System Health & Metrics
   app.get("/api/admin/system-health", requireAdmin, async (_req: Request, res: Response) => {
     try {
-      const users = await storage.getAllUsers();
+      const allUsers = await storage.getAllUsers();
       const availabilities = await storage.getAvailableUsers(new Date().toISOString().split('T')[0]);
       const assignments = await storage.getCurrentAssignments();
       const pushLogs = await storage.getAllPushLogs({ limit: 100 });
       const alarms = await storage.getAllAlarmEvents();
 
-      // Calculate metrics
-      const totalUsers = users.length;
-      const availableToday = availabilities.length;
-      const assignedUsers = assignments.filter(a => a.user_id).length;
+      // Filter out admin users from operational statistics
+      const operationalUsers = filterOperationalUsers(allUsers);
+      
+      // Calculate metrics (excluding admin accounts)
+      const totalUsers = operationalUsers.length;
+      const availableToday = availabilities.length; // Already filtered by getAvailableUsers in storage
+      const assignedUsers = assignments.filter(a => {
+        if (!a.user_id) return false;
+        const user = allUsers.find(u => u.id === a.user_id);
+        return user && user.role !== "admin";
+      }).length;
       
       const pushSuccess = pushLogs.filter(log => log.status === "success").length;
       const pushTotal = pushLogs.length;
