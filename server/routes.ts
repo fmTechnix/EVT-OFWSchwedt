@@ -2367,6 +2367,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin: Audit Logs (System-weite Event-Logs)
+  app.get("/api/admin/audit-logs", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const filters = {
+        startDate: req.query.startDate as string,
+        endDate: req.query.endDate as string,
+        action: req.query.action as string,
+        actorId: req.query.actorId as string,
+        entityType: req.query.entityType as string,
+        severity: req.query.severity as string,
+        limit: req.query.limit ? parseInt(req.query.limit as string) : 100,
+        offset: req.query.offset ? parseInt(req.query.offset as string) : 0,
+      };
+
+      const result = await storage.getAuditLogs(filters);
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching audit logs:", error);
+      res.status(500).json({ error: "Fehler beim Laden der Audit-Logs" });
+    }
+  });
+
+  // Admin: System Health & Metrics
+  app.get("/api/admin/system-health", requireAdmin, async (_req: Request, res: Response) => {
+    try {
+      const users = await storage.getAllUsers();
+      const availabilities = await storage.getAvailableUsers(new Date().toISOString().split('T')[0]);
+      const assignments = await storage.getCurrentAssignments();
+      const pushLogs = await storage.getAllPushLogs({ limit: 100 });
+      const alarms = await storage.getAllAlarmEvents();
+
+      // Calculate metrics
+      const totalUsers = users.length;
+      const availableToday = availabilities.length;
+      const assignedUsers = assignments.filter(a => a.user_id).length;
+      
+      const pushSuccess = pushLogs.filter(log => log.status === "success").length;
+      const pushTotal = pushLogs.length;
+      const pushSuccessRate = pushTotal > 0 ? Math.round((pushSuccess / pushTotal) * 100) : 0;
+
+      const recentAlarms = alarms.filter(alarm => {
+        const alarmDate = new Date(alarm.empfangen_am);
+        const dayAgo = new Date();
+        dayAgo.setDate(dayAgo.getDate() - 1);
+        return alarmDate >= dayAgo;
+      }).length;
+
+      res.json({
+        users: {
+          total: totalUsers,
+          available_today: availableToday,
+          assigned: assignedUsers,
+        },
+        push_notifications: {
+          success_rate: pushSuccessRate,
+          total_sent_last_100: pushTotal,
+          successful: pushSuccess,
+        },
+        alarms: {
+          last_24h: recentAlarms,
+          total: alarms.length,
+        },
+        system: {
+          uptime: process.uptime(),
+          nodejs_version: process.version,
+          memory: process.memoryUsage(),
+        },
+      });
+    } catch (error) {
+      console.error("Error fetching system health:", error);
+      res.status(500).json({ error: "Fehler beim Laden der System-Metriken" });
+    }
+  });
+
   // Download EVT project as ZIP
   app.get("/download/evt-projekt.zip", (req: Request, res: Response) => {
     const filePath = "/home/runner/workspace/public/evt-projekt.zip";
