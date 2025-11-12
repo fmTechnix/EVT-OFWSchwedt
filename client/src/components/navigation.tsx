@@ -2,7 +2,7 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { LayoutDashboard, Truck, Users, TruckIcon, Settings, LogOut, AlertCircle, FileText, Radio, Menu } from "lucide-react";
+import { LayoutDashboard, Truck, Users, TruckIcon, Settings, LogOut, AlertCircle, FileText, Radio, Menu, Activity } from "lucide-react";
 import { useState } from "react";
 
 export function Navigation() {
@@ -21,6 +21,7 @@ export function Navigation() {
     { href: "/fahrzeuge", label: "Fahrzeuge", icon: TruckIcon, show: user.role === "admin" },
     { href: "/aao", label: "AAO", icon: FileText, show: user.role === "admin" },
     { href: "/alarm-historie", label: "Alarme", icon: Radio, show: true },
+    { href: "/system-logs", label: "System-Logs", icon: Activity, show: user.role === "admin" },
     { href: "/einstellungen", label: "Einstellungen", icon: Settings, show: user.role === "admin" },
   ];
 

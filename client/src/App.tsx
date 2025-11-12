@@ -14,6 +14,7 @@ import Einstellungen from "@/pages/einstellungen";
 import Maengelmeldungen from "@/pages/maengelmeldungen";
 import AaoVerwaltung from "@/pages/aao-verwaltung";
 import AlarmHistorie from "@/pages/alarm-historie";
+import SystemLogs from "@/pages/system-logs";
 import DownloadPage from "@/pages/download";
 import NotFound from "@/pages/not-found";
 
@@ -121,6 +122,12 @@ function Router() {
       <Route path="/alarm-historie">
         <ProtectedRoute>
           <AlarmHistorie />
+        </ProtectedRoute>
+      </Route>
+      
+      <Route path="/system-logs">
+        <ProtectedRoute adminOnly>
+          <SystemLogs />
         </ProtectedRoute>
       </Route>
       
