@@ -1916,6 +1916,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all subscriptions for a user (Admin only)
+  app.get("/api/push/subscriptions/:userId", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { userId } = req.params;
+      const subscriptions = await storage.getUserPushSubscriptions(userId);
+      res.json({
+        count: subscriptions.length,
+        subscriptions: subscriptions.map(sub => ({
+          id: sub.id,
+          endpoint: sub.endpoint,
+          created_at: sub.created_at,
+          // Don't expose keys for security
+        })),
+      });
+    } catch (error) {
+      console.error("Error fetching user subscriptions:", error);
+      res.status(500).json({ error: "Fehler beim Laden der Subscriptions" });
+    }
+  });
+
+  // Clean up invalid subscriptions for a user (Admin only)
+  app.post("/api/push/cleanup/:userId", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { userId } = req.params;
+      const subscriptions = await storage.getUserPushSubscriptions(userId);
+      
+      let removed = 0;
+      for (const sub of subscriptions) {
+        // Try to validate subscription by checking endpoint
+        if (!sub.endpoint || sub.endpoint.trim() === '' || sub.endpoint === '.') {
+          await storage.deletePushSubscription(sub.endpoint);
+          removed++;
+          console.log(`🗑️  Removed invalid subscription for user ${userId}: ${sub.endpoint}`);
+        }
+      }
+      
+      res.json({ 
+        message: `${removed} ungültige Subscription(s) entfernt`,
+        remaining: subscriptions.length - removed,
+      });
+    } catch (error) {
+      console.error("Error cleaning up subscriptions:", error);
+      res.status(500).json({ error: "Fehler beim Bereinigen der Subscriptions" });
+    }
+  });
+
   // Send test push notification (Admin only)
   app.post("/api/push/test/:userId", requireAdmin, async (req: Request, res: Response) => {
     try {

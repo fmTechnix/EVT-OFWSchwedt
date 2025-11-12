@@ -123,10 +123,14 @@ export class PushNotificationService {
         const isPermanentFailure = 
           error instanceof InvalidPushSubscriptionError || // Our validation
           error?.statusCode === 410 || // Gone (browser unsubscribed)
-          error?.statusCode === 404;   // Not found
+          error?.statusCode === 404 || // Not found
+          error?.statusCode === 400 || // Bad request (invalid subscription)
+          error?.statusCode === 401 || // Unauthorized (invalid VAPID keys)
+          error?.statusCode === 403 || // Forbidden
+          errorMsg.includes('Received unexpected response code'); // Generic push failure
         
         if (isPermanentFailure) {
-          console.log(`🗑️  Removing invalid subscription for user ${userId}: ${errorMsg}`);
+          console.log(`🗑️  Removing invalid subscription for user ${userId}: ${errorMsg} (Status: ${error?.statusCode || 'N/A'})`);
           await this.storage.deletePushSubscription(sub.endpoint);
         }
         // Temporary network errors - log but keep subscription for retry
