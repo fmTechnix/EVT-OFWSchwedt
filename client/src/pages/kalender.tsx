@@ -187,26 +187,24 @@ export default function Kalender() {
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="ort">Ort</Label>
+                      <Label htmlFor="ort">Ort (optional)</Label>
                       <Input
                         id="ort"
                         value={formData.ort}
                         onChange={(e) => setFormData({ ...formData, ort: e.target.value })}
                         placeholder="z.B. Feuerwache Schwedt"
-                        required
                         data-testid="input-ort"
                         className="h-11"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="beschreibung">Beschreibung</Label>
+                      <Label htmlFor="beschreibung">Beschreibung (optional)</Label>
                       <Textarea
                         id="beschreibung"
                         value={formData.beschreibung}
                         onChange={(e) => setFormData({ ...formData, beschreibung: e.target.value })}
                         placeholder="Weitere Details zum Termin..."
                         rows={4}
-                        required
                         data-testid="input-beschreibung"
                       />
                     </div>

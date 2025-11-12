@@ -63,7 +63,10 @@ export default function SystemLogs() {
   });
 
   const { data: auditLogs, isLoading: auditLoading } = useQuery<{ logs: AuditLog[]; total: number }>({
-    queryKey: ["/api/admin/audit-logs", auditFilters],
+    queryKey: [
+      "/api/admin/audit-logs",
+      `?action=${auditFilters.action}&severity=${auditFilters.severity}&limit=${auditFilters.limit}&offset=${auditFilters.offset}`
+    ],
   });
 
   const { data: systemHealth, isLoading: healthLoading } = useQuery<SystemHealth>({

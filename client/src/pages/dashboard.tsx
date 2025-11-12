@@ -478,53 +478,6 @@ export default function Dashboard() {
                 )}
               </CardContent>
             </Card>
-
-            {/* Nächste Termine für Admin/Moderator */}
-            <Card className="shadow-lg hover-elevate transition-all lg:col-span-3" data-testid="card-upcoming-termine">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <span className="text-2xl">📅</span>
-                  Nächste Termine
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {upcomingTermine.length === 0 ? (
-                  <p className="text-sm text-muted-foreground" data-testid="text-no-termine">
-                    Keine anstehenden Termine
-                  </p>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {upcomingTermine.map((termin) => {
-                      const terminDate = parseISO(`${termin.datum}T${termin.uhrzeit}`);
-                      return (
-                        <div
-                          key={termin.id}
-                          className="border rounded-md p-3 hover-elevate"
-                          data-testid={`termin-${termin.id}`}
-                        >
-                          <p className="font-semibold" data-testid={`text-titel-${termin.id}`}>
-                            {termin.titel}
-                          </p>
-                          <p className="text-sm text-muted-foreground" data-testid={`text-datum-${termin.id}`}>
-                            {format(terminDate, "dd.MM.yyyy 'um' HH:mm 'Uhr'", { locale: de })}
-                          </p>
-                          {termin.ort && (
-                            <p className="text-sm text-muted-foreground" data-testid={`text-ort-${termin.id}`}>
-                              📍 {termin.ort}
-                            </p>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-                <Link href="/kalender">
-                  <Button variant="outline" className="w-full" data-testid="button-all-termine">
-                    Alle Termine anzeigen
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
           </div>
         )}
       </main>
