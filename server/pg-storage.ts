@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { eq, sql, ilike, or, desc, asc, inArray, and } from "drizzle-orm";
+import { eq, sql, ilike, or, desc, asc, inArray, and, gte, lte } from "drizzle-orm";
 import {
   users,
   vehicles,
@@ -20,6 +20,7 @@ import {
   userReminderSettings,
   alarmEvents,
   aaoStichworte,
+  auditLogs,
   type User,
   type InsertUser,
   type Vehicle,
@@ -57,6 +58,8 @@ import {
   type InsertAlarmEvent,
   type AaoStichwort,
   type InsertAaoStichwort,
+  type AuditLog,
+  type InsertAuditLog,
 } from "@shared/schema";
 import type { IStorage } from "./storage";
 import { hashPassword } from "./password-utils";
@@ -781,5 +784,64 @@ export class PostgresStorage implements IStorage {
 
   async deleteAaoStichwort(id: number): Promise<void> {
     await db.delete(aaoStichworte).where(eq(aaoStichworte.id, id));
+  }
+
+  // Audit Logs (System-weite Event-Logs)
+  async createAuditLog(log: InsertAuditLog): Promise<AuditLog> {
+    const result = await db.insert(auditLogs).values(log).returning();
+    return result[0];
+  }
+
+  async getAuditLogs(filters?: {
+    startDate?: string;
+    endDate?: string;
+    action?: string;
+    actorId?: string;
+    entityType?: string;
+    severity?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<{ logs: AuditLog[]; total: number }> {
+    // Build WHERE conditions
+    const conditions = [];
+    
+    if (filters?.startDate) {
+      conditions.push(gte(auditLogs.event_time, new Date(filters.startDate)));
+    }
+    if (filters?.endDate) {
+      conditions.push(lte(auditLogs.event_time, new Date(filters.endDate)));
+    }
+    if (filters?.action) {
+      conditions.push(eq(auditLogs.action, filters.action));
+    }
+    if (filters?.actorId) {
+      conditions.push(eq(auditLogs.actor_id, filters.actorId));
+    }
+    if (filters?.entityType) {
+      conditions.push(eq(auditLogs.entity_type, filters.entityType));
+    }
+    if (filters?.severity) {
+      conditions.push(eq(auditLogs.severity, filters.severity));
+    }
+
+    // Get total count
+    const countQuery = conditions.length > 0
+      ? db.select({ count: sql<number>`count(*)::int` }).from(auditLogs).where(and(...conditions))
+      : db.select({ count: sql<number>`count(*)::int` }).from(auditLogs);
+    
+    const countResult = await countQuery;
+    const total = countResult[0]?.count || 0;
+
+    // Get paginated results
+    const limit = filters?.limit || 100;
+    const offset = filters?.offset || 0;
+
+    const logsQuery = conditions.length > 0
+      ? db.select().from(auditLogs).where(and(...conditions)).orderBy(desc(auditLogs.event_time)).limit(limit).offset(offset)
+      : db.select().from(auditLogs).orderBy(desc(auditLogs.event_time)).limit(limit).offset(offset);
+
+    const logs = await logsQuery;
+
+    return { logs, total };
   }
 }

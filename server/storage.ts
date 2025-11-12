@@ -954,7 +954,17 @@ export class MemStorage implements IStorage {
     const auditLog: AuditLog = {
       id: this.nextAuditLogId++,
       event_time: new Date(),
-      ...log,
+      actor_id: log.actor_id ?? null,
+      actor_role: log.actor_role ?? null,
+      actor_ip: log.actor_ip ?? null,
+      actor_agent: log.actor_agent ?? null,
+      action: log.action,
+      entity_type: log.entity_type ?? null,
+      entity_id: log.entity_id ?? null,
+      severity: log.severity ?? "info",
+      metadata: log.metadata ?? null,
+      request_id: log.request_id ?? null,
+      source: log.source ?? "api",
     };
     this.auditLogs.push(auditLog);
     return auditLog;
