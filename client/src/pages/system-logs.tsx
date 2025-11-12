@@ -213,14 +213,14 @@ export default function SystemLogs() {
                 data-testid="input-audit-filter-action"
               />
               <Select
-                value={auditFilters.severity}
-                onValueChange={(value) => setAuditFilters({ ...auditFilters, severity: value, offset: 0 })}
+                value={auditFilters.severity || "all"}
+                onValueChange={(value) => setAuditFilters({ ...auditFilters, severity: value === "all" ? "" : value, offset: 0 })}
               >
                 <SelectTrigger className="w-[200px]" data-testid="select-audit-filter-severity">
                   <SelectValue placeholder="Severity" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="" data-testid="select-severity-all">Alle</SelectItem>
+                  <SelectItem value="all" data-testid="select-severity-all">Alle</SelectItem>
                   <SelectItem value="info" data-testid="select-severity-info">Info</SelectItem>
                   <SelectItem value="warning" data-testid="select-severity-warning">Warning</SelectItem>
                   <SelectItem value="error" data-testid="select-severity-error">Error</SelectItem>
