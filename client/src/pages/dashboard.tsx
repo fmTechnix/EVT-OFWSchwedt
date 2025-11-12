@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Navigation } from "@/components/navigation";
 import { useAuth } from "@/lib/auth-context";
-import type { Vehicle, User, Termin, CurrentAssignment, Availability } from "@shared/schema";
+import type { Vehicle, User, TerminMitStats, CurrentAssignment, Availability } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, parseISO, isAfter } from "date-fns";
 import { de } from "date-fns/locale";
@@ -47,7 +47,7 @@ export default function Dashboard() {
     queryKey: ["/api/users/public"],
   });
 
-  const { data: termine, isLoading: termineLoading } = useQuery<Termin[]>({
+  const { data: termine, isLoading: termineLoading } = useQuery<TerminMitStats[]>({
     queryKey: ["/api/termine"],
   });
 
@@ -347,22 +347,85 @@ export default function Dashboard() {
             </Card>
 
             {/* Kalender & Termine */}
-            <Card className="shadow-lg hover-elevate transition-all" data-testid="card-kalender">
+            <Card className="shadow-lg hover-elevate transition-all md:col-span-2" data-testid="card-kalender">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <span className="text-2xl">📅</span>
-                  Kalender & Termine
+                <CardTitle className="flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <span className="text-2xl">📅</span>
+                    Kalender & Termine
+                  </span>
+                  <Link href="/kalender">
+                    <Button variant="outline" size="sm" data-testid="button-view-kalender">
+                      Alle anzeigen
+                    </Button>
+                  </Link>
                 </CardTitle>
+                <CardDescription>
+                  Nächste 3 anstehende Termine
+                </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  Aktuelle Termine einsehen und Zusagen verwalten
-                </p>
-                <Link href="/kalender">
-                  <Button className="w-full" data-testid="button-view-kalender">
-                    Kalender öffnen
-                  </Button>
-                </Link>
+              <CardContent className="space-y-3">
+                {termineLoading ? (
+                  <div className="space-y-2">
+                    <Skeleton className="h-20 w-full" />
+                    <Skeleton className="h-20 w-full" />
+                    <Skeleton className="h-20 w-full" />
+                  </div>
+                ) : upcomingTermine.length > 0 ? (
+                  <div className="space-y-2">
+                    {upcomingTermine.map((termin) => {
+                      const terminDate = parseISO(`${termin.datum}T${termin.uhrzeit}`);
+                      return (
+                        <Link 
+                          key={termin.id} 
+                          href="/kalender"
+                          data-testid={`card-termin-${termin.id}`}
+                        >
+                          <div className="border rounded-lg p-3 hover-elevate active-elevate-2 transition-all cursor-pointer">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex-1 min-w-0">
+                                <h4 className="font-semibold text-sm truncate" data-testid={`text-termin-title-${termin.id}`}>
+                                  {termin.titel}
+                                </h4>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  {format(terminDate, "EEEE, dd. MMMM yyyy 'um' HH:mm 'Uhr'", { locale: de })}
+                                </p>
+                                {termin.ort && (
+                                  <p className="text-xs text-muted-foreground mt-0.5">
+                                    📍 {termin.ort}
+                                  </p>
+                                )}
+                              </div>
+                              <div className="flex flex-col items-end gap-1">
+                                <Badge variant="outline" className="text-xs whitespace-nowrap" data-testid={`badge-termin-zugesagt-${termin.id}`}>
+                                  ✅ {termin.zusagen_count}
+                                </Badge>
+                                {termin.absagen_count > 0 && (
+                                  <Badge variant="secondary" className="text-xs whitespace-nowrap" data-testid={`badge-termin-abgesagt-${termin.id}`}>
+                                    ❌ {termin.absagen_count}
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-8" data-testid="text-no-termine">
+                    <p className="text-sm text-muted-foreground">
+                      Keine anstehenden Termine
+                    </p>
+                    {user?.role !== "member" && (
+                      <Link href="/kalender">
+                        <Button variant="outline" size="sm" className="mt-3">
+                          Neuen Termin erstellen
+                        </Button>
+                      </Link>
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
