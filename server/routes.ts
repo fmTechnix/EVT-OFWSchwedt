@@ -1694,6 +1694,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       await storage.setCurrentAssignments(assignmentsToSave);
       
+      await logAuditEvent(req, {
+        action: "crew_assignment_automatic",
+        entity_type: "assignment",
+        metadata: {
+          vehicle_count: result.assignments.length,
+          total_assigned: result.summary?.totalAssigned || assignmentsToSave.length,
+          warnings: result.summary?.warnings || [],
+          vehicleIds: validation.data.vehicleIds
+        }
+      });
+      
       res.json(result);
     } catch (error) {
       console.error("Crew assignment error:", error);
@@ -2106,6 +2117,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Save alarm event to database
       const savedEvent = await storage.createAlarmEvent(validatedData);
       console.log("✅ Alarm event saved to database:", savedEvent.id);
+      
+      await logAuditEvent(req, {
+        action: "alarm_received",
+        entity_type: "alarm",
+        entity_id: savedEvent.id?.toString(),
+        severity: "warning",
+        metadata: {
+          einsatznummer: savedEvent.einsatznummer,
+          stichwort: savedEvent.stichwort,
+          einsatzart: savedEvent.einsatzart,
+          ort: savedEvent.ort
+        },
+        source: "webhook"
+      });
 
       // Check if automatic crew reassignment is enabled via settings
       let shouldReassignCrew = false; // Default to manual mode
@@ -2394,6 +2419,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validatedData = insertAaoStichwortSchema.parse(req.body);
       const stichwort = await storage.createAaoStichwort(validatedData);
+      
+      await logAuditEvent(req, {
+        action: "aao_created",
+        entity_type: "aao",
+        entity_id: stichwort.id?.toString(),
+        metadata: {
+          stichwort: stichwort.stichwort,
+          kategorie: stichwort.kategorie,
+          fahrzeuge: stichwort.fahrzeuge
+        }
+      });
+      
       res.status(201).json(stichwort);
     } catch (error: any) {
       console.error("Error creating AAO keyword:", error);
@@ -2409,6 +2446,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const updates = req.body;
       const stichwort = await storage.updateAaoStichwort(parseInt(req.params.id), updates);
+      
+      await logAuditEvent(req, {
+        action: "aao_updated",
+        entity_type: "aao",
+        entity_id: req.params.id,
+        metadata: { updates }
+      });
+      
       res.json(stichwort);
     } catch (error) {
       console.error("Error updating AAO keyword:", error);
