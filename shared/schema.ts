@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, serial, timestamp, boolean, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, serial, timestamp, boolean, jsonb, pgEnum } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -33,12 +33,21 @@ export const insertVehicleSchema = createInsertSchema(vehicles).omit({ id: true 
 export type InsertVehicle = z.infer<typeof insertVehicleSchema>;
 export type Vehicle = typeof vehicles.$inferSelect;
 
+// Einsatzart Enum
+export const einsatzartEnum = pgEnum("einsatzart", [
+  "brandeinsatz",
+  "technische_hilfeleistung",
+  "gefahrgut",
+  "standard"
+]);
+
 // Einsatz (Deployment/Mission)
 export const einsatz = pgTable("einsatz", {
   id: integer("id").primaryKey(),
   stichwort: text("stichwort").notNull(),
   bemerkung: text("bemerkung").notNull(),
   mannschaftsbedarf: integer("mannschaftsbedarf").notNull(),
+  einsatzart: einsatzartEnum("einsatzart").default("standard").notNull(),
 });
 
 export const insertEinsatzSchema = createInsertSchema(einsatz).omit({ id: true });

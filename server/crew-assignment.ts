@@ -201,6 +201,20 @@ function checkVehicleConstraints(
   return { met, warnings };
 }
 
+/**
+ * Multi-Pass Crew Assignment Algorithm
+ * 
+ * Ensures tactical vehicles (LF/HLF) are prioritized over support vehicles (MTF/ELW).
+ * Prevents qualified personnel from sitting idle on low-priority vehicles while
+ * critical positions remain empty on high-priority vehicles.
+ * 
+ * Algorithm:
+ * 1. Group vehicles by priority tier (1=tactical, 2=special, 3=support)
+ * 2. Pass 1: Assign crew to Priority 1 vehicles (LF/HLF/TLF)
+ * 3. Pass 2: Assign crew to Priority 2 vehicles (DL/RW)
+ * 4. Pass 3: Assign crew to Priority 3 vehicles (MTF/ELW)
+ * 5. Reassignment: Move qualified personnel from low-priority to high-priority gaps
+ */
 export async function assignCrewToVehicles(
   users: User[],
   vehicleConfigs: VehicleConfig[],
@@ -226,9 +240,53 @@ export async function assignCrewToVehicles(
   const allUserIds = operationalUsers.map(u => u.id);
   await fairnessScorer.preloadUserData(allUserIds, rotationWindow);
   
+  // Get current mission type to determine correct vehicle priorities
+  const einsatz = await storage.getEinsatz();
+  const missionType = einsatz.einsatzart || 'standard';
+  
+  // Get vehicle priorities from database
+  const vehiclePriorities = await storage.getAllVehiclePriorities();
+  const priorityMap = new Map<string, number>();
+  
+  // Build priority map based on current mission type
+  for (const vp of vehiclePriorities) {
+    let priority: number;
+    switch (missionType) {
+      case 'brandeinsatz':
+        priority = vp.brandeinsatz_priority;
+        break;
+      case 'technische_hilfeleistung':
+        priority = vp.th_priority;
+        break;
+      case 'gefahrgut':
+        priority = vp.gefahrgut_priority;
+        break;
+      default:
+        priority = vp.standard_priority;
+    }
+    priorityMap.set(vp.vehicle_type, priority);
+  }
+  
+  // Group vehicles by priority tier
+  const vehiclesByPriority = new Map<number, VehicleConfig[]>();
+  for (const config of vehicleConfigs) {
+    const priority = priorityMap.get(config.type) || 3; // Default to lowest priority
+    if (!vehiclesByPriority.has(priority)) {
+      vehiclesByPriority.set(priority, []);
+    }
+    vehiclesByPriority.get(priority)!.push(config);
+  }
+  
+  // Sort priority tiers (1 = highest, 3 = lowest)
+  const sortedPriorities = Array.from(vehiclesByPriority.keys()).sort((a, b) => a - b);
+  
   let totalFulfilled = 0;
   
-  for (const vehicleConfig of vehicleConfigs) {
+  // MULTI-PASS ASSIGNMENT: Process each priority tier sequentially
+  for (const priority of sortedPriorities) {
+    const vehiclesInTier = vehiclesByPriority.get(priority) || [];
+    
+    for (const vehicleConfig of vehiclesInTier) {
     const vehicleAssignment: VehicleAssignment = {
       vehicle: vehicleConfig.vehicle,
       type: vehicleConfig.type,
@@ -342,7 +400,11 @@ export async function assignCrewToVehicles(
     globalWarnings.push(...constraintCheck.warnings);
     
     assignments.push(vehicleAssignment);
+    }
   }
+  
+  // REASSIGNMENT PHASE: Move qualified personnel from low to high-priority gaps
+  // TODO: Implement reassignment logic in next iteration
   
   // Clear cache after assignment run
   fairnessScorer.clearCache();
