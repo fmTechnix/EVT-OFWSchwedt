@@ -1,0 +1,132 @@
+0|evt  | 2025-11-13 17:07:38: 
+0|evt  | 2025-11-13 17:07:38: > rest-express@1.0.0 dev
+0|evt  | 2025-11-13 17:07:38: > NODE_ENV=development tsx server/index.ts
+0|evt  | 2025-11-13 17:07:38: 
+0|evt  | 2025-11-13 17:07:40: 
+0|evt  | 2025-11-13 17:07:40: node:internal/modules/run_main:123
+0|evt  | 2025-11-13 17:07:40:     triggerUncaughtException(
+0|evt  | 2025-11-13 17:07:40:     ^
+0|evt  | 2025-11-13 17:07:40: Error [TransformError]: Transform failed with 1 error:
+0|evt  | 2025-11-13 17:07:40: /home/felix/EVT/EVT-OFWSchwedt/server/routes.ts:1:11: ERROR: Expected ";" but found "type"
+0|evt  | 2025-11-13 17:07:40:     at failureErrorWithLog (/home/felix/EVT/EVT-OFWSchwedt/node_modules/esbuild/lib/main.js:1467:15)
+0|evt  | 2025-11-13 17:07:40:     at /home/felix/EVT/EVT-OFWSchwedt/node_modules/esbuild/lib/main.js:736:50
+0|evt  | 2025-11-13 17:07:40:     at responseCallbacks.<computed> (/home/felix/EVT/EVT-OFWSchwedt/node_modules/esbuild/lib/main.js:603:9)
+0|evt  | 2025-11-13 17:07:40:     at handleIncomingPacket (/home/felix/EVT/EVT-OFWSchwedt/node_modules/esbuild/lib/main.js:658:12)
+0|evt  | 2025-11-13 17:07:40:     at Socket.readFromStdout (/home/felix/EVT/EVT-OFWSchwedt/node_modules/esbuild/lib/main.js:581:7)
+0|evt  | 2025-11-13 17:07:40:     at Socket.emit (node:events:524:28)
+0|evt  | 2025-11-13 17:07:40:     at addChunk (node:internal/streams/readable:561:12)
+0|evt  | 2025-11-13 17:07:40:     at readableAddChunkPushByteMode (node:internal/streams/readable:512:3)
+0|evt  | 2025-11-13 17:07:40:     at Readable.push (node:internal/streams/readable:392:5)
+0|evt  | 2025-11-13 17:07:40:     at Pipe.onStreamRead (node:internal/stream_base_commons:191:23)
+0|evt  | 2025-11-13 17:07:40: 
+0|evt  | 2025-11-13 17:07:40: Node.js v20.19.5
+0|evt  | 2025-11-13 17:07:42: 
+0|evt  | 2025-11-13 17:07:42: > rest-express@1.0.0 dev
+0|evt  | 2025-11-13 17:07:42: > NODE_ENV=development tsx server/index.ts
+0|evt  | 2025-11-13 17:07:42: 
+0|evt  | 2025-11-13 17:07:44: 
+0|evt  | 2025-11-13 17:07:44: node:internal/modules/run_main:123
+0|evt  | 2025-11-13 17:07:44:     triggerUncaughtException(
+0|evt  | 2025-11-13 17:07:44:     ^
+0|evt  | 2025-11-13 17:07:44: Error [TransformError]: Transform failed with 1 error:
+0|evt  | 2025-11-13 17:07:44: /home/felix/EVT/EVT-OFWSchwedt/server/routes.ts:1:11: ERROR: Expected ";" but found "type"
+0|evt  | 2025-11-13 17:07:44:     at failureErrorWithLog (/home/felix/EVT/EVT-OFWSchwedt/node_modules/esbuild/lib/main.js:1467:15)
+0|evt  | 2025-11-13 17:07:44:     at /home/felix/EVT/EVT-OFWSchwedt/node_modules/esbuild/lib/main.js:736:50
+0|evt  | 2025-11-13 17:07:44:     at responseCallbacks.<computed> (/home/felix/EVT/EVT-OFWSchwedt/node_modules/esbuild/lib/main.js:603:9)
+0|evt  | 2025-11-13 17:07:44:     at handleIncomingPacket (/home/felix/EVT/EVT-OFWSchwedt/node_modules/esbuild/lib/main.js:658:12)
+0|evt  | 2025-11-13 17:07:44:     at Socket.readFromStdout (/home/felix/EVT/EVT-OFWSchwedt/node_modules/esbuild/lib/main.js:581:7)
+0|evt  | 2025-11-13 17:07:44:     at Socket.emit (node:events:524:28)
+0|evt  | 2025-11-13 17:07:44:     at addChunk (node:internal/streams/readable:561:12)
+0|evt  | 2025-11-13 17:07:44:     at readableAddChunkPushByteMode (node:internal/streams/readable:512:3)
+0|evt  | 2025-11-13 17:07:44:     at Readable.push (node:internal/streams/readable:392:5)
+0|evt  | 2025-11-13 17:07:44:     at Pipe.onStreamRead (node:internal/stream_base_commons:191:23)
+0|evt  | 2025-11-13 17:07:44: 
+0|evt  | 2025-11-13 17:07:44: Node.js v20.19.5
+0|evt  | 2025-11-13 17:07:45: 
+0|evt  | 2025-11-13 17:07:45: > rest-express@1.0.0 dev
+0|evt  | 2025-11-13 17:07:45: > NODE_ENV=development tsx server/index.ts
+0|evt  | 2025-11-13 17:07:45: 
+0|evt  | 2025-11-13 17:07:47: 
+0|evt  | 2025-11-13 17:07:47: node:internal/modules/run_main:123
+0|evt  | 2025-11-13 17:07:47:     triggerUncaughtException(
+0|evt  | 2025-11-13 17:07:47:     ^
+0|evt  | 2025-11-13 17:07:47: Error [TransformError]: Transform failed with 1 error:
+0|evt  | 2025-11-13 17:07:47: /home/felix/EVT/EVT-OFWSchwedt/server/routes.ts:1:11: ERROR: Expected ";" but found "type"
+0|evt  | 2025-11-13 17:07:47:     at failureErrorWithLog (/home/felix/EVT/EVT-OFWSchwedt/node_modules/esbuild/lib/main.js:1467:15)
+0|evt  | 2025-11-13 17:07:47:     at /home/felix/EVT/EVT-OFWSchwedt/node_modules/esbuild/lib/main.js:736:50
+0|evt  | 2025-11-13 17:07:47:     at responseCallbacks.<computed> (/home/felix/EVT/EVT-OFWSchwedt/node_modules/esbuild/lib/main.js:603:9)
+0|evt  | 2025-11-13 17:07:47:     at handleIncomingPacket (/home/felix/EVT/EVT-OFWSchwedt/node_modules/esbuild/lib/main.js:658:12)
+0|evt  | 2025-11-13 17:07:47:     at Socket.readFromStdout (/home/felix/EVT/EVT-OFWSchwedt/node_modules/esbuild/lib/main.js:581:7)
+0|evt  | 2025-11-13 17:07:47:     at Socket.emit (node:events:524:28)
+0|evt  | 2025-11-13 17:07:47:     at addChunk (node:internal/streams/readable:561:12)
+0|evt  | 2025-11-13 17:07:47:     at readableAddChunkPushByteMode (node:internal/streams/readable:512:3)
+0|evt  | 2025-11-13 17:07:47:     at Readable.push (node:internal/streams/readable:392:5)
+0|evt  | 2025-11-13 17:07:47:     at Pipe.onStreamRead (node:internal/stream_base_commons:191:23)
+0|evt  | 2025-11-13 17:07:47: 
+0|evt  | 2025-11-13 17:07:47: Node.js v20.19.5
+0|evt  | 2025-11-13 17:07:48: 
+0|evt  | 2025-11-13 17:07:48: > rest-express@1.0.0 dev
+0|evt  | 2025-11-13 17:07:48: > NODE_ENV=development tsx server/index.ts
+0|evt  | 2025-11-13 17:07:48: 
+0|evt  | 2025-11-13 17:07:55: 
+0|evt  | 2025-11-13 17:07:55: node:internal/modules/run_main:123
+0|evt  | 2025-11-13 17:07:55:     triggerUncaughtException(
+0|evt  | 2025-11-13 17:07:55:     ^
+0|evt  | 2025-11-13 17:07:55: Error [TransformError]: Transform failed with 1 error:
+0|evt  | 2025-11-13 17:07:55: /home/felix/EVT/EVT-OFWSchwedt/server/routes.ts:1:11: ERROR: Expected ";" but found "type"
+0|evt  | 2025-11-13 17:07:55:     at failureErrorWithLog (/home/felix/EVT/EVT-OFWSchwedt/node_modules/esbuild/lib/main.js:1467:15)
+0|evt  | 2025-11-13 17:07:55:     at /home/felix/EVT/EVT-OFWSchwedt/node_modules/esbuild/lib/main.js:736:50
+0|evt  | 2025-11-13 17:07:55:     at responseCallbacks.<computed> (/home/felix/EVT/EVT-OFWSchwedt/node_modules/esbuild/lib/main.js:603:9)
+0|evt  | 2025-11-13 17:07:55:     at handleIncomingPacket (/home/felix/EVT/EVT-OFWSchwedt/node_modules/esbuild/lib/main.js:658:12)
+0|evt  | 2025-11-13 17:07:55:     at Socket.readFromStdout (/home/felix/EVT/EVT-OFWSchwedt/node_modules/esbuild/lib/main.js:581:7)
+0|evt  | 2025-11-13 17:07:55:     at Socket.emit (node:events:524:28)
+0|evt  | 2025-11-13 17:07:55:     at addChunk (node:internal/streams/readable:561:12)
+0|evt  | 2025-11-13 17:07:55:     at readableAddChunkPushByteMode (node:internal/streams/readable:512:3)
+0|evt  | 2025-11-13 17:07:55:     at Readable.push (node:internal/streams/readable:392:5)
+0|evt  | 2025-11-13 17:07:55:     at Pipe.onStreamRead (node:internal/stream_base_commons:191:23)
+0|evt  | 2025-11-13 17:07:55: 
+0|evt  | 2025-11-13 17:07:55: Node.js v20.19.5
+0|evt  | 2025-11-13 17:07:58: 
+0|evt  | 2025-11-13 17:07:58: > rest-express@1.0.0 dev
+0|evt  | 2025-11-13 17:07:58: > NODE_ENV=development tsx server/index.ts
+0|evt  | 2025-11-13 17:07:58: 
+0|evt  | 2025-11-13 17:08:00: 
+0|evt  | 2025-11-13 17:08:00: node:internal/modules/run_main:123
+0|evt  | 2025-11-13 17:08:00:     triggerUncaughtException(
+0|evt  | 2025-11-13 17:08:00:     ^
+0|evt  | 2025-11-13 17:08:00: Error [TransformError]: Transform failed with 1 error:
+0|evt  | 2025-11-13 17:08:00: /home/felix/EVT/EVT-OFWSchwedt/server/routes.ts:1:11: ERROR: Expected ";" but found "type"
+0|evt  | 2025-11-13 17:08:00:     at failureErrorWithLog (/home/felix/EVT/EVT-OFWSchwedt/node_modules/esbuild/lib/main.js:1467:15)
+0|evt  | 2025-11-13 17:08:00:     at /home/felix/EVT/EVT-OFWSchwedt/node_modules/esbuild/lib/main.js:736:50
+0|evt  | 2025-11-13 17:08:00:     at responseCallbacks.<computed> (/home/felix/EVT/EVT-OFWSchwedt/node_modules/esbuild/lib/main.js:603:9)
+0|evt  | 2025-11-13 17:08:00:     at handleIncomingPacket (/home/felix/EVT/EVT-OFWSchwedt/node_modules/esbuild/lib/main.js:658:12)
+0|evt  | 2025-11-13 17:08:00:     at Socket.readFromStdout (/home/felix/EVT/EVT-OFWSchwedt/node_modules/esbuild/lib/main.js:581:7)
+0|evt  | 2025-11-13 17:08:00:     at Socket.emit (node:events:524:28)
+0|evt  | 2025-11-13 17:08:00:     at addChunk (node:internal/streams/readable:561:12)
+0|evt  | 2025-11-13 17:08:00:     at readableAddChunkPushByteMode (node:internal/streams/readable:512:3)
+0|evt  | 2025-11-13 17:08:00:     at Readable.push (node:internal/streams/readable:392:5)
+0|evt  | 2025-11-13 17:08:00:     at Pipe.onStreamRead (node:internal/stream_base_commons:191:23)
+0|evt  | 2025-11-13 17:08:00: 
+0|evt  | 2025-11-13 17:08:00: Node.js v20.19.5
+0|evt  | 2025-11-13 17:08:01: 
+0|evt  | 2025-11-13 17:08:01: > rest-express@1.0.0 dev
+0|evt  | 2025-11-13 17:08:01: > NODE_ENV=development tsx server/index.ts
+0|evt  | 2025-11-13 17:08:01: 
+0|evt  | 2025-11-13 17:08:04: 
+0|evt  | 2025-11-13 17:08:04: node:internal/modules/run_main:123
+0|evt  | 2025-11-13 17:08:04:     triggerUncaughtException(
+0|evt  | 2025-11-13 17:08:04:     ^
+0|evt  | 2025-11-13 17:08:04: Error [TransformError]: Transform failed with 1 error:
+0|evt  | 2025-11-13 17:08:04: /home/felix/EVT/EVT-OFWSchwedt/server/routes.ts:1:11: ERROR: Expected ";" but found "type"
+0|evt  | 2025-11-13 17:08:04:     at failureErrorWithLog (/home/felix/EVT/EVT-OFWSchwedt/node_modules/esbuild/lib/main.js:1467:15)
+0|evt  | 2025-11-13 17:08:04:     at /home/felix/EVT/EVT-OFWSchwedt/node_modules/esbuild/lib/main.js:736:50
+0|evt  | 2025-11-13 17:08:04:     at responseCallbacks.<computed> (/home/felix/EVT/EVT-OFWSchwedt/node_modules/esbuild/lib/main.js:603:9)
+0|evt  | 2025-11-13 17:08:04:     at handleIncomingPacket (/home/felix/EVT/EVT-OFWSchwedt/node_modules/esbuild/lib/main.js:658:12)
+0|evt  | 2025-11-13 17:08:04:     at Socket.readFromStdout (/home/felix/EVT/EVT-OFWSchwedt/node_modules/esbuild/lib/main.js:581:7)
+0|evt  | 2025-11-13 17:08:04:     at Socket.emit (node:events:524:28)
+0|evt  | 2025-11-13 17:08:04:     at addChunk (node:internal/streams/readable:561:12)
+0|evt  | 2025-11-13 17:08:04:     at readableAddChunkPushByteMode (node:internal/streams/readable:512:3)
+0|evt  | 2025-11-13 17:08:04:     at Readable.push (node:internal/streams/readable:392:5)
+0|evt  | 2025-11-13 17:08:04:     at Pipe.onStreamRead (node:internal/stream_base_commons:191:23)
+0|evt  | 2025-11-13 17:08:04: 
+0|evt  | 2025-11-13 17:08:04: Node.js v20.19.5
