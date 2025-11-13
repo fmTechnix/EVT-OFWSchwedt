@@ -21,7 +21,7 @@ export async function logAuditEvent(
   try {
     const log: InsertAuditLog = {
       actor_id: req.session?.userId || null,
-      actor_role: req.session?.userRole || null,
+      actor_role: (req.session as any)?.role || null,
       actor_ip: (req.ip || req.socket.remoteAddress || "unknown").replace("::ffff:", ""),
       actor_agent: req.get("user-agent") || null,
       action: details.action,

@@ -11,6 +11,7 @@ import { verifyPassword } from "./password-utils";
 import { assignCrewToVehicles } from "./crew-assignment";
 import { PushNotificationService, getVapidPublicKey } from "./push-service";
 import { ReminderScheduler } from "./reminder-scheduler";
+import { logAuditEvent } from "./audit-helper";
 import { z } from "zod";
 
 // Extend Express session to include user
@@ -244,22 +245,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const user = await storage.getUserByUsername(username);
       if (!user) {
+        await logAuditEvent(req, {
+          action: "login_failed",
+          severity: "warning",
+          metadata: { username, reason: "user_not_found" }
+        });
         return res.status(401).json({ error: "Ungültige Anmeldedaten" });
       }
       
       const validPassword = await verifyPassword(password, user.password);
       if (!validPassword) {
+        await logAuditEvent(req, {
+          action: "login_failed",
+          entity_type: "user",
+          entity_id: user.id,
+          severity: "warning",
+          metadata: { username, reason: "invalid_password" }
+        });
         return res.status(401).json({ error: "Ungültige Anmeldedaten" });
       }
       
       req.session.userId = user.id;
+      
+      await logAuditEvent(req, {
+        action: "login_success",
+        entity_type: "user",
+        entity_id: user.id,
+        metadata: { username, role: user.role }
+      });
+      
       res.json(sanitizeUser(user));
     } catch (error) {
       res.status(500).json({ error: "Login fehlgeschlagen" });
     }
   });
 
-  app.post("/api/auth/logout", (req: Request, res: Response) => {
+  app.post("/api/auth/logout", async (req: Request, res: Response) => {
+    const userId = req.session.userId;
+    
+    await logAuditEvent(req, {
+      action: "logout",
+      entity_type: "user",
+      entity_id: userId || undefined
+    });
+    
     req.session.destroy((err) => {
       if (err) {
         return res.status(500).json({ error: "Logout fehlgeschlagen" });
@@ -1174,6 +1203,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         date,
         status,
         reason: reason || null,
+      });
+      
+      await logAuditEvent(req, {
+        action: "availability_changed",
+        entity_type: "availability",
+        entity_id: availability.id?.toString(),
+        metadata: { 
+          date, 
+          status, 
+          reason: reason || null,
+          old_status: oldAvailability?.status || null
+        }
       });
       
       // If changing availability for today, trigger automatic reassignment
