@@ -18,6 +18,7 @@ import { z } from "zod";
 declare module "express-session" {
   interface SessionData {
     userId?: string;
+    role?: User["role"];
   }
 }
 
