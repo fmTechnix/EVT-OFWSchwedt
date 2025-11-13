@@ -406,7 +406,7 @@ export async function assignCrewToVehicles(
   }
   
   // REASSIGNMENT PHASE: Move qualified personnel from low to high-priority gaps
-  // This ensures tactical vehicles are fully staffed before support vehicles
+  // Strategy: Keep minimal crew (2-3 people) on MTF/ELW, redistribute rest to tactical vehicles
   let reassignmentsMade = 0;
   const affectedVehicleNames = new Set<string>();
   
@@ -415,6 +415,9 @@ export async function assignCrewToVehicles(
   for (const vc of vehicleConfigs) {
     slotDefinitionsMap.set(vc.vehicle, vc.slots as any[]);
   }
+  
+  // Define minimal crew requirements for support vehicles (Priority 3 only: MTW, ELW, KdoW)
+  const MINIMAL_CREW_FOR_SUPPORT = 2; // Keep 2-3 people on MTF/ELW before redistributing
   
   // Process priority tiers from highest to lowest
   for (const targetPriority of sortedPriorities) {
@@ -436,17 +439,28 @@ export async function assignCrewToVehicles(
         const originalSlotDef = slotDefinitionsMap.get(targetVehicle.vehicle)?.[emptySlotIndex];
         if (!originalSlotDef) continue;
         
-        // Search for qualified personnel in lower-priority vehicles (priority 3)
+        // Search for qualified personnel in lower-priority vehicles (priority 3: MTF/ELW only)
         const sourcePriority = 3;
         const sourceVehicles = assignments.filter(va => {
           const vPriority = priorityMap.get(va.type) || 3;
-          return vPriority === sourcePriority;
+          // Only pull from actual support vehicles (MTW, ELW, KdoW), not RW or other priority 2/3 hybrids
+          const isSupportVehicle = va.type === 'MTW' || va.type === 'ELW' || va.type === 'KdoW';
+          return vPriority === sourcePriority && isSupportVehicle;
         });
         
         // Find candidates: users assigned to source vehicles who could fill this slot
+        // BUT respect minimal crew requirement (keep at least 2-3 people on each support vehicle)
         const candidates: Array<{ user: User; sourceVehicle: VehicleAssignment; sourceSlotIndex: number }> = [];
         
         for (const sourceVehicle of sourceVehicles) {
+          // Count currently assigned crew on this support vehicle
+          const currentCrew = sourceVehicle.slots.filter(s => s.assignedUser !== null).length;
+          
+          // Only pull crew if we have MORE than minimal requirement
+          if (currentCrew <= MINIMAL_CREW_FOR_SUPPORT) {
+            continue; // Skip this vehicle - keep minimal crew intact
+          }
+          
           sourceVehicle.slots.forEach((sourceSlot, slotIndex) => {
             if (sourceSlot.assignedUser !== null) {
               // Use original slot definition for accurate qualification checking
@@ -486,6 +500,16 @@ export async function assignCrewToVehicles(
           );
           
           const bestCandidate = candidates.find(c => c.user.id === bestScored.user.id)!;
+          
+          // DOUBLE-CHECK: After removal, will source vehicle still have minimal crew?
+          const sourceCrewAfterRemoval = bestCandidate.sourceVehicle.slots.filter(
+            (s, idx) => s.assignedUser !== null && idx !== bestCandidate.sourceSlotIndex
+          ).length;
+          
+          if (sourceCrewAfterRemoval < MINIMAL_CREW_FOR_SUPPORT) {
+            // Skip this reassignment - would violate minimal crew requirement
+            continue;
+          }
           
           // REASSIGN: Move user from source to target
           emptySlot.assignedUser = bestCandidate.user;
@@ -539,7 +563,7 @@ export async function assignCrewToVehicles(
   
   if (reassignmentsMade > 0) {
     globalWarnings.unshift(
-      `Reassignment: ${reassignmentsMade} Personen von Support-Fahrzeugen auf taktische Fahrzeuge verschoben`
+      `Umverteilung: ${reassignmentsMade} Personen von MTF/ELW (über Minimalbesetzung) zu LF/HLF/TLF verschoben`
     );
   }
   
