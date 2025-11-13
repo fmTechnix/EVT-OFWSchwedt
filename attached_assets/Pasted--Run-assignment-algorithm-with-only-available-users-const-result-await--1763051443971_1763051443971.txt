@@ -1,0 +1,60 @@
+    }
+      
+      // Run assignment algorithm with only available users
+      const result = await assignCrewToVehicles(availableUsers, vehicleConfigs, storage, today);
+      
+      // Save assignments to database
+      const assignmentsToSave: Array<{
+        user_id: string;
+        vehicle_config_id: number;
+        position: string;
+        trupp_partner_id: string | null;
+      }> = [];
+      
+      for (const vehicleAssignment of result.assignments) {
+        // Find the vehicle config ID by vehicle name
+        const vehicleConfig = vehicleConfigs.find(
+          vc => vc.vehicle === (vehicleAssignment as any).vehicle
+        );
+        
+        if (!vehicleConfig) continue;
+        
+        for (const slot of vehicleAssignment.slots) {
+          if (slot.assignedUser) {
+            // Find trupp partner for positions like "Angriffstrupp", "Wassertrupp", etc.
+            let truppPartnerId: string | null = null;
+            
+            if (slot.position.includes("trupp") && !slot.position.includes("führer")) {
+              const truppName = slot.position.replace(/\s*\(.*?\)/, ""); // Remove qualifications in parentheses
+              const partnerSlot = vehicleAssignment.slots.find(
+                s => s.position !== slot.position && 
+                     s.position.includes(truppName) && 
+                     s.assignedUser
+              );
+              if (partnerSlot && partnerSlot.assignedUser) {
+                truppPartnerId = partnerSlot.assignedUser.id;
+              }
+            }
+            
+            assignmentsToSave.push({
+              user_id: slot.assignedUser.id,
+              vehicle_config_id: vehicleConfig.id,
+              position: slot.position,
+              trupp_partner_id: truppPartnerId,
+            });
+          }
+        }
+      }
+      
+      await storage.setCurrentAssignments(assignmentsToSave);
+      
+      await logAuditEvent(req, {
+        action: "crew_assignment_automatic",
+        entity_type: "assignment",
+        metadata: {
+          vehicle_count: result.assignments.length,
+          total_assigned: result.summary?.totalAssigned || assignmentsToSave.length,
+          warnings: result.summary?.warnings || [],
+          vehicleIds: validation.data.vehicleIds
+        }
+      });
