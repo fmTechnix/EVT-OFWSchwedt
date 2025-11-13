@@ -266,6 +266,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       req.session.userId = user.id;
+      req.session.role = user.role;
       
       await logAuditEvent(req, {
         action: "login_success",
@@ -2332,6 +2333,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const savedEvent = await storage.createAlarmEvent(testAlarm);
       console.log("🧪 Test alarm created:", savedEvent.id);
+      
+      await logAuditEvent(req, {
+        action: "alarm_simulated",
+        entity_type: "alarm",
+        entity_id: savedEvent.id?.toString(),
+        severity: "info",
+        metadata: {
+          einsatznummer: savedEvent.einsatznummer,
+          stichwort: savedEvent.stichwort,
+          notifyUserIds: notifyUserIds || []
+        }
+      });
 
       // Send push notifications to selected users
       if (notifyUserIds && Array.isArray(notifyUserIds) && notifyUserIds.length > 0) {
