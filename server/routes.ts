@@ -26,10 +26,11 @@ function sanitizeUser(user: User): Omit<User, "password"> {
   return sanitized;
 }
 
-// Helper: Filter out admin users from operational statistics and assignments
-// Admin accounts are for system administration only, not crew members
+// Helper: Filter out system_admin users from operational statistics and assignments
+// System admin accounts are for system administration only, not crew members
+// Regular "admin" role (operative admins) ARE included in crew assignments
 function filterOperationalUsers(users: User[]): User[] {
-  return users.filter(u => u.role !== "admin");
+  return users.filter(u => u.role !== "system_admin");
 }
 
 // Middleware to check authentication
@@ -40,28 +41,28 @@ function requireAuth(req: Request, res: Response, next: Function) {
   next();
 }
 
-// Middleware to check admin role
+// Middleware to check admin role (accepts both system_admin and admin)
 async function requireAdmin(req: Request, res: Response, next: Function) {
   if (!req.session.userId) {
     return res.status(401).json({ error: "Nicht authentifiziert" });
   }
   
   const user = await storage.getUser(req.session.userId);
-  if (!user || user.role !== "admin") {
+  if (!user || (user.role !== "system_admin" && user.role !== "admin")) {
     return res.status(403).json({ error: "Keine Berechtigung" });
   }
   
   next();
 }
 
-// Middleware to check moderator or admin role
+// Middleware to check moderator or admin role (accepts system_admin, admin, moderator)
 async function requireModerator(req: Request, res: Response, next: Function) {
   if (!req.session.userId) {
     return res.status(401).json({ error: "Nicht authentifiziert" });
   }
   
   const user = await storage.getUser(req.session.userId);
-  if (!user || (user.role !== "admin" && user.role !== "moderator")) {
+  if (!user || (user.role !== "system_admin" && user.role !== "admin" && user.role !== "moderator")) {
     return res.status(403).json({ error: "Keine Berechtigung" });
   }
   
