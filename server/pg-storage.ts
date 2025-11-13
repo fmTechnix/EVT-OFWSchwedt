@@ -498,8 +498,9 @@ export class PostgresStorage implements IStorage {
 
   // Current Assignments
   async getCurrentAssignments(): Promise<CurrentAssignment[]> {
-    // CRITICAL: Filter out admin users from assignments (they should never appear in operational context)
-    // This includes both user_id and trupp_partner_id - admins must not appear anywhere
+    // CRITICAL: Filter out system_admin users from assignments (they should never appear in operational context)
+    // This includes both user_id and trupp_partner_id - system_admins must not appear anywhere
+    // Note: Regular "admin" role (operative admins) ARE included in assignments
     const result = await db
       .select({
         assignment: currentAssignments,
@@ -511,15 +512,15 @@ export class PostgresStorage implements IStorage {
       .leftJoin(sql`users as partner`, sql`${currentAssignments.trupp_partner_id} = partner.id`)
       .where(
         and(
-          // Exclude assignments where user is admin
+          // Exclude assignments where user is system_admin
           or(
             sql`${users.role} IS NULL`,
-            sql`${users.role} != 'admin'`
+            sql`${users.role} != 'system_admin'`
           ),
-          // Exclude assignments where trupp_partner is admin
+          // Exclude assignments where trupp_partner is system_admin
           or(
             sql`partner.role IS NULL`,
-            sql`partner.role != 'admin'`
+            sql`partner.role != 'system_admin'`
           )
         )
       );
@@ -540,8 +541,9 @@ export class PostgresStorage implements IStorage {
       return [];
     }
     
-    // CRITICAL: Filter out admin users before saving assignments
-    // Admin accounts must NEVER be assigned to vehicles (neither as user_id nor trupp_partner_id)
+    // CRITICAL: Filter out system_admin users before saving assignments
+    // System admin accounts must NEVER be assigned to vehicles (neither as user_id nor trupp_partner_id)
+    // Note: Regular "admin" role (operative admins) ARE included in assignments
     const validAssignments: InsertCurrentAssignment[] = [];
     
     // Batch fetch all user IDs to check roles (performance optimization)
@@ -560,7 +562,7 @@ export class PostgresStorage implements IStorage {
     }
     
     for (const assignment of insertAssignments) {
-      // Check if user_id is admin
+      // Check if user_id is system_admin
       if (assignment.user_id) {
         const userRole = userRoleMap.get(assignment.user_id);
         if (!userRole) {
@@ -568,19 +570,19 @@ export class PostgresStorage implements IStorage {
           continue;
         }
         
-        if (userRole === "admin") {
+        if (userRole === "system_admin") {
           const user = allUsers.find(u => u.id === assignment.user_id);
-          console.warn(`⚠️  setCurrentAssignments: Blocked admin user ${user?.vorname} ${user?.nachname} (${assignment.user_id}) from being assigned to vehicle`);
+          console.warn(`⚠️  setCurrentAssignments: Blocked system_admin user ${user?.vorname} ${user?.nachname} (${assignment.user_id}) from being assigned to vehicle`);
           continue;
         }
       }
       
-      // Check if trupp_partner_id is admin
+      // Check if trupp_partner_id is system_admin
       if (assignment.trupp_partner_id) {
         const partnerRole = userRoleMap.get(assignment.trupp_partner_id);
-        if (partnerRole === "admin") {
+        if (partnerRole === "system_admin") {
           const partner = allUsers.find(u => u.id === assignment.trupp_partner_id);
-          console.warn(`⚠️  setCurrentAssignments: Blocked admin user ${partner?.vorname} ${partner?.nachname} (${assignment.trupp_partner_id}) from being trupp_partner`);
+          console.warn(`⚠️  setCurrentAssignments: Blocked system_admin user ${partner?.vorname} ${partner?.nachname} (${assignment.trupp_partner_id}) from being trupp_partner`);
           // Null out the partner instead of skipping entire assignment
           assignment.trupp_partner_id = null;
         }
