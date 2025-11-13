@@ -1,0 +1,30 @@
+0|evt      | 2025-11-13 17:57:33: }
+0|evt      | 2025-11-13 17:57:36: Error fetching audit logs: error: relation "audit_logs" does not exist
+0|evt      | 2025-11-13 17:57:36:     at /home/felix/EVT/EVT-OFWSchwedt/node_modules/pg-pool/index.js:45:11
+0|evt      | 2025-11-13 17:57:36:     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|evt      | 2025-11-13 17:57:36:     at async <anonymous> (/home/felix/EVT/EVT-OFWSchwedt/node_modules/src/node-postgres/session.ts:104:19)
+0|evt      | 2025-11-13 17:57:36:     at async PostgresStorage.getAuditLogs (/home/felix/EVT/EVT-OFWSchwedt/server/pg-storage.ts:913:25)
+0|evt      | 2025-11-13 17:57:36:     at async <anonymous> (/home/felix/EVT/EVT-OFWSchwedt/server/routes.ts:2503:22) {
+0|evt      | 2025-11-13 17:57:36:   length: 109,
+0|evt      | 2025-11-13 17:57:36:   severity: 'ERROR',
+0|evt      | 2025-11-13 17:57:36:   code: '42P01',
+0|evt      | 2025-11-13 17:57:36:   detail: undefined,
+0|evt      | 2025-11-13 17:57:36:   hint: undefined,
+0|evt      | 2025-11-13 17:57:36:   position: '27',
+0|evt      | 2025-11-13 17:57:36:   internalPosition: undefined,
+0|evt      | 2025-11-13 17:57:36:   internalQuery: undefined,
+0|evt      | 2025-11-13 17:57:36:   where: undefined,
+0|evt      | 2025-11-13 17:57:36:   schema: undefined,
+0|evt      | 2025-11-13 17:57:36:   table: undefined,
+0|evt      | 2025-11-13 17:57:36:   column: undefined,
+0|evt      | 2025-11-13 17:57:36:   dataType: undefined,
+0|evt      | 2025-11-13 17:57:36:   constraint: undefined,
+0|evt      | 2025-11-13 17:57:36:   file: 'parse_relation.c',
+0|evt      | 2025-11-13 17:57:36:   line: '1449',
+0|evt      | 2025-11-13 17:57:36:   routine: 'parserOpenTable'
+0|evt      | 2025-11-13 17:57:36: }
+0|evt      | 2025-11-13 18:17:21: Browserslist: browsers data (caniuse-lite) is 13 months old. Please run:
+0|evt      | 2025-11-13 18:17:21:   npx update-browserslist-db@latest
+0|evt      | 2025-11-13 18:17:21:   Why you should do it regularly: https://github.com/browserslist/update-db#readme
+0|evt      | 2025-11-13 18:17:28: 
+0|evt      | 2025-11-13 18:17:28: A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
