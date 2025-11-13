@@ -340,7 +340,9 @@ export async function assignCrewToVehicles(
         // Higher qualification score = better match
         // Lower fairness score = higher priority
         // We normalize and combine them
-        const combinedScores = scoredUsers.map(scored => {
+        const combinedScores = scoredUsers
+          .filter(scored => scored.user) // Filter out undefined users (defensive)
+          .map(scored => {
           const qualUser = usersWithQualScore.find(u => u.user.id === scored.user.id);
           const qualScore = qualUser?.qualScore || 0;
           
