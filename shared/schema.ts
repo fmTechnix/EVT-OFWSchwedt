@@ -349,7 +349,8 @@ export type AlarmEvent = typeof alarmEvents.$inferSelect;
 export const aaoStichworte = pgTable("aao_stichworte", {
   id: serial("id").primaryKey(),
   stichwort: text("stichwort").notNull().unique(), // e.g., "B:Klein", "H:VU mit P"
-  kategorie: text("kategorie").notNull(), // "Brand" or "Hilfeleistung"
+  kategorie: text("kategorie").notNull(), // "brand", "hilfeleistung", "sonstige"
+  einsatzart: text("einsatzart").notNull().default("standard"), // "brandeinsatz", "technische_hilfeleistung", "gefahrgut", "standard"
   beschreibung: text("beschreibung").notNull(), // Description/examples
   fahrzeuge: text("fahrzeuge").array().notNull().default(sql`'{}'`), // Array of vehicle names that should respond
   taktische_einheit: text("taktische_einheit"), // e.g., "Staffel", "Gruppe", "Zug"
@@ -358,9 +359,26 @@ export const aaoStichworte = pgTable("aao_stichworte", {
   erstellt_am: timestamp("erstellt_am").notNull().default(sql`now()`),
 });
 
-export const insertAaoStichwortSchema = createInsertSchema(aaoStichworte).omit({ id: true, erstellt_am: true });
+export const insertAaoStichwortSchema = createInsertSchema(aaoStichworte).omit({ id: true, erstellt_am: true }).extend({
+  einsatzart: z.enum(["brandeinsatz", "technische_hilfeleistung", "gefahrgut", "standard"]).default("standard"),
+});
 export type InsertAaoStichwort = z.infer<typeof insertAaoStichwortSchema>;
 export type AaoStichwort = typeof aaoStichworte.$inferSelect;
+
+// Vehicle Priorities (Fahrzeug-Prioritäten für taktische Besetzung)
+// Priority 1 = highest (Angriffsfahrzeuge), Priority 3 = lowest (Unterstützung)
+export const vehiclePriorities = pgTable("vehicle_priorities", {
+  id: serial("id").primaryKey(),
+  vehicle_type: text("vehicle_type").notNull().unique(), // e.g., "LF", "HLF", "TLF", "DL", "RW", "MTW", "ELW", "ABC-Erkunder", "KdoW"
+  brandeinsatz_priority: integer("brandeinsatz_priority").notNull().default(3), // 1 = highest, 3 = lowest
+  th_priority: integer("th_priority").notNull().default(3), // Technical rescue priority
+  gefahrgut_priority: integer("gefahrgut_priority").notNull().default(3), // Hazmat priority
+  standard_priority: integer("standard_priority").notNull().default(2), // Default priority
+});
+
+export const insertVehiclePrioritySchema = createInsertSchema(vehiclePriorities).omit({ id: true });
+export type InsertVehiclePriority = z.infer<typeof insertVehiclePrioritySchema>;
+export type VehiclePriority = typeof vehiclePriorities.$inferSelect;
 
 // Audit Logs (System-weite Event-Logs für Admin-Überwachung)
 export const auditLogs = pgTable("audit_logs", {

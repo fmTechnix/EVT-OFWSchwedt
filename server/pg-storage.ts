@@ -20,6 +20,7 @@ import {
   userReminderSettings,
   alarmEvents,
   aaoStichworte,
+  vehiclePriorities,
   auditLogs,
   type User,
   type InsertUser,
@@ -58,6 +59,8 @@ import {
   type InsertAlarmEvent,
   type AaoStichwort,
   type InsertAaoStichwort,
+  type VehiclePriority,
+  type InsertVehiclePriority,
   type AuditLog,
   type InsertAuditLog,
 } from "@shared/schema";
@@ -926,5 +929,24 @@ export class PostgresStorage implements IStorage {
     const logs = await logsQuery;
 
     return { logs, total };
+  }
+
+  // Vehicle Priorities (Fahrzeug-Prioritäten)
+  async getAllVehiclePriorities(): Promise<VehiclePriority[]> {
+    return await db.select().from(vehiclePriorities);
+  }
+
+  async getVehiclePriority(vehicleType: string): Promise<VehiclePriority | undefined> {
+    const result = await db.select().from(vehiclePriorities).where(eq(vehiclePriorities.vehicle_type, vehicleType));
+    return result[0];
+  }
+
+  async updateVehiclePriority(vehicleType: string, updates: Partial<InsertVehiclePriority>): Promise<VehiclePriority> {
+    const result = await db.update(vehiclePriorities)
+      .set(updates)
+      .where(eq(vehiclePriorities.vehicle_type, vehicleType))
+      .returning();
+    if (!result[0]) throw new Error("Vehicle priority not found");
+    return result[0];
   }
 }

@@ -21,6 +21,7 @@ import type {
   UserReminderSettings, InsertUserReminderSettings,
   AlarmEvent, InsertAlarmEvent,
   AaoStichwort, InsertAaoStichwort,
+  VehiclePriority, InsertVehiclePriority,
   AuditLog, InsertAuditLog
 } from "@shared/schema";
 import { PostgresStorage } from "./pg-storage";
@@ -158,6 +159,11 @@ export interface IStorage {
   createAaoStichwort(stichwort: InsertAaoStichwort): Promise<AaoStichwort>;
   updateAaoStichwort(id: number, updates: Partial<InsertAaoStichwort>): Promise<AaoStichwort>;
   deleteAaoStichwort(id: number): Promise<void>;
+  
+  // Vehicle Priorities (Fahrzeug-Prioritäten für taktische Besetzung)
+  getAllVehiclePriorities(): Promise<VehiclePriority[]>;
+  getVehiclePriority(vehicleType: string): Promise<VehiclePriority | undefined>;
+  updateVehiclePriority(vehicleType: string, updates: Partial<InsertVehiclePriority>): Promise<VehiclePriority>;
   
   // Audit Logs (System-weite Event-Logs)
   createAuditLog(log: InsertAuditLog): Promise<AuditLog>;
@@ -1015,6 +1021,19 @@ export class MemStorage implements IStorage {
     const paginated = filtered.slice(offset, offset + limit);
 
     return { logs: paginated, total };
+  }
+
+  // Vehicle Priorities (stubs - not used, only PostgresStorage is used)
+  async getAllVehiclePriorities(): Promise<VehiclePriority[]> {
+    return [];
+  }
+
+  async getVehiclePriority(vehicleType: string): Promise<VehiclePriority | undefined> {
+    return undefined;
+  }
+
+  async updateVehiclePriority(vehicleType: string, updates: Partial<InsertVehiclePriority>): Promise<VehiclePriority> {
+    throw new Error("MemStorage does not support vehicle priorities");
   }
 }
 
