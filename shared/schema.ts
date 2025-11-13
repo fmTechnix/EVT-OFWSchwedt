@@ -8,14 +8,16 @@ export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
-  role: text("role").notNull(), // "admin", "moderator", or "member"
+  role: text("role").notNull(), // "system_admin" (excluded from assignments), "admin" (operative admin), "moderator", or "member"
   vorname: text("vorname").notNull(),
   nachname: text("nachname").notNull(),
   qualifikationen: text("qualifikationen").array().notNull().default(sql`'{}'`), // ["TM", "AGT", "Maschinist", "GF", "Sprechfunker", "San"]
   muss_passwort_aendern: boolean("muss_passwort_aendern").notNull().default(false),
 });
 
-export const insertUserSchema = createInsertSchema(users).omit({ id: true });
+export const insertUserSchema = createInsertSchema(users).omit({ id: true }).extend({
+  role: z.enum(["system_admin", "admin", "moderator", "member"]),
+});
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 
