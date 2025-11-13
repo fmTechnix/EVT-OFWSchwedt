@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Navigation } from "@/components/navigation";
 import { Activity, Database, Bell, Server, Users, AlertTriangle, CheckCircle, Info } from "lucide-react";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -107,27 +108,30 @@ export default function SystemLogs() {
   };
 
   return (
-    <div className="flex flex-col gap-6 p-6" data-testid="page-system-logs">
-      <div>
-        <h1 className="text-3xl font-bold" data-testid="heading-system-logs">System-Logs & Überwachung</h1>
-        <p className="text-muted-foreground" data-testid="text-system-logs-description">
-          Audit-Logs, Server-Metriken und System-Status
-        </p>
-      </div>
+    <div className="min-h-screen bg-background">
+      <Navigation />
+      
+      <main className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-8" data-testid="page-system-logs">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold" data-testid="heading-system-logs">System-Logs & Überwachung</h1>
+          <p className="text-muted-foreground" data-testid="text-system-logs-description">
+            Audit-Logs, Server-Metriken und System-Status
+          </p>
+        </div>
 
-      <Tabs defaultValue="metrics" className="w-full">
-        <TabsList>
-          <TabsTrigger value="metrics" data-testid="tab-metrics">
-            <Server className="h-4 w-4 mr-2" />
-            Server-Metriken
-          </TabsTrigger>
-          <TabsTrigger value="audit" data-testid="tab-audit">
-            <Activity className="h-4 w-4 mr-2" />
-            Audit-Logs
-          </TabsTrigger>
-        </TabsList>
+        <Tabs defaultValue="metrics" className="w-full">
+          <TabsList>
+            <TabsTrigger value="metrics" data-testid="tab-metrics">
+              <Server className="h-4 w-4 mr-2" />
+              Server-Metriken
+            </TabsTrigger>
+            <TabsTrigger value="audit" data-testid="tab-audit">
+              <Activity className="h-4 w-4 mr-2" />
+              Audit-Logs
+            </TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="metrics" className="space-y-4">
+          <TabsContent value="metrics" className="space-y-4">
           {healthLoading ? (
             <div className="text-center py-8 text-muted-foreground">Lade System-Metriken...</div>
           ) : systemHealth ? (
@@ -197,9 +201,9 @@ export default function SystemLogs() {
           ) : (
             <div className="text-center py-8 text-muted-foreground">Keine Daten verfügbar</div>
           )}
-        </TabsContent>
+          </TabsContent>
 
-        <TabsContent value="audit" className="space-y-4">
+          <TabsContent value="audit" className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle>Filter</CardTitle>
@@ -321,8 +325,9 @@ export default function SystemLogs() {
               )}
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+          </TabsContent>
+        </Tabs>
+      </main>
     </div>
   );
 }
