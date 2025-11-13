@@ -805,7 +805,11 @@ export class PostgresStorage implements IStorage {
   }
 
   // Reassignment tracking: Update most recent assignment for this user+date
-  // NOTE: This is a simplified implementation. Full implementation would use historyId.
+  // TODO: Future improvement - use historyId and transactions for full robustness
+  //   - Capture assignment_history.id at creation time
+  //   - Use ID for deterministic updates (handles multi-assignment scenarios)
+  //   - Wrap history+fairness updates in single transaction
+  //   Current limitation: May update wrong row if user has multiple assignments on same day
   async updateAssignmentHistoryForReassignment(
     userId: string,
     assignedForDate: string,
