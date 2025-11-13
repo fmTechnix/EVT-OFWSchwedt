@@ -1,0 +1,35 @@
+elix@raspberrypi:~/EVT/EVT-OFWSchwedt $ pm2 log
+[TAILING] Tailing last 15 lines for [all] processes (change the value with --lines option)
+/home/felix/.pm2/pm2.log last 15 lines:
+PM2        | 2025-11-13T17:26:09: PM2 log: App [evt:0] exited with code [1] via signal [SIGINT]
+PM2        | 2025-11-13T17:26:09: PM2 log: App [evt:0] starting in -fork mode-
+PM2        | 2025-11-13T17:26:09: PM2 log: App [evt:0] online
+PM2        | 2025-11-13T17:26:11: PM2 log: App [evt:0] exited with code [1] via signal [SIGINT]
+PM2        | 2025-11-13T17:26:11: PM2 log: App [evt:0] starting in -fork mode-
+PM2        | 2025-11-13T17:26:11: PM2 log: App [evt:0] online
+PM2        | 2025-11-13T17:26:13: PM2 log: App [evt:0] exited with code [1] via signal [SIGINT]
+PM2        | 2025-11-13T17:26:13: PM2 log: App [evt:0] starting in -fork mode-
+PM2        | 2025-11-13T17:26:13: PM2 log: App [evt:0] online
+PM2        | 2025-11-13T17:26:15: PM2 log: App [evt:0] exited with code [1] via signal [SIGINT]
+PM2        | 2025-11-13T17:26:15: PM2 log: App [evt:0] starting in -fork mode-
+PM2        | 2025-11-13T17:26:15: PM2 log: App [evt:0] online
+PM2        | 2025-11-13T17:26:16: PM2 log: App [evt:0] exited with code [1] via signal [SIGINT]
+PM2        | 2025-11-13T17:26:16: PM2 log: App [evt:0] starting in -fork mode-
+PM2        | 2025-11-13T17:26:16: PM2 log: App [evt:0] online
+
+/home/felix/.pm2/logs/evt-error.log last 15 lines:
+0|evt      | 2025-11-13 17:26:16:     ^
+0|evt      | 2025-11-13 17:26:16: Error [TransformError]: Transform failed with 1 error:
+0|evt      | 2025-11-13 17:26:16: /home/felix/EVT/EVT-OFWSchwedt/server/routes.ts:1:11: ERROR: Expected ";" but found "type"
+0|evt      | 2025-11-13 17:26:16:     at failureErrorWithLog (/home/felix/EVT/EVT-OFWSchwedt/node_modules/esbuild/lib/main.js:1467:15)
+0|evt      | 2025-11-13 17:26:16:     at /home/felix/EVT/EVT-OFWSchwedt/node_modules/esbuild/lib/main.js:736:50
+0|evt      | 2025-11-13 17:26:16:     at responseCallbacks.<computed> (/home/felix/EVT/EVT-OFWSchwedt/node_modules/esbuild/lib/main.js:603:9)
+0|evt      | 2025-11-13 17:26:16:     at handleIncomingPacket (/home/felix/EVT/EVT-OFWSchwedt/node_modules/esbuild/lib/main.js:658:12)
+0|evt      | 2025-11-13 17:26:16:     at Socket.readFromStdout (/home/felix/EVT/EVT-OFWSchwedt/node_modules/esbuild/lib/main.js:581:7)
+0|evt      | 2025-11-13 17:26:16:     at Socket.emit (node:events:524:28)
+0|evt      | 2025-11-13 17:26:16:     at addChunk (node:internal/streams/readable:561:12)
+0|evt      | 2025-11-13 17:26:16:     at readableAddChunkPushByteMode (node:internal/streams/readable:512:3)
+0|evt      | 2025-11-13 17:26:16:     at Readable.push (node:internal/streams/readable:392:5)
+0|evt      | 2025-11-13 17:26:16:     at Pipe.onStreamRead (node:internal/stream_base_commons:191:23)
+0|evt      | 2025-11-13 17:26:16: 
+0|evt      | 2025-11-13 17:26:16: Node.js v20.19.5
