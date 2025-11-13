@@ -26,6 +26,16 @@ function sanitizeUser(user: User): Omit<User, "password"> {
   return sanitized;
 }
 
+// Helper: Check if user has admin privileges (system_admin or admin)
+function isAdmin(user: User | null | undefined): boolean {
+  return user?.role === "system_admin" || user?.role === "admin";
+}
+
+// Helper: Check if user has moderator or higher privileges
+function isModeratorOrAbove(user: User | null | undefined): boolean {
+  return user?.role === "system_admin" || user?.role === "admin" || user?.role === "moderator";
+}
+
 // Helper: Filter out system_admin users from operational statistics and assignments
 // System admin accounts are for system administration only, not crew members
 // Regular "admin" role (operative admins) ARE included in crew assignments
@@ -1743,7 +1753,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if user is admin/moderator for status changes
       if (updates.status) {
         const user = await storage.getUser(req.session.userId!);
-        if (!user || (user.role !== "admin" && user.role !== "moderator")) {
+        if (!isModeratorOrAbove(user)) {
           return res.status(403).json({ error: "Nur Administratoren und Moderatoren können den Status ändern" });
         }
       }
@@ -2016,7 +2026,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/alarm/events", requireAuth, async (req: Request, res: Response) => {
     try {
       const user = await storage.getUser(req.session.userId!);
-      if (!user || (user.role !== "admin" && user.role !== "moderator")) {
+      if (!isModeratorOrAbove(user)) {
         return res.status(403).json({ error: "Keine Berechtigung" });
       }
 
@@ -2032,7 +2042,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/alarm/events/unprocessed", requireAuth, async (req: Request, res: Response) => {
     try {
       const user = await storage.getUser(req.session.userId!);
-      if (!user || (user.role !== "admin" && user.role !== "moderator")) {
+      if (!isModeratorOrAbove(user)) {
         return res.status(403).json({ error: "Keine Berechtigung" });
       }
 
@@ -2306,7 +2316,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/aao", requireAuth, async (req: Request, res: Response) => {
     try {
       const user = await storage.getUser(req.session.userId!);
-      if (!user || (user.role !== "admin" && user.role !== "moderator")) {
+      if (!isModeratorOrAbove(user)) {
         return res.status(403).json({ error: "Keine Berechtigung" });
       }
 
@@ -2322,7 +2332,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/aao/:id", requireAuth, async (req: Request, res: Response) => {
     try {
       const user = await storage.getUser(req.session.userId!);
-      if (!user || (user.role !== "admin" && user.role !== "moderator")) {
+      if (!isModeratorOrAbove(user)) {
         return res.status(403).json({ error: "Keine Berechtigung" });
       }
 
@@ -2407,16 +2417,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const pushLogs = await storage.getAllPushLogs({ limit: 100 });
       const alarms = await storage.getAllAlarmEvents();
 
-      // Filter out admin users from operational statistics
+      // Filter out system_admin users from operational statistics
       const operationalUsers = filterOperationalUsers(allUsers);
       
-      // Calculate metrics (excluding admin accounts)
+      // Calculate metrics (excluding system_admin accounts)
       const totalUsers = operationalUsers.length;
       const availableToday = availabilities.length; // Already filtered by getAvailableUsers in storage
       const assignedUsers = assignments.filter(a => {
         if (!a.user_id) return false;
         const user = allUsers.find(u => u.id === a.user_id);
-        return user && user.role !== "admin";
+        return user && user.role !== "system_admin";
       }).length;
       
       const pushSuccess = pushLogs.filter(log => log.status === "success").length;

@@ -207,8 +207,9 @@ export async function assignCrewToVehicles(
   storage: IStorage,
   assignedForDate: string
 ): Promise<CrewAssignmentResult> {
-  // Filter out admin users - they should never be assigned to crew positions
-  const operationalUsers = users.filter(u => u.role !== "admin");
+  // Filter out system_admin users - they should never be assigned to crew positions
+  // Note: Regular "admin" role (operative admins) ARE included in assignments
+  const operationalUsers = users.filter(u => u.role !== "system_admin");
   const availableUsers = [...operationalUsers];
   const assignments: VehicleAssignment[] = [];
   const globalWarnings: string[] = [];
