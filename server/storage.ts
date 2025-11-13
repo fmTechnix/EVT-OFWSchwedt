@@ -138,6 +138,8 @@ export interface IStorage {
   createAssignmentHistory(insertHistory: InsertAssignmentHistory): Promise<AssignmentHistory>;
   getAssignmentHistory(userId: string, weeks?: number): Promise<AssignmentHistory[]>;
   getRecentAssignmentsByPosition(userId: string, position: string, weeks?: number): Promise<AssignmentHistory[]>;
+  // Simplified reassignment tracking: updates most recent assignment for this user+date
+  updateAssignmentHistoryForReassignment(userId: string, assignedForDate: string, newVehicle: string, newPosition: string): Promise<void>;
   
   // Assignment Fairness
   getFairnessMetrics(userId: string): Promise<AssignmentFairness | undefined>;
@@ -871,6 +873,16 @@ export class MemStorage implements IStorage {
   }
 
   async resetFairnessMetrics(_userId: string): Promise<void> {
+    return;
+  }
+
+  async updateAssignmentHistoryForReassignment(
+    _userId: string,
+    _assignedForDate: string,
+    _newVehicle: string,
+    _newPosition: string
+  ): Promise<void> {
+    // Stub - not implemented in MemStorage
     return;
   }
 

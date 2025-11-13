@@ -404,7 +404,142 @@ export async function assignCrewToVehicles(
   }
   
   // REASSIGNMENT PHASE: Move qualified personnel from low to high-priority gaps
-  // TODO: Implement reassignment logic in next iteration
+  // This ensures tactical vehicles are fully staffed before support vehicles
+  let reassignmentsMade = 0;
+  const affectedVehicleNames = new Set<string>();
+  
+  // Build map of original slot definitions from vehicleConfigs for accurate qualification checking
+  const slotDefinitionsMap = new Map<string, any[]>();
+  for (const vc of vehicleConfigs) {
+    slotDefinitionsMap.set(vc.vehicle, vc.slots as any[]);
+  }
+  
+  // Process priority tiers from highest to lowest
+  for (const targetPriority of sortedPriorities) {
+    if (targetPriority === 3) break; // Don't reassign TO priority 3 vehicles
+    
+    const targetVehicles = assignments.filter(va => {
+      const vPriority = priorityMap.get(va.type) || 3;
+      return vPriority === targetPriority && !va.fulfilled;
+    });
+    
+    for (const targetVehicle of targetVehicles) {
+      // Find empty slots in this vehicle
+      const emptySlotIndices = targetVehicle.slots
+        .map((slot, index) => ({ slot, index }))
+        .filter(({ slot }) => slot.assignedUser === null);
+      
+      for (const { slot: emptySlot, index: emptySlotIndex } of emptySlotIndices) {
+        // Get original slot definition with all qualification rules
+        const originalSlotDef = slotDefinitionsMap.get(targetVehicle.vehicle)?.[emptySlotIndex];
+        if (!originalSlotDef) continue;
+        
+        // Search for qualified personnel in lower-priority vehicles (priority 3)
+        const sourcePriority = 3;
+        const sourceVehicles = assignments.filter(va => {
+          const vPriority = priorityMap.get(va.type) || 3;
+          return vPriority === sourcePriority;
+        });
+        
+        // Find candidates: users assigned to source vehicles who could fill this slot
+        const candidates: Array<{ user: User; sourceVehicle: VehicleAssignment; sourceSlotIndex: number }> = [];
+        
+        for (const sourceVehicle of sourceVehicles) {
+          sourceVehicle.slots.forEach((sourceSlot, slotIndex) => {
+            if (sourceSlot.assignedUser !== null) {
+              // Use original slot definition for accurate qualification checking
+              if (canFulfillSlot(sourceSlot.assignedUser, originalSlotDef)) {
+                candidates.push({
+                  user: sourceSlot.assignedUser,
+                  sourceVehicle,
+                  sourceSlotIndex: slotIndex,
+                });
+              }
+            }
+          });
+        }
+        
+        if (candidates.length > 0) {
+          // Score candidates using fairness
+          const requiredQuals = [
+            ...(originalSlotDef.requires || []),
+            ...(originalSlotDef.requires_any || []),
+          ];
+          
+          const scoredCandidates = await fairnessScorer.scoreUsersForPosition(
+            candidates.map(c => c.user),
+            {
+              position: emptySlot.position,
+              vehicleName: targetVehicle.vehicle,
+              requiredQuals,
+              assignedForDate,
+              rotationWindow,
+              rotationWeights,
+            }
+          );
+          
+          // Find best candidate (lowest fairness score = most in need of assignment)
+          const bestScored = scoredCandidates.reduce((best, current) =>
+            current.score < best.score ? current : best
+          );
+          
+          const bestCandidate = candidates.find(c => c.user.id === bestScored.user.id)!;
+          
+          // REASSIGN: Move user from source to target
+          emptySlot.assignedUser = bestCandidate.user;
+          bestCandidate.sourceVehicle.slots[bestCandidate.sourceSlotIndex].assignedUser = null;
+          
+          reassignmentsMade++;
+          affectedVehicleNames.add(targetVehicle.vehicle);
+          affectedVehicleNames.add(bestCandidate.sourceVehicle.vehicle);
+          
+          // Update fairness history: modify existing entry instead of creating duplicate
+          fairnessScorer.updateAfterReassignment(
+            bestCandidate.user.id,
+            emptySlot.position,
+            targetVehicle.vehicle,
+            assignedForDate
+          ).catch(err => {
+            console.error("Error updating fairness history during reassignment:", err);
+          });
+        }
+      }
+    }
+  }
+  
+  // Re-evaluate all affected vehicles (both targets and sources)
+  for (const vehicleName of affectedVehicleNames) {
+    const vehicle = assignments.find(va => va.vehicle === vehicleName);
+    if (!vehicle) continue;
+    
+    const vehicleConfig = vehicleConfigs.find(vc => vc.vehicle === vehicleName)!;
+    
+    // Re-check fulfillment
+    const wasFulfilled = vehicle.fulfilled;
+    const allSlotsFilled = vehicle.slots.every(s => s.assignedUser !== null);
+    vehicle.fulfilled = allSlotsFilled;
+    
+    // Update totalFulfilled count
+    if (allSlotsFilled && !wasFulfilled) {
+      totalFulfilled++;
+    } else if (!allSlotsFilled && wasFulfilled) {
+      totalFulfilled--;
+    }
+    
+    // Re-check constraints
+    const constraintCheck = checkVehicleConstraints(vehicleConfig, vehicle.slots);
+    vehicle.constraintsMet = constraintCheck.met;
+    vehicle.warnings = constraintCheck.warnings;
+    
+    // Update global warnings
+    globalWarnings.push(...constraintCheck.warnings);
+  }
+  
+  if (reassignmentsMade > 0) {
+    globalWarnings.unshift(
+      `Reassignment: ${reassignmentsMade} Personen von Support-Fahrzeugen auf taktische Fahrzeuge verschoben`
+    );
+  }
   
   // Clear cache after assignment run
   fairnessScorer.clearCache();

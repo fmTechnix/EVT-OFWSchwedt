@@ -285,4 +285,27 @@ export class FairnessScorer {
     // Aktualisiere Fairness-Metriken
     await this.storage.updateFairnessMetrics(userId, position);
   }
+
+  /**
+   * Update history after reassignment (moving user from one vehicle/position to another)
+   * This modifies the most recent history entry instead of creating a duplicate
+   */
+  async updateAfterReassignment(
+    userId: string,
+    newPosition: string,
+    newVehicleName: string,
+    assignedForDate: string
+  ): Promise<void> {
+    // Update the most recent history entry for this user+date
+    await this.storage.updateAssignmentHistoryForReassignment(
+      userId,
+      assignedForDate,
+      newVehicleName,
+      newPosition
+    );
+    
+    // Invalidate cache for this user
+    this.userHistoryCache.delete(userId);
+    this.fairnessMetricsCache.delete(userId);
+  }
 }

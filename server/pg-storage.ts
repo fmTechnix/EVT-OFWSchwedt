@@ -804,6 +804,65 @@ export class PostgresStorage implements IStorage {
     await db.delete(assignmentFairness).where(eq(assignmentFairness.user_id, userId));
   }
 
+  // Reassignment tracking: Update most recent assignment for this user+date
+  // NOTE: This is a simplified implementation. Full implementation would use historyId.
+  async updateAssignmentHistoryForReassignment(
+    userId: string,
+    assignedForDate: string,
+    newVehicle: string,
+    newPosition: string
+  ): Promise<void> {
+    // Get old assignment to extract old position
+    const oldAssignment = await db
+      .select()
+      .from(assignmentHistory)
+      .where(
+        sql`${assignmentHistory.user_id} = ${userId} AND ${assignmentHistory.assigned_for_date} = ${assignedForDate}`
+      )
+      .orderBy(desc(assignmentHistory.created_at))
+      .limit(1);
+    
+    if (oldAssignment.length === 0) return; // No assignment to update
+    
+    const oldPosition = oldAssignment[0].position;
+    
+    // Update history entry
+    await db
+      .update(assignmentHistory)
+      .set({
+        vehicle_name: newVehicle,
+        position: newPosition,
+      })
+      .where(eq(assignmentHistory.id, oldAssignment[0].id));
+    
+    // Adjust fairness metrics: decrement old position, increment new position
+    if (oldPosition !== newPosition) {
+      const metrics = await this.getFairnessMetrics(userId);
+      if (metrics) {
+        const perPositionCounts = (metrics.per_position_counts as Record<string, number>) || {};
+        
+        // Decrement old position (but don't go negative)
+        const oldCount = perPositionCounts[oldPosition] || 0;
+        if (oldCount > 0) {
+          perPositionCounts[oldPosition] = oldCount - 1;
+        }
+        
+        // Increment new position
+        perPositionCounts[newPosition] = (perPositionCounts[newPosition] || 0) + 1;
+        
+        // Update database
+        await db
+          .update(assignmentFairness)
+          .set({
+            per_position_counts: perPositionCounts,
+            last_position: newPosition,
+            last_assigned_at: new Date(),
+          })
+          .where(eq(assignmentFairness.user_id, userId));
+      }
+    }
+  }
+
   // Alarm Events (DE-Alarm Integration)
   async getAllAlarmEvents(): Promise<AlarmEvent[]> {
     return await db.select().from(alarmEvents).orderBy(desc(alarmEvents.alarmierungszeit));
