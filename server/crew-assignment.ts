@@ -439,13 +439,11 @@ export async function assignCrewToVehicles(
         const originalSlotDef = slotDefinitionsMap.get(targetVehicle.vehicle)?.[emptySlotIndex];
         if (!originalSlotDef) continue;
         
-        // Search for qualified personnel in lower-priority vehicles (priority 3: MTF/ELW only)
-        const sourcePriority = 3;
+        // Search for qualified personnel in support vehicles (MTW, ELW, KdoW)
+        // IMPORTANT: Filter by explicit vehicle type, NOT priority (ELW/KdoW can have priority 2 in some missions)
+        const SUPPORT_VEHICLE_TYPES = ['MTW', 'ELW', 'KdoW', 'MTF']; // Personnel transport and command only
         const sourceVehicles = assignments.filter(va => {
-          const vPriority = priorityMap.get(va.type) || 3;
-          // Only pull from actual support vehicles (MTW, ELW, KdoW), not RW or other priority 2/3 hybrids
-          const isSupportVehicle = va.type === 'MTW' || va.type === 'ELW' || va.type === 'KdoW';
-          return vPriority === sourcePriority && isSupportVehicle;
+          return SUPPORT_VEHICLE_TYPES.includes(va.type);
         });
         
         // Find candidates: users assigned to source vehicles who could fill this slot
@@ -534,7 +532,7 @@ export async function assignCrewToVehicles(
   }
   
   // Re-evaluate all affected vehicles (both targets and sources)
-  for (const vehicleName of affectedVehicleNames) {
+  for (const vehicleName of Array.from(affectedVehicleNames)) {
     const vehicle = assignments.find(va => va.vehicle === vehicleName);
     if (!vehicle) continue;
     
