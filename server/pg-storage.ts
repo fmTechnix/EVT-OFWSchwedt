@@ -498,7 +498,33 @@ export class PostgresStorage implements IStorage {
 
   // Current Assignments
   async getCurrentAssignments(): Promise<CurrentAssignment[]> {
-    return await db.select().from(currentAssignments);
+    // CRITICAL: Filter out admin users from assignments (they should never appear in operational context)
+    // This includes both user_id and trupp_partner_id - admins must not appear anywhere
+    const result = await db
+      .select({
+        assignment: currentAssignments,
+        userRole: users.role,
+        partnerRole: sql<string | null>`partner.role`.as('partner_role'),
+      })
+      .from(currentAssignments)
+      .leftJoin(users, eq(currentAssignments.user_id, users.id))
+      .leftJoin(sql`users as partner`, sql`${currentAssignments.trupp_partner_id} = partner.id`)
+      .where(
+        and(
+          // Exclude assignments where user is admin
+          or(
+            sql`${users.role} IS NULL`,
+            sql`${users.role} != 'admin'`
+          ),
+          // Exclude assignments where trupp_partner is admin
+          or(
+            sql`partner.role IS NULL`,
+            sql`partner.role != 'admin'`
+          )
+        )
+      );
+    
+    return result.map(r => r.assignment);
   }
 
   async getUserAssignment(userId: string): Promise<CurrentAssignment | undefined> {
@@ -514,7 +540,60 @@ export class PostgresStorage implements IStorage {
       return [];
     }
     
-    return await db.insert(currentAssignments).values(insertAssignments).returning();
+    // CRITICAL: Filter out admin users before saving assignments
+    // Admin accounts must NEVER be assigned to vehicles (neither as user_id nor trupp_partner_id)
+    const validAssignments: InsertCurrentAssignment[] = [];
+    
+    // Batch fetch all user IDs to check roles (performance optimization)
+    const allUserIds = new Set<string>();
+    for (const assignment of insertAssignments) {
+      if (assignment.user_id) allUserIds.add(assignment.user_id);
+      if (assignment.trupp_partner_id) allUserIds.add(assignment.trupp_partner_id);
+    }
+    
+    const allUsers = await db.select().from(users)
+      .where(inArray(users.id, Array.from(allUserIds)));
+    
+    const userRoleMap = new Map<string, string>();
+    for (const user of allUsers) {
+      userRoleMap.set(user.id, user.role);
+    }
+    
+    for (const assignment of insertAssignments) {
+      // Check if user_id is admin
+      if (assignment.user_id) {
+        const userRole = userRoleMap.get(assignment.user_id);
+        if (!userRole) {
+          console.warn(`⚠️  setCurrentAssignments: User ${assignment.user_id} not found, skipping assignment`);
+          continue;
+        }
+        
+        if (userRole === "admin") {
+          const user = allUsers.find(u => u.id === assignment.user_id);
+          console.warn(`⚠️  setCurrentAssignments: Blocked admin user ${user?.vorname} ${user?.nachname} (${assignment.user_id}) from being assigned to vehicle`);
+          continue;
+        }
+      }
+      
+      // Check if trupp_partner_id is admin
+      if (assignment.trupp_partner_id) {
+        const partnerRole = userRoleMap.get(assignment.trupp_partner_id);
+        if (partnerRole === "admin") {
+          const partner = allUsers.find(u => u.id === assignment.trupp_partner_id);
+          console.warn(`⚠️  setCurrentAssignments: Blocked admin user ${partner?.vorname} ${partner?.nachname} (${assignment.trupp_partner_id}) from being trupp_partner`);
+          // Null out the partner instead of skipping entire assignment
+          assignment.trupp_partner_id = null;
+        }
+      }
+      
+      validAssignments.push(assignment);
+    }
+    
+    if (validAssignments.length === 0) {
+      return [];
+    }
+    
+    return await db.insert(currentAssignments).values(validAssignments).returning();
   }
 
   async clearCurrentAssignments(): Promise<void> {
