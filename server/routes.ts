@@ -1036,6 +1036,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const result = await storage.updateVehicleComplete(id, vehicleData || {}, configData || {});
       
+      // Audit logging
+      await logAuditEvent(req, {
+        action: "fahrzeug_config_aktualisiert",
+        entity_type: "vehicle_config",
+        entity_id: id.toString(),
+        metadata: {
+          vehicle_name: result.vehicle.name,
+          funkrufname: result.vehicle.funk,
+          type: result.config.type,
+          changes: { vehicleData, configData }
+        }
+      });
+      
       res.json(result);
     } catch (error) {
       console.error("Error updating vehicle complete:", error);
