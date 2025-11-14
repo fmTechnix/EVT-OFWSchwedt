@@ -335,6 +335,55 @@ export class PostgresStorage implements IStorage {
     await db.delete(vehicleConfigs).where(eq(vehicleConfigs.id, id));
   }
 
+  async updateVehicleComplete(
+    configId: number,
+    vehicleData: { name?: string; funk?: string; besatzung?: number },
+    configData: Partial<InsertVehicleConfig>
+  ): Promise<{ vehicle: Vehicle; config: VehicleConfig }> {
+    // First, get the current config to find the vehicle name
+    const currentConfig = await this.getVehicleConfig(configId);
+    if (!currentConfig) {
+      throw new Error("Fahrzeug-Konfiguration nicht gefunden");
+    }
+
+    // Find the vehicle by name
+    const vehiclesResult = await db.select().from(vehicles).where(eq(vehicles.name, currentConfig.vehicle));
+    if (!vehiclesResult[0]) {
+      throw new Error("Fahrzeug nicht gefunden");
+    }
+
+    const vehicle = vehiclesResult[0];
+
+    // Update both tables in a transaction
+    return await db.transaction(async (tx) => {
+      // Update vehicle table (name, funk, besatzung)
+      const updatedVehicleData: any = {};
+      if (vehicleData.name !== undefined) updatedVehicleData.name = vehicleData.name;
+      if (vehicleData.funk !== undefined) updatedVehicleData.funk = vehicleData.funk;
+      if (vehicleData.besatzung !== undefined) updatedVehicleData.besatzung = vehicleData.besatzung;
+
+      let updatedVehicle = vehicle;
+      if (Object.keys(updatedVehicleData).length > 0) {
+        const result = await tx.update(vehicles).set(updatedVehicleData).where(eq(vehicles.id, vehicle.id)).returning();
+        updatedVehicle = result[0];
+      }
+
+      // Update config table (vehicle name must match new vehicle name)
+      const updatedConfigData: any = { ...configData };
+      if (vehicleData.name) {
+        updatedConfigData.vehicle = vehicleData.name; // Keep vehicle_configs.vehicle in sync
+      }
+
+      const result = await tx.update(vehicleConfigs).set(updatedConfigData).where(eq(vehicleConfigs.id, configId)).returning();
+      const updatedConfig = result[0];
+
+      return {
+        vehicle: updatedVehicle,
+        config: updatedConfig,
+      };
+    });
+  }
+
   // Availabilities
   async getUserAvailability(userId: string, date: string): Promise<Availability | undefined> {
     const result = await db.select().from(availabilities)

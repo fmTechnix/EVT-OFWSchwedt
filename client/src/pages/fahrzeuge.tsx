@@ -304,11 +304,30 @@ function VehicleConfigEditDialog({
   open: boolean; 
   onOpenChange: (open: boolean) => void;
 }) {
+  const [vehicleName, setVehicleName] = useState(config.vehicle);
+  const [vehicleType, setVehicleType] = useState(config.type);
+  const [vehicleFunk, setVehicleFunk] = useState("");
+  const [vehicleId, setVehicleId] = useState<number | null>(null);
   const [slots, setSlots] = useState<any[]>(JSON.parse(JSON.stringify(config.slots)) || []);
   const { toast } = useToast();
   
   const { data: qualifikationen } = useQuery<Qualifikation[]>({
     queryKey: ["/api/qualifikationen"],
+  });
+
+  const { data: vehicles } = useQuery<Vehicle[]>({
+    queryKey: ["/api/vehicles"],
+  });
+
+  // Find matching vehicle and set funk value
+  useState(() => {
+    if (vehicles) {
+      const matchingVehicle = vehicles.find(v => v.name === config.vehicle);
+      if (matchingVehicle) {
+        setVehicleFunk(matchingVehicle.funk);
+        setVehicleId(matchingVehicle.id);
+      }
+    }
   });
 
   const updateMutation = useMutation({
@@ -333,9 +352,27 @@ function VehicleConfigEditDialog({
   });
 
   const handleSave = () => {
+    if (!vehicleName.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Fehler",
+        description: "Fahrzeugname darf nicht leer sein",
+      });
+      return;
+    }
+    
+    if (!vehicleType.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Fehler",
+        description: "Fahrzeugtyp darf nicht leer sein",
+      });
+      return;
+    }
+    
     updateMutation.mutate({
-      vehicle: config.vehicle,
-      type: config.type,
+      vehicle: vehicleName.trim(),
+      type: vehicleType.trim(),
       slots,
       constraints: config.constraints || {},
     });
@@ -368,10 +405,33 @@ function VehicleConfigEditDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Fahrzeug-Konfiguration bearbeiten: {config.vehicle}</DialogTitle>
+          <DialogTitle>Fahrzeug-Konfiguration bearbeiten</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="edit-vehicle-name">Fahrzeugname</Label>
+              <Input
+                id="edit-vehicle-name"
+                value={vehicleName}
+                onChange={(e) => setVehicleName(e.target.value)}
+                placeholder="z.B. HLF 20, MTF, DL 30"
+                data-testid="input-edit-vehicle-name"
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-vehicle-type">Fahrzeugtyp</Label>
+              <Input
+                id="edit-vehicle-type"
+                value={vehicleType}
+                onChange={(e) => setVehicleType(e.target.value)}
+                placeholder="z.B. HLF, MTW, DL"
+                data-testid="input-edit-vehicle-type"
+              />
+            </div>
+          </div>
+
           <div className="flex items-center justify-between">
             <h3 className="font-semibold">Positionen ({slots.length})</h3>
             <Button 

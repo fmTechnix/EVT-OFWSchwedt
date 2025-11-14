@@ -1028,6 +1028,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Combined endpoint to update both vehicle and vehicle_config atomically
+  app.patch("/api/vehicle-configs/:id/complete", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { vehicleData, configData } = req.body;
+      
+      const result = await storage.updateVehicleComplete(id, vehicleData || {}, configData || {});
+      
+      res.json(result);
+    } catch (error) {
+      console.error("Error updating vehicle complete:", error);
+      res.status(500).json({ error: "Fehler beim Aktualisieren des Fahrzeugs" });
+    }
+  });
+
   app.delete("/api/vehicle-configs/:id", requireAdmin, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);

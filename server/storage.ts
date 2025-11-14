@@ -82,6 +82,13 @@ export interface IStorage {
   updateVehicleConfig(id: number, updates: Partial<InsertVehicleConfig>): Promise<VehicleConfig>;
   deleteVehicleConfig(id: number): Promise<void>;
   
+  // Combined Vehicle + Config Update (atomic)
+  updateVehicleComplete(
+    configId: number,
+    vehicleData: { name?: string; funk?: string; besatzung?: number },
+    configData: Partial<InsertVehicleConfig>
+  ): Promise<{ vehicle: Vehicle; config: VehicleConfig }>;
+  
   // Availabilities
   getUserAvailability(userId: string, date: string): Promise<Availability | undefined>;
   getUserAvailabilities(userId: string): Promise<Availability[]>;
@@ -1046,6 +1053,14 @@ export class MemStorage implements IStorage {
 
   async updateVehiclePriority(vehicleType: string, updates: Partial<InsertVehiclePriority>): Promise<VehiclePriority> {
     throw new Error("MemStorage does not support vehicle priorities");
+  }
+
+  async updateVehicleComplete(
+    configId: number,
+    vehicleData: { name?: string; funk?: string; besatzung?: number },
+    configData: Partial<InsertVehicleConfig>
+  ): Promise<{ vehicle: Vehicle; config: VehicleConfig }> {
+    throw new Error("MemStorage does not support vehicle complete update");
   }
 }
 
