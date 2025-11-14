@@ -1,0 +1,16 @@
+/home/felix/.pm2/logs/evt-error.log last 15 lines:
+0|evt      | 2025-11-14 07:01:19:   4  |  import cors from "cors";
+0|evt      | 2025-11-14 07:01:19:   5  |  import { pool } from "./db";
+0|evt      | 2025-11-14 07:01:19:      |                        ^
+0|evt      | 2025-11-14 07:01:19:   6  |  import { storage } from "./storage";
+0|evt      | 2025-11-14 07:01:19:   7  |  import { insertVehicleSchema, insertEinsatzSchema, insertSettingsSchema, insertQualifikationSchema, insertTerminSchema, insertPushSubscriptionSchema, insertMaengelMeldungSchema, insertAlarmEventSchema, insertAaoStichwortSchema } from "@shared/schema";
+0|evt      | 2025-11-14 07:01:19:       at TransformPluginContext._formatError (/home/felix/EVT/EVT-OFWSchwedt/node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:49258:41)
+0|evt      | 2025-11-14 07:01:19:       at TransformPluginContext.error (/home/felix/EVT/EVT-OFWSchwedt/node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:49253:16)
+0|evt      | 2025-11-14 07:01:19:       at normalizeUrl (/home/felix/EVT/EVT-OFWSchwedt/node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:64306:23)
+0|evt      | 2025-11-14 07:01:19:       at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|evt      | 2025-11-14 07:01:19:       at async <anonymous> (/home/felix/EVT/EVT-OFWSchwedt/node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:64438:39)
+0|evt      | 2025-11-14 07:01:19:       at async Promise.all (index 4)
+0|evt      | 2025-11-14 07:01:19:       at async TransformPluginContext.transform (/home/felix/EVT/EVT-OFWSchwedt/node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:64365:7)
+0|evt      | 2025-11-14 07:01:19:       at async PluginContainer.transform (/home/felix/EVT/EVT-OFWSchwedt/node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:49099:18)
+0|evt      | 2025-11-14 07:01:19:       at async loadAndTransform (/home/felix/EVT/EVT-OFWSchwedt/node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:51977:27)
+0|evt      | 2025-11-14 07:01:19:       at async viteTransformMiddleware (/home/felix/EVT/EVT-OFWSchwedt/node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:62105:24)
