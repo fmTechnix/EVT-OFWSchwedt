@@ -485,9 +485,12 @@ export class PostgresStorage implements IStorage {
 
   // Availability Templates
   async getUserTemplates(userId: string): Promise<AvailabilityTemplate[]> {
-    return await db.select().from(availabilityTemplates)
+    console.log("[PG] getUserTemplates for userId:", userId);
+    const result = await db.select().from(availabilityTemplates)
       .where(eq(availabilityTemplates.user_id, userId))
       .orderBy(desc(availabilityTemplates.created_at));
+    console.log("[PG] getUserTemplates result:", result);
+    return result;
   }
 
   async createTemplate(template: InsertAvailabilityTemplate): Promise<AvailabilityTemplate> {

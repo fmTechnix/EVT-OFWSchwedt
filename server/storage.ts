@@ -197,8 +197,10 @@ export class MemStorage implements IStorage {
   private maengelMeldungen: Map<number, MaengelMeldung>;
   private pushLogs: Map<number, PushLog>;
   private pushSubscriptions: Map<string, PushSubscription>;
+  private availabilityTemplates: Map<number, AvailabilityTemplate>;
   private auditLogs: AuditLog[];
   private nextPushSubscriptionId: number;
+  private nextTemplateId: number;
   private einsatz: Einsatz;
   private settings: Settings;
   private nextVehicleId: number;
@@ -218,6 +220,7 @@ export class MemStorage implements IStorage {
     this.maengelMeldungen = new Map();
     this.pushLogs = new Map();
     this.pushSubscriptions = new Map();
+    this.availabilityTemplates = new Map();
     this.auditLogs = [];
     this.nextVehicleId = 1;
     this.nextQualifikationId = 1;
@@ -226,6 +229,7 @@ export class MemStorage implements IStorage {
     this.nextMaengelMeldungId = 1;
     this.nextPushLogId = 1;
     this.nextPushSubscriptionId = 1;
+    this.nextTemplateId = 1;
     this.nextAuditLogId = 1;
 
     // Initialize default qualifikationen (must be before users)
@@ -1024,25 +1028,47 @@ export class MemStorage implements IStorage {
     throw new Error("AAO management not available in development mode");
   }
 
-  // Availability Templates - Development stubs
-  async getUserTemplates(_userId: string): Promise<AvailabilityTemplate[]> {
-    return [];
+  // Availability Templates - In-memory implementation
+  async getUserTemplates(userId: string): Promise<AvailabilityTemplate[]> {
+    return Array.from(this.availabilityTemplates.values())
+      .filter(t => t.user_id === userId)
+      .sort((a, b) => b.created_at.getTime() - a.created_at.getTime());
   }
 
-  async createTemplate(_template: InsertAvailabilityTemplate): Promise<AvailabilityTemplate> {
-    throw new Error("Templates not available in development mode");
+  async createTemplate(template: InsertAvailabilityTemplate): Promise<AvailabilityTemplate> {
+    const newTemplate: AvailabilityTemplate = {
+      id: this.nextTemplateId++,
+      user_id: template.user_id,
+      name: template.name,
+      weekdays: template.weekdays,
+      start_time: template.start_time,
+      end_time: template.end_time,
+      status: template.status,
+      active: template.active ?? true,
+      created_at: new Date(),
+    };
+    this.availabilityTemplates.set(newTemplate.id, newTemplate);
+    return newTemplate;
   }
 
-  async updateTemplate(_id: number, _updates: Partial<InsertAvailabilityTemplate>): Promise<AvailabilityTemplate> {
-    throw new Error("Templates not available in development mode");
+  async updateTemplate(id: number, updates: Partial<InsertAvailabilityTemplate>): Promise<AvailabilityTemplate> {
+    const template = this.availabilityTemplates.get(id);
+    if (!template) {
+      throw new Error("Template nicht gefunden");
+    }
+    const updated = { ...template, ...updates };
+    this.availabilityTemplates.set(id, updated);
+    return updated;
   }
 
-  async deleteTemplate(_id: number): Promise<void> {
-    throw new Error("Templates not available in development mode");
+  async deleteTemplate(id: number): Promise<void> {
+    this.availabilityTemplates.delete(id);
   }
 
   async applyTemplateToWeek(_userId: string, _templateId: number, _weekStartDate: string): Promise<Availability[]> {
-    throw new Error("Templates not available in development mode");
+    // In development mode, templates don't actually set availability (no DB)
+    // Just return empty array - frontend will handle this gracefully
+    return [];
   }
 
   // User Reminder Settings - Development stubs
