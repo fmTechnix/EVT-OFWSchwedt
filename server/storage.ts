@@ -243,6 +243,7 @@ export class MemStorage implements IStorage {
       stichwort: "B: Kleinbrand",
       bemerkung: "",
       mannschaftsbedarf: 9,
+      einsatzart: "brandeinsatz",
     };
     
     // Initialize default settings
@@ -518,7 +519,11 @@ export class MemStorage implements IStorage {
   }
 
   async updateEinsatz(insertEinsatz: InsertEinsatz): Promise<Einsatz> {
-    this.einsatz = { id: 1, ...insertEinsatz };
+    this.einsatz = { 
+      id: 1, 
+      ...insertEinsatz,
+      einsatzart: insertEinsatz.einsatzart ?? "standard"
+    };
     return this.einsatz;
   }
 
@@ -681,6 +686,66 @@ export class MemStorage implements IStorage {
 
   async deleteVehicleConfig(_id: number): Promise<void> {
     throw new Error("Vehicle configs not available in development mode");
+  }
+
+  async updateVehicleComplete(
+    configId: number,
+    vehicleData: { name?: string; funk?: string; besatzung?: number },
+    configData: Partial<InsertVehicleConfig>
+  ): Promise<{ vehicle: Vehicle; config: VehicleConfig }> {
+    // Get current config
+    const currentConfig = Array.from(this.vehicleConfigs.values()).find(vc => vc.id === configId);
+    if (!currentConfig) {
+      throw new Error("Fahrzeug-Konfiguration nicht gefunden");
+    }
+
+    // Determine target vehicle name (authoritative source)
+    const targetName = vehicleData.name ?? configData.vehicle ?? currentConfig.vehicle;
+
+    // COLLISION CHECK: If renaming, ensure target name doesn't already exist
+    if (targetName !== currentConfig.vehicle) {
+      const collision = Array.from(this.vehicles.values()).find(v => v.name === targetName);
+      if (collision) {
+        throw new Error(`Fahrzeug mit Name "${targetName}" existiert bereits. Bitte wählen Sie einen anderen Namen.`);
+      }
+    }
+
+    // Find existing vehicle by CURRENT config name
+    let vehicle = Array.from(this.vehicles.values()).find(v => v.name === currentConfig.vehicle);
+    
+    if (!vehicle) {
+      // Auto-create missing vehicle with target name
+      const newVehicle: Vehicle = {
+        id: this.nextVehicleId++,
+        name: targetName,
+        funk: vehicleData.funk || `Florian Schwedt 1/XX/1`,
+        besatzung: vehicleData.besatzung ?? 9,
+      };
+      this.vehicles.set(newVehicle.id, newVehicle);
+      vehicle = newVehicle;
+    } else {
+      // Update existing vehicle - ALWAYS set name to target name (handles rename)
+      vehicle.name = targetName;
+      if (vehicleData.funk !== undefined) vehicle.funk = vehicleData.funk;
+      if (vehicleData.besatzung !== undefined) vehicle.besatzung = vehicleData.besatzung;
+      this.vehicles.set(vehicle.id, vehicle);
+    }
+
+    // Update config with provided fields only
+    const updatedConfig = { ...currentConfig };
+    if (configData.type !== undefined) updatedConfig.type = configData.type;
+    if (configData.slots !== undefined) updatedConfig.slots = configData.slots;
+    if (configData.constraints !== undefined) updatedConfig.constraints = configData.constraints;
+    
+    // ENFORCE INVARIANT: vehicle_configs.vehicle === vehicle.name (target name)
+    updatedConfig.vehicle = vehicle.name;
+    
+    this.vehicleConfigs.set(configId, updatedConfig);
+
+    return {
+      vehicle,
+      config: updatedConfig,
+    };
   }
 
   // Availabilities - Development stubs

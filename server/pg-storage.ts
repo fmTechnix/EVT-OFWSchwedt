@@ -346,39 +346,58 @@ export class PostgresStorage implements IStorage {
       throw new Error("Fahrzeug-Konfiguration nicht gefunden");
     }
 
-    // Find the vehicle by name
-    const vehiclesResult = await db.select().from(vehicles).where(eq(vehicles.name, currentConfig.vehicle));
-    if (!vehiclesResult[0]) {
-      throw new Error("Fahrzeug nicht gefunden");
-    }
+    // Determine the target vehicle name (authoritative source)
+    // Priority: vehicleData.name > configData.vehicle > currentConfig.vehicle
+    const targetName = vehicleData.name ?? configData.vehicle ?? currentConfig.vehicle;
 
-    const vehicle = vehiclesResult[0];
-
-    // Update both tables in a transaction
+    // Update both tables in a transaction (including auto-create if needed)
     return await db.transaction(async (tx) => {
-      // Update vehicle table (name, funk, besatzung)
-      const updatedVehicleData: any = {};
-      if (vehicleData.name !== undefined) updatedVehicleData.name = vehicleData.name;
-      if (vehicleData.funk !== undefined) updatedVehicleData.funk = vehicleData.funk;
-      if (vehicleData.besatzung !== undefined) updatedVehicleData.besatzung = vehicleData.besatzung;
+      // COLLISION CHECK: If renaming, ensure target name doesn't already exist
+      if (targetName !== currentConfig.vehicle) {
+        const collision = await tx.select().from(vehicles).where(eq(vehicles.name, targetName));
+        if (collision[0]) {
+          throw new Error(`Fahrzeug mit Name "${targetName}" existiert bereits. Bitte wählen Sie einen anderen Namen.`);
+        }
+      }
 
-      let updatedVehicle = vehicle;
-      if (Object.keys(updatedVehicleData).length > 0) {
+      // Find existing vehicle by CURRENT config name
+      let vehiclesResult = await tx.select().from(vehicles).where(eq(vehicles.name, currentConfig.vehicle));
+      
+      let vehicle: Vehicle;
+      if (!vehiclesResult[0]) {
+        // Auto-create missing vehicle with target name
+        console.log(`Auto-creating missing vehicle: ${targetName}`);
+        const newVehicle = await tx.insert(vehicles).values({
+          name: targetName,
+          funk: vehicleData.funk || `Florian Schwedt 1/XX/1`,
+          besatzung: vehicleData.besatzung ?? 9,
+        }).returning();
+        vehicle = newVehicle[0];
+      } else {
+        // Update existing vehicle - ALWAYS set name to target name (handles rename)
+        vehicle = vehiclesResult[0];
+        const updatedVehicleData: any = { name: targetName }; // ALWAYS update name to target
+        if (vehicleData.funk !== undefined) updatedVehicleData.funk = vehicleData.funk;
+        if (vehicleData.besatzung !== undefined) updatedVehicleData.besatzung = vehicleData.besatzung;
+
         const result = await tx.update(vehicles).set(updatedVehicleData).where(eq(vehicles.id, vehicle.id)).returning();
-        updatedVehicle = result[0];
+        vehicle = result[0];
       }
 
-      // Update config table (vehicle name must match new vehicle name)
-      const updatedConfigData: any = { ...configData };
-      if (vehicleData.name) {
-        updatedConfigData.vehicle = vehicleData.name; // Keep vehicle_configs.vehicle in sync
-      }
+      // Update config table with provided fields only (preserve constraints)
+      const updatedConfigData: any = {};
+      if (configData.type !== undefined) updatedConfigData.type = configData.type;
+      if (configData.slots !== undefined) updatedConfigData.slots = configData.slots;
+      if (configData.constraints !== undefined) updatedConfigData.constraints = configData.constraints;
+      
+      // ENFORCE INVARIANT: vehicle_configs.vehicle MUST ALWAYS equal vehicle.name (target name)
+      updatedConfigData.vehicle = vehicle.name;
 
       const result = await tx.update(vehicleConfigs).set(updatedConfigData).where(eq(vehicleConfigs.id, configId)).returning();
       const updatedConfig = result[0];
 
       return {
-        vehicle: updatedVehicle,
+        vehicle,
         config: updatedConfig,
       };
     });

@@ -441,8 +441,14 @@ export async function assignCrewToVehicles(
         
         // Search for qualified personnel in support vehicles (MTW, ELW, KdoW)
         // IMPORTANT: Filter by explicit vehicle type, NOT priority (ELW/KdoW can have priority 2 in some missions)
+        // NEVER pull from specialized vehicles (RW, GWG, Wasserträger, SW, DL)
         const SUPPORT_VEHICLE_TYPES = ['MTW', 'ELW', 'KdoW', 'MTF']; // Personnel transport and command only
+        const SPECIALIZED_VEHICLE_TYPES = ['RW', 'GWG', 'Wasserträger', 'SW', 'DL', 'DLK']; // NEVER pull from these
+        
         const sourceVehicles = assignments.filter(va => {
+          // Exclude specialized vehicles completely
+          if (SPECIALIZED_VEHICLE_TYPES.includes(va.type)) return false;
+          // Only include support vehicles
           return SUPPORT_VEHICLE_TYPES.includes(va.type);
         });
         
@@ -499,13 +505,23 @@ export async function assignCrewToVehicles(
           
           const bestCandidate = candidates.find(c => c.user.id === bestScored.user.id)!;
           
-          // DOUBLE-CHECK: After removal, will source vehicle still have minimal crew?
+          // TRIPLE-CHECK: After removal, will source vehicle still have minimal crew?
+          // This is a final safety check in case crew count changed during iteration
           const sourceCrewAfterRemoval = bestCandidate.sourceVehicle.slots.filter(
             (s, idx) => s.assignedUser !== null && idx !== bestCandidate.sourceSlotIndex
           ).length;
           
           if (sourceCrewAfterRemoval < MINIMAL_CREW_FOR_SUPPORT) {
             // Skip this reassignment - would violate minimal crew requirement
+            console.warn(`Skipping reassignment: Would leave ${bestCandidate.sourceVehicle.vehicle} with only ${sourceCrewAfterRemoval} crew`);
+            continue;
+          }
+          
+          // FINAL CHECK: Never pull from specialized vehicles (defensive programming)
+          const sourceType = bestCandidate.sourceVehicle.type;
+          const SPECIALIZED_TYPES = ['RW', 'GWG', 'Wasserträger', 'SW', 'DL', 'DLK'];
+          if (SPECIALIZED_TYPES.includes(sourceType)) {
+            console.warn(`Defensive check: Blocked attempt to pull from specialized vehicle ${bestCandidate.sourceVehicle.vehicle}`);
             continue;
           }
           

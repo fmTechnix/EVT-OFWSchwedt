@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Navigation } from "@/components/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -319,27 +319,35 @@ function VehicleConfigEditDialog({
     queryKey: ["/api/vehicles"],
   });
 
-  // Find matching vehicle and set funk value
-  useState(() => {
-    if (vehicles) {
-      const matchingVehicle = vehicles.find(v => v.name === config.vehicle);
-      if (matchingVehicle) {
-        setVehicleFunk(matchingVehicle.funk);
-        setVehicleId(matchingVehicle.id);
+  // Reset form state when dialog opens or config changes
+  useEffect(() => {
+    if (open && config) {
+      setVehicleName(config.vehicle);
+      setVehicleType(config.type);
+      setSlots(JSON.parse(JSON.stringify(config.slots)) || []);
+      
+      // Find matching vehicle for funk value
+      if (vehicles) {
+        const matchingVehicle = vehicles.find(v => v.name === config.vehicle);
+        if (matchingVehicle) {
+          setVehicleFunk(matchingVehicle.funk);
+          setVehicleId(matchingVehicle.id);
+        }
       }
     }
-  });
+  }, [open, config, vehicles]);
 
   const updateMutation = useMutation({
-    mutationFn: async (data: any) => {
-      return await apiRequest("PATCH", `/api/vehicle-configs/${config.id}`, data);
+    mutationFn: async (data: { vehicleData: any; configData: any }) => {
+      return await apiRequest("PATCH", `/api/vehicle-configs/${config.id}/complete`, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/vehicle-configs"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
       onOpenChange(false);
       toast({
-        title: "Konfiguration gespeichert",
-        description: "Die Fahrzeug-Konfiguration wurde aktualisiert",
+        title: "Fahrzeug gespeichert",
+        description: "Fahrzeugname, Funkrufname und Konfiguration wurden aktualisiert",
       });
     },
     onError: () => {
@@ -370,11 +378,26 @@ function VehicleConfigEditDialog({
       return;
     }
     
+    if (!vehicleFunk.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Fehler",
+        description: "Funkrufname darf nicht leer sein",
+      });
+      return;
+    }
+    
     updateMutation.mutate({
-      vehicle: vehicleName.trim(),
-      type: vehicleType.trim(),
-      slots,
-      constraints: config.constraints || {},
+      vehicleData: {
+        name: vehicleName.trim(),
+        funk: vehicleFunk.trim(),
+      },
+      configData: {
+        vehicle: vehicleName.trim(),
+        type: vehicleType.trim(),
+        slots,
+        constraints: config.constraints || {},
+      },
     });
   };
 
@@ -409,7 +432,7 @@ function VehicleConfigEditDialog({
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div>
               <Label htmlFor="edit-vehicle-name">Fahrzeugname</Label>
               <Input
@@ -418,6 +441,16 @@ function VehicleConfigEditDialog({
                 onChange={(e) => setVehicleName(e.target.value)}
                 placeholder="z.B. HLF 20, MTF, DL 30"
                 data-testid="input-edit-vehicle-name"
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-vehicle-funk">Funkrufname</Label>
+              <Input
+                id="edit-vehicle-funk"
+                value={vehicleFunk}
+                onChange={(e) => setVehicleFunk(e.target.value)}
+                placeholder="z.B. Florian Schwedt 10/46"
+                data-testid="input-edit-vehicle-funk"
               />
             </div>
             <div>

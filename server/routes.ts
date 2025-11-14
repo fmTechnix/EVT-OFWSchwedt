@@ -1716,8 +1716,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         entity_type: "assignment",
         metadata: {
           vehicle_count: result.assignments.length,
-          total_assigned: result.summary?.totalAssigned || assignmentsToSave.length,
-          warnings: result.summary?.warnings || [],
+          total_assigned: assignmentsToSave.length,
+          warnings: result.warnings || [],
           vehicleIds: validation.data.vehicleIds
         }
       });
