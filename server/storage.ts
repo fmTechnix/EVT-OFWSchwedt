@@ -702,30 +702,50 @@ export class MemStorage implements IStorage {
     // Determine target vehicle name (authoritative source)
     const targetName = vehicleData.name ?? configData.vehicle ?? currentConfig.vehicle;
 
-    // COLLISION CHECK: If renaming, ensure target name doesn't already exist
-    if (targetName !== currentConfig.vehicle) {
+    // Find existing vehicle by CURRENT config name
+    let currentVehicle = Array.from(this.vehicles.values()).find(v => v.name === currentConfig.vehicle);
+    
+    // Check if we're actually renaming
+    const isRename = currentVehicle && targetName !== currentVehicle.name;
+    
+    let vehicle: Vehicle;
+    if (!currentVehicle) {
+      // Current vehicle doesn't exist - check if target exists (adopt) or create new
+      const targetVehicle = Array.from(this.vehicles.values()).find(v => v.name === targetName);
+      
+      if (targetVehicle) {
+        // Target exists - adopt it (recovery from data drift)
+        vehicle = targetVehicle;
+        if (vehicleData.funk !== undefined) vehicle.funk = vehicleData.funk;
+        if (vehicleData.besatzung !== undefined) vehicle.besatzung = vehicleData.besatzung;
+        this.vehicles.set(vehicle.id, vehicle);
+      } else {
+        // Neither current nor target exists - auto-create new
+        const newVehicle: Vehicle = {
+          id: this.nextVehicleId++,
+          name: targetName,
+          funk: vehicleData.funk || `Florian Schwedt 1/XX/1`,
+          besatzung: vehicleData.besatzung ?? 9,
+        };
+        this.vehicles.set(newVehicle.id, newVehicle);
+        vehicle = newVehicle;
+      }
+    } else if (isRename) {
+      // Renaming existing vehicle - check for collision
       const collision = Array.from(this.vehicles.values()).find(v => v.name === targetName);
       if (collision) {
         throw new Error(`Fahrzeug mit Name "${targetName}" existiert bereits. Bitte wählen Sie einen anderen Namen.`);
       }
-    }
-
-    // Find existing vehicle by CURRENT config name
-    let vehicle = Array.from(this.vehicles.values()).find(v => v.name === currentConfig.vehicle);
-    
-    if (!vehicle) {
-      // Auto-create missing vehicle with target name
-      const newVehicle: Vehicle = {
-        id: this.nextVehicleId++,
-        name: targetName,
-        funk: vehicleData.funk || `Florian Schwedt 1/XX/1`,
-        besatzung: vehicleData.besatzung ?? 9,
-      };
-      this.vehicles.set(newVehicle.id, newVehicle);
-      vehicle = newVehicle;
-    } else {
-      // Update existing vehicle - ALWAYS set name to target name (handles rename)
+      
+      // Safe to rename
+      vehicle = currentVehicle;
       vehicle.name = targetName;
+      if (vehicleData.funk !== undefined) vehicle.funk = vehicleData.funk;
+      if (vehicleData.besatzung !== undefined) vehicle.besatzung = vehicleData.besatzung;
+      this.vehicles.set(vehicle.id, vehicle);
+    } else {
+      // No rename - just update fields if provided
+      vehicle = currentVehicle;
       if (vehicleData.funk !== undefined) vehicle.funk = vehicleData.funk;
       if (vehicleData.besatzung !== undefined) vehicle.besatzung = vehicleData.besatzung;
       this.vehicles.set(vehicle.id, vehicle);
