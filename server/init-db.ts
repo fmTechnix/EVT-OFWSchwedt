@@ -83,6 +83,7 @@ export async function initializeDatabase() {
 
   // Initialize settings
   await db.insert(settings).values({
+    id: 1,
     min_agt: 2,
     min_maschinist: 1,
     min_gf: 1,
