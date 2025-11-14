@@ -44,10 +44,10 @@ export async function initializeDatabase() {
     {
       username: "admin",
       password: await hashPassword("admin"),
-      role: "admin",
-      vorname: "Admin",
-      nachname: "User",
-      qualifikationen: ["TM", "AGT", "MASCH", "GF", "ZF"],
+      role: "system_admin",
+      vorname: "System",
+      nachname: "Administrator",
+      qualifikationen: [],
       muss_passwort_aendern: false,
     },
     {
@@ -83,8 +83,6 @@ export async function initializeDatabase() {
 
   // Initialize settings
   await db.insert(settings).values({
-    id: 1,
-    schichtlaenge_std: 12,
     min_agt: 2,
     min_maschinist: 1,
     min_gf: 1,

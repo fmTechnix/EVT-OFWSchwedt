@@ -2,7 +2,8 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { LayoutDashboard, Truck, Users, TruckIcon, Settings, LogOut, AlertCircle, FileText, Radio, Menu, Activity, Calendar } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { LayoutDashboard, Truck, Users, TruckIcon, Settings, LogOut, AlertCircle, FileText, Radio, Menu, Activity, Calendar, ChevronDown } from "lucide-react";
 import { useState } from "react";
 
 export function Navigation() {
@@ -54,16 +55,25 @@ export function Navigation() {
               </Button>
             </Link>
           ))}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => logout()}
-            className="text-white hover:bg-red-700"
-            data-testid="button-logout"
-          >
-            <LogOut className="w-4 h-4 mr-2" />
-            Logout
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-white hover:bg-red-700"
+                data-testid="button-user-menu"
+              >
+                {user.username}
+                <ChevronDown className="w-4 h-4 ml-1" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={() => logout()} data-testid="button-logout">
+                <LogOut className="w-4 h-4 mr-2" />
+                Logout
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </nav>
 
         {/* Mobile Hamburger Menu */}
@@ -89,7 +99,7 @@ export function Navigation() {
                   alt="Feuerwehr Schwedt/Oder" 
                   className="h-10 w-auto"
                 />
-                EVT Menü
+                {user.username}
               </SheetTitle>
             </SheetHeader>
             <nav className="flex flex-col p-4">
